@@ -1,36 +1,41 @@
-# LineWise data contract
+# LineWise data contract (canonical)
 
-`data/output/data.json` is the single source of truth between this repo and
-the LineWise frontend. The contract is enforced by
-`app/data_contract.py` and `app/validate_data_json.py`. Adding or removing a
-top-level key is a contract change — bump `CONTRACT_VERSION` and notify the
-frontend team.
+`data/output/data.json` is the canonical payload — the rich, file-on-disk
+form that the validators, the backtest and any future tooling read. The
+LineWise frontend consumes a **trimmed HTTP-shape** version of this
+payload via `GET /plan`; see [`API_CONTRACT.md`](API_CONTRACT.md) for that
+contract.
 
-Current `CONTRACT_VERSION`: **1.0**.
+The two are kept in lockstep by `app/frontend_payload.py`, which is the
+only legal seam between the canonical shape and the HTTP shape.
 
-## Top-level shape
+Current `CONTRACT_VERSION`: **2.0**.
+
+## Top-level shape (canonical)
 
 ```jsonc
 {
-  "urgentOrders":     [ ... ],            // list — see §1
-  "lineBaseline":     { "14": {...}, "17": {...}, "19": {...} },  // §2
+  "urgentOrders":     [ ... ],
+  "lineBaseline":     { "14": {avg_oee:..., ...}, "17": {...}, "19": {...} },
   "lineCentre":       { "14": "CF Prat", "17": "CF Prat", "19": "CF Prat" },
-  "yearCompare":      { "2025": { "01": { "14": 0.62, ... }, ... } }, // §3
-  "executedHistory":  { "14": [seg, ...], "17": [...], "19": [...] }, // §4
-  "basePlan":         { "14": [seg, ...], "17": [...], "19": [...] }, // §4
-  "recommendations":  { "14": rec, "17": rec, "19": rec },           // §5
-  "objectives":       { "oee": objective, "time": objective, "dis": objective }, // §6
+  "yearCompare":      { "weekLabel": "Week 21 · 18–24 May", "lines": { ... } },
+  "executedHistory":  { "14": [seg, ...], "17": [...], "19": [...] },
+  "basePlan":         { "14": [seg, ...], "17": [...], "19": [...] },
+  "recommendations":  { "14": rec, "17": rec, "19": rec },
+  "objectives":       { "oee": objective, "time": objective, "dis": objective },
+  "manualSlots":      { "17-after-XYZ": ManualSlot, "14-end": ManualSlot, ... },
 
-  // additive metadata — present but not required by the contract:
+  // additive — present in canonical but stripped from the /plan HTTP response:
   "metadata":         { ... },
   "infeasibleByLine": { "17": "Line 17 cannot run 1/2 ..." },
   "planReview":       { ... }
 }
 ```
 
-The contract validator (`validate_data_json.py`) only enforces the eight keys
-listed in `REQUIRED_TOP_LEVEL`; `metadata`, `infeasibleByLine` and
-`planReview` are additive and may evolve without a version bump.
+Segment `start` and `w` values are in **hours** (matching the frontend
+contract). The contract validator (`validate_data_json.py`) enforces the
+nine keys listed in `REQUIRED_TOP_LEVEL`; everything else is additive and
+may evolve without a version bump.
 
 ## 1. `urgentOrders`
 

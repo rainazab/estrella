@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Tuple
 
-CONTRACT_VERSION = "1.0"
+CONTRACT_VERSION = "2.0"
 
 REQUIRED_TOP_LEVEL: List[str] = [
     "urgentOrders",
@@ -26,6 +26,7 @@ REQUIRED_TOP_LEVEL: List[str] = [
     "basePlan",
     "recommendations",
     "objectives",
+    "manualSlots",
 ]
 
 REQUIRED_RECOMMENDATION_FIELDS: List[str] = [

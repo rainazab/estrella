@@ -80,6 +80,7 @@ def _payload() -> dict:
         "basePlan": {l: [_seg(f"B{l}", 0.0, 0.4)] for l in ("14", "17", "19")},
         "recommendations": {"19": rec},
         "objectives": {"oee": {"label": "OEE", "icon": "◉", "order": ["19"], "notes": {}}},
+        "manualSlots": {},
     }
 
 
@@ -88,6 +89,7 @@ class TestRequiredKeysExist:
         assert set(REQUIRED_TOP_LEVEL) == {
             "urgentOrders", "lineBaseline", "lineCentre", "yearCompare",
             "executedHistory", "basePlan", "recommendations", "objectives",
+            "manualSlots",
         }
 
     def test_required_recommendation_fields_include_plan_and_evidence(self):

@@ -140,15 +140,31 @@ No LLM, no €/cost numbers, no fabricated analogues.
 
 ## 8. Frontend handoff
 
-The frontend repo expects `public/data.json`. Either:
+The frontend now consumes an HTTP API. Start the server:
 
 ```bash
-cp data/output/data.json /path/to/frontend/public/data.json
+./scripts/run_server.sh                 # 127.0.0.1:8000
+./scripts/run_server.sh --reload        # auto-reload during dev
 ```
 
-…or hand the file over directly. The contract is documented at
-[`docs/DATA_CONTRACT.md`](docs/DATA_CONTRACT.md). Step-by-step instructions for
-the frontend teammate are in [`docs/HANDOFF.md`](docs/HANDOFF.md).
+Endpoints:
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET`  | `/health` | Liveness probe — `{ "ok": true }` |
+| `GET`  | `/plan`   | Full planning payload (frontend contract v2.0). ETag + `Cache-Control: no-store`. |
+| `POST` | `/plan/recompute` | Re-run the exporter from `data/raw/` |
+
+The frontend's `.env`:
+
+```
+VITE_API_BASE=http://localhost:8000
+```
+
+The frontend can also still consume `data/output/data.json` directly
+(canonical, richer) if it prefers — but the HTTP `/plan` returns the
+trimmed contract shape described in
+[`docs/API_CONTRACT.md`](docs/API_CONTRACT.md).
 
 ## 9. Assumptions
 

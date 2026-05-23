@@ -30,6 +30,7 @@ class TestTopLevel:
         for key in (
             "urgentOrders", "lineBaseline", "lineCentre", "yearCompare",
             "executedHistory", "basePlan", "recommendations", "objectives",
+            "manualSlots",
         ):
             assert key in data, f"missing top-level key {key!r}"
 

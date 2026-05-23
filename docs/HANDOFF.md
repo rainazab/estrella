@@ -7,17 +7,34 @@ This repo is the backend / data layer. It emits one artifact:
 The frontend in your repo loads it as `public/data.json` and renders the
 cockpit from it.
 
-## TL;DR
+## TL;DR — HTTP path
 
 ```bash
-# from this repo:
+# 1. Generate the canonical data:
 ./scripts/run_export.sh
 
-# then copy the file across:
+# 2. Start the HTTP API:
+./scripts/run_server.sh
+
+# 3. Point your frontend at it:
+#    VITE_API_BASE=http://localhost:8000
+```
+
+`GET /health` should return `{ "ok": true }`. `GET /plan` returns the
+frontend-shape payload described in [`API_CONTRACT.md`](API_CONTRACT.md).
+
+### Alternative: file drop
+
+If you prefer a static file (the old workflow), just copy the canonical
+output:
+
+```bash
 cp data/output/data.json /path/to/frontend/public/data.json
 ```
 
-That's it. No backend process needs to run alongside the frontend.
+That file is richer than `/plan` (it includes `metadata`,
+`infeasibleByLine`, `planReview`, and additive scoring fields). The
+frontend can read it directly without a server.
 
 ## What the file contains
 

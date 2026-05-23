@@ -125,12 +125,12 @@ def build_executed_and_plan(
         plan_rows = rows[5:]
 
         def seg_from_row(r: dict, cursor: float) -> Tuple[dict, float]:
-            dur_days = max(0.01, _row_duration_hours(r) / 24.0)
+            dur_hours = max(0.25, _row_duration_hours(r))
             btype = r.get("block_type") or "production"
             base = {
                 "of": str(r.get("of")),
                 "start": round(cursor, 2),
-                "w": round(dur_days, 2),
+                "w": round(dur_hours, 2),
             }
             if btype == "production":
                 envase = str(r.get("envase")) if r.get("envase") else None
@@ -147,7 +147,7 @@ def build_executed_and_plan(
                 })
             else:
                 base.update({"kind": btype})
-            return base, cursor + dur_days
+            return base, cursor + dur_hours
 
         # plan: cursor starts at 0 = today
         cursor = 0.0
@@ -497,9 +497,9 @@ def _build_proposed_plan(
     """Produce the per-line plan with the urgent OF inserted on `insertion_line`.
 
     Returns: {plan, ghosts, moves, ordersMoved, insertion_hours}.
+    All start / w fields are in hours (matching the frontend contract).
     """
     insertion_hours = max(1.0, urgent_volume_hl / max(line_hl_per_hour, 1.0))
-    insertion_days = insertion_hours / 24.0
 
     plan: Dict[str, List[Dict[str, Any]]] = {}
     ghosts: Dict[str, List[Dict[str, Any]]] = {}
@@ -515,42 +515,40 @@ def _build_proposed_plan(
             if line == int(insertion_line) and not inserted_yet and s.get("of") == anchor_of:
                 # 1) The anchor first
                 anchor_seg = {**s, "start": round(cursor, 2)}
-                anchor_seg.setdefault("kind", "anchor" if not anchor_seg.get("kind") else anchor_seg["kind"])
                 anchor_seg["kind"] = "anchor"
                 new_segs.append(anchor_seg)
-                cursor += s["w"]
+                cursor += float(s["w"])
                 # 2) Then the urgent insertion
                 new_segs.append({
                     "of": urgent_label,
                     "sku": urgent_label,
                     "vol": int(urgent_volume_hl),
                     "start": round(cursor, 2),
-                    "w": round(insertion_days, 2),
+                    "w": round(insertion_hours, 2),
                     "oee": round(float(urgent_oee), 3),
                     "kind": "ins",
                 })
-                cursor += insertion_days
+                cursor += insertion_hours
                 inserted_yet = True
                 continue
 
             if line == int(insertion_line) and inserted_yet and s.get("kind") in (None, "production"):
                 # Shifted downstream production order
-                ghost_start = cursor - insertion_days
+                ghost_start = cursor - insertion_hours
                 ghosts.setdefault(line_str, []).append({
-                    "of": s["of"], "start": round(ghost_start, 2), "w": s["w"],
+                    "of": s["of"], "start": round(ghost_start, 2), "w": float(s["w"]),
                 })
-                shift_hours = insertion_hours
                 moves.append({
                     "of": s["of"], "line": line,
-                    "shift": f"+{int(round(shift_hours))}h",
+                    "shift": f"+{int(round(insertion_hours))}h",
                     "why": "pushed back to make room for the insertion",
                 })
                 orders_moved += 1
                 new_segs.append({**s, "start": round(cursor, 2), "kind": "shift"})
-                cursor += s["w"]
+                cursor += float(s["w"])
             else:
                 new_segs.append({**s, "start": round(cursor, 2)})
-                cursor += s["w"]
+                cursor += float(s["w"])
 
         plan[line_str] = new_segs
 
@@ -560,7 +558,6 @@ def _build_proposed_plan(
         "moves": moves,
         "ordersMoved": orders_moved,
         "insertion_hours": insertion_hours,
-        "insertion_days": insertion_days,
     }
 
 
@@ -1037,8 +1034,8 @@ def build_recommendations(
             (s for s in proposed["plan"].get(str(line), []) if s.get("kind") == "ins"),
             None,
         )
-        recovery_start = (ins_seg["start"] + ins_seg["w"]) if ins_seg else 0.0
-        recovery_width = max(0.4, recovery_hours / 24.0)
+        recovery_start = (float(ins_seg["start"]) + float(ins_seg["w"])) if ins_seg else 0.0
+        recovery_width = max(1.0, float(recovery_hours))  # hours
 
         comps: List[str] = [t for t in transition_type.split("+") if t and t != "same-sku"]
         breakdown = build_changeover_breakdown(
@@ -1118,8 +1115,8 @@ def build_recommendations(
             if naive_anchor:
                 naive_band = {
                     "line": str(naive_line),
-                    "start": round(naive_anchor["start"] + naive_anchor["w"], 2),
-                    "w": round(proposed["insertion_days"], 2),
+                    "start": round(float(naive_anchor["start"]) + float(naive_anchor["w"]), 2),
+                    "w": round(float(proposed["insertion_hours"]), 2),
                 }
 
         rec = {
@@ -1337,6 +1334,76 @@ def build_plan_review(
     }
 
 
+def build_manual_slots(
+    *,
+    base_plan: Dict[str, List[Dict[str, Any]]],
+    recommendations: Dict[str, Any],
+    infeasible_by_line: Dict[str, str],
+    max_slots_per_line: int = 6,
+) -> Dict[str, Dict[str, Any]]:
+    """Per-slot verdict cards for hand-placed insertions.
+
+    Key format follows the frontend convention:
+      - "{line}-after-{anchor_of}"  → production-anchor slot
+      - "{line}-end"                → end-of-queue slot
+
+    Each value is { recKey, verdict, label, banner }. Verdicts:
+      - "match"  : this slot matches the system's recommendation
+      - "ok"     : feasible alternative slot
+      - "worse"  : infeasible line (still surfaced so the UI can warn)
+    """
+    out: Dict[str, Dict[str, Any]] = {}
+
+    # Infeasible lines: emit one "worse" slot so the UI can display the reason.
+    for line, reason in infeasible_by_line.items():
+        out[f"{line}-after"] = {
+            "recKey": str(line),
+            "verdict": "worse",
+            "label": f"Line {line}",
+            "banner": reason or f"Line {line} cannot run this format.",
+        }
+
+    for line, rec in recommendations.items():
+        line_segs = [
+            seg for seg in (base_plan.get(str(line)) or [])
+            if seg.get("kind") not in ("clean", "maint", "shift")
+        ]
+        chosen_anchor_of = None
+        position = str(rec.get("position") or "")
+        if position.startswith("after "):
+            chosen_anchor_of = position[len("after "):].strip()
+
+        # Production-anchor slots
+        for seg in line_segs[:max_slots_per_line]:
+            anchor_of = str(seg.get("of") or "")
+            if not anchor_of:
+                continue
+            is_match = anchor_of == chosen_anchor_of
+            key = f"{line}-after-{anchor_of}"
+            label = f"Line {line} · after {anchor_of}"
+            if is_match:
+                banner = "Recommended slot — best evidence-adjusted OEE on this line."
+            else:
+                banner = "Alternative slot on this line — feasible but not the chosen one."
+            out[key] = {
+                "recKey": str(line),
+                "verdict": "match" if is_match else "ok",
+                "label": label,
+                "banner": banner,
+            }
+
+        # End-of-queue slot
+        end_key = f"{line}-end"
+        out[end_key] = {
+            "recKey": str(line),
+            "verdict": "ok",
+            "label": f"Line {line} · end of queue",
+            "banner": "End of queue — zero knock-on to scheduled orders.",
+        }
+
+    return out
+
+
 def build_objectives(recs: Dict[str, Any]) -> Dict[str, Any]:
     if not recs:
         return {}
@@ -1392,29 +1459,113 @@ def build_objectives(recs: Dict[str, Any]) -> Dict[str, Any]:
 # ============================================================ year compare
 
 
-def build_year_compare(master_prod: pd.DataFrame) -> Dict[str, Any]:
-    """Monthly avg OEE per line (production rows only) for the most recent year."""
+_MONTH_ABBREV = {
+    1: "Jan", 2: "Feb", 3: "Mar", 4: "Apr", 5: "May", 6: "Jun",
+    7: "Jul", 8: "Aug", 9: "Sep", 10: "Oct", 11: "Nov", 12: "Dec",
+}
+
+
+def _format_week_label(week_start, week_end, iso_year: int, iso_week: int) -> str:
+    if week_start.month == week_end.month:
+        span = f"{week_start.day}–{week_end.day} {_MONTH_ABBREV[week_start.month]}"
+    else:
+        span = (
+            f"{week_start.day} {_MONTH_ABBREV[week_start.month]}–"
+            f"{week_end.day} {_MONTH_ABBREV[week_end.month]}"
+        )
+    return f"Week {iso_week} · {span}"
+
+
+def _week_metrics(
+    df: pd.DataFrame,
+    transitions: Optional[pd.DataFrame],
+    iso_year: int,
+    iso_week: int,
+    line: int,
+) -> Dict[str, float]:
+    """Mean OEE, total HL, and changeover count for a (year, week, line)."""
+    sub = df[(df["__iso_year"] == iso_year) & (df["__iso_week"] == iso_week) & (df["tren"] == line)]
+    if sub.empty:
+        return {"oee": 0.0, "vol": 0.0, "changes": 0.0}
+    mean_oee = float(sub["oee"].dropna().mean()) if "oee" in sub.columns else 0.0
+    vol = float(sub["hl"].dropna().sum()) if "hl" in sub.columns else 0.0
+    changes = 0
+    if transitions is not None and not transitions.empty and "date" in transitions.columns:
+        tx = transitions.copy()
+        tx["date"] = pd.to_datetime(tx["date"], errors="coerce")
+        tx = tx.dropna(subset=["date"])
+        if not tx.empty:
+            tx["__iso_year"] = tx["date"].dt.isocalendar().year.astype(int)
+            tx["__iso_week"] = tx["date"].dt.isocalendar().week.astype(int)
+            changes = int(((tx["__iso_year"] == iso_year) & (tx["__iso_week"] == iso_week) & (tx["line"] == line)).sum())
+    return {
+        "oee": round(mean_oee, 3) if mean_oee == mean_oee else 0.0,
+        "vol": round(vol, 1),
+        "changes": float(changes),
+    }
+
+
+def build_year_compare(
+    master_prod: pd.DataFrame,
+    transitions: Optional[pd.DataFrame] = None,
+) -> Dict[str, Any]:
+    """Weekly compare strip: current ISO week vs same ISO week of previous year.
+
+    Returned shape (matches the frontend contract):
+
+        {
+          "weekLabel": "Week 21 · 18–24 May",
+          "lines": {
+            "14": { "oeeNow": 0.62, "oeeLast": 0.58,
+                     "volNow": 12345, "volLast": 11042,
+                     "changesNow": 7,  "changesLast": 5 },
+            ...
+          }
+        }
+
+    "Current" means the most recent ISO week present in the data; "last"
+    means the same ISO week one year earlier.
+    """
     if (
         master_prod is None or master_prod.empty
         or "fecha_fin" not in master_prod.columns
-        or "oee" not in master_prod.columns
     ):
-        return {}
-    df = master_prod.dropna(subset=["fecha_fin", "oee"]).copy()
-    if df.empty:
-        return {}
+        return {"weekLabel": "—", "lines": {}}
+
+    df = master_prod.copy()
     df["fecha_fin"] = pd.to_datetime(df["fecha_fin"], errors="coerce")
     df = df.dropna(subset=["fecha_fin"])
-    df["year"] = df["fecha_fin"].dt.year
-    df["month"] = df["fecha_fin"].dt.month
-    grouped = df.groupby(["year", "month", "tren"])["oee"].mean().reset_index()
-    out: Dict[str, Dict[str, Dict[str, float]]] = {}
-    for _, row in grouped.iterrows():
-        y = str(int(row["year"]))
-        m = f"{int(row['month']):02d}"
-        l = str(int(row["tren"]))
-        out.setdefault(y, {}).setdefault(m, {})[l] = round(float(row["oee"]), 3)
-    return out
+    if df.empty:
+        return {"weekLabel": "—", "lines": {}}
+
+    iso = df["fecha_fin"].dt.isocalendar()
+    df["__iso_year"] = iso.year.astype(int)
+    df["__iso_week"] = iso.week.astype(int)
+
+    # Pick the most recent (year, week) with data.
+    latest_dt = df["fecha_fin"].max()
+    iso_year = int(latest_dt.isocalendar().year)
+    iso_week = int(latest_dt.isocalendar().week)
+
+    # Compute week bounds for the label.
+    week_start = pd.Timestamp.fromisocalendar(iso_year, iso_week, 1)
+    week_end = pd.Timestamp.fromisocalendar(iso_year, iso_week, 7)
+    week_label = _format_week_label(week_start, week_end, iso_year, iso_week)
+
+    lines_out: Dict[str, Dict[str, float]] = {}
+    for line in LINES:
+        cur = _week_metrics(df, transitions, iso_year, iso_week, line)
+        last = _week_metrics(df, transitions, iso_year - 1, iso_week, line)
+        lines_out[str(line)] = {
+            "oeeNow": cur["oee"],
+            "oeeLast": last["oee"],
+            "volNow": cur["vol"],
+            "volLast": last["vol"],
+            "changesNow": cur["changes"],
+            "changesLast": last["changes"],
+        }
+
+    return {"weekLabel": week_label, "lines": lines_out}
 
 
 # ============================================================ validation report
@@ -1719,7 +1870,12 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     print("→ objectives + year compare", flush=True)
     objectives = build_objectives(recommendations)
-    year_compare = build_year_compare(master_prod)
+    year_compare = build_year_compare(master_prod, transitions)
+    manual_slots = build_manual_slots(
+        base_plan=base_plan,
+        recommendations=recommendations,
+        infeasible_by_line=infeasible_by_line,
+    )
 
     line_centre = {str(l): "CF Prat" for l in LINES}
 
@@ -1732,6 +1888,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "basePlan": base_plan,
         "recommendations": recommendations,
         "objectives": objectives,
+        "manualSlots": manual_slots,
         # additive metadata
         "metadata": {
             "contract_version": CONTRACT_VERSION,

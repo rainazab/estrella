@@ -215,7 +215,7 @@ def load_forward_plan(
             else:
                 dur_hours = 8.0  # last segment fallback
             dur_hours = max(1.0, min(dur_hours, 24.0))
-            start_days = (start_dt - first_start).total_seconds() / 86400.0
+            start_hours = (start_dt - first_start).total_seconds() / 3600.0
             material = row.get(material_col)
             material_str = str(material) if pd.notna(material) else None
             name = row.get(name_col) if name_col else None
@@ -228,8 +228,8 @@ def load_forward_plan(
             # production. Source-of-truth metadata lives in the extra fields.
             seg: Dict[str, Any] = {
                 "of": material_str or f"PLN-{int(line)}-{i+1:02d}",
-                "start": round(max(0.0, start_days), 2),
-                "w": round(dur_hours / 24.0, 2),
+                "start": round(max(0.0, start_hours), 2),
+                "w": round(dur_hours, 2),
                 "sku": (name_str or material_str or "—"),
                 "vol": vol,
                 "envase": None,
