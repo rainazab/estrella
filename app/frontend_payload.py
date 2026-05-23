@@ -5,11 +5,13 @@ metadata, the detailed per-line baseline object, and additive scoring
 fields. The frontend wants a slimmer, strictly-typed shape served from
 `GET /plan`. This module is the seam between them.
 
-The transformation is intentionally one-way and stateless: pass it the
-canonical payload, get back the frontend payload. No I/O.
+`build_frontend_payload(canonical)` is the in-process API used by the
+FastAPI server. The CLI at the bottom of this file writes the same
+payload out to disk for the Vite dev fake-API.
 """
 from __future__ import annotations
 
+import json
 from typing import Any, Dict, List, Optional
 
 
@@ -199,3 +201,71 @@ def build_frontend_payload(canonical: Dict[str, Any]) -> Dict[str, Any]:
         "objectives": _clean_objectives(canonical.get("objectives")),
         "manualSlots": _clean_manual_slots(canonical.get("manualSlots")),
     }
+
+
+# ============================================================ CLI
+
+
+def main(argv: Optional[list] = None) -> int:
+    """Transform a canonical data.json file into the frontend plan.json shape.
+
+    Examples:
+        # repo root → linewise dev seed
+        python -m app.frontend_payload \\
+            --in data/output/data.json --out linewise/data/plan.json
+
+        # read stdin → stdout
+        cat data.json | python -m app.frontend_payload --out -
+    """
+    import argparse
+    import sys
+    from pathlib import Path
+
+    from . import config  # noqa: WPS433 — kept inside main() to avoid heavy import on direct use
+
+    parser = argparse.ArgumentParser(
+        description="Transform canonical data.json into the frontend plan.json shape.",
+    )
+    parser.add_argument(
+        "--in",
+        dest="src",
+        default=str(config.OUTPUT_DIR / "data.json"),
+        help="Canonical data.json path. Default: data/output/data.json. Use '-' for stdin.",
+    )
+    parser.add_argument(
+        "--out",
+        dest="dst",
+        default=str(config.BASE_DIR / "linewise" / "data" / "plan.json"),
+        help="Frontend plan.json output path. Default: linewise/data/plan.json. Use '-' for stdout.",
+    )
+    args = parser.parse_args(argv)
+
+    if args.src == "-":
+        canonical = json.loads(sys.stdin.read())
+    else:
+        src_path = Path(args.src).expanduser().resolve()
+        if not src_path.exists():
+            print(
+                f"✗ source data.json not found: {src_path}\n"
+                "  Run `python -m app.export_data_json` first.",
+                file=sys.stderr,
+            )
+            return 1
+        canonical = json.loads(src_path.read_text(encoding="utf-8"))
+
+    payload = build_frontend_payload(canonical)
+    body = json.dumps(payload, indent=2, ensure_ascii=False)
+
+    if args.dst == "-":
+        sys.stdout.write(body + "\n")
+    else:
+        dst_path = Path(args.dst).expanduser().resolve()
+        dst_path.parent.mkdir(parents=True, exist_ok=True)
+        dst_path.write_text(body + "\n", encoding="utf-8")
+        size_kb = dst_path.stat().st_size / 1024
+        print(f"✔ wrote {dst_path}  ({size_kb:.1f} KB)")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

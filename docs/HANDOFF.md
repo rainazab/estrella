@@ -1,15 +1,19 @@
 # Handoff to the frontend teammate
 
-This repo is now a **monorepo**. Your code goes under
-[`frontend/`](../frontend/README.md); the backend stays under `app/` and
-emits two things the frontend can consume:
+This repo is now a **monorepo**. The frontend lives under
+[`linewise/`](../linewise/README.md); the backend stays under `app/` and
+exposes two consumption paths:
 
-- `data/output/data.json` — canonical file (richer, on-disk).
-- `GET /plan` over HTTP (frontend contract v2.0, served by FastAPI).
+- **Vite fake-API (default)**: `linewise/vite.config.js` serves
+  `linewise/data/plan.json`. Refresh that file with
+  `./scripts/run_export.sh` (auto-syncs) or
+  `./scripts/sync_frontend_plan.sh`.
+- **Real HTTP backend**: start `./scripts/run_server.sh` and set
+  `VITE_API_BASE=http://localhost:8000` in `linewise/.env.local`. The
+  app's `src/api/client.js` already honours that env var.
 
-See [`../frontend/README.md`](../frontend/README.md) for the drop-in /
-`git subtree` instructions to land your existing codebase here without
-losing history.
+Both paths serve the same shape — see
+[`API_CONTRACT.md`](API_CONTRACT.md).
 
 ## TL;DR — HTTP path
 

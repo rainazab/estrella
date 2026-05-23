@@ -1,201 +1,3258 @@
 {
   "urgentOrders": [
-    { "of": "ED13LTNN", "status": "urgent", "sku": "Estrella Damm · lata 33cl", "units": 18000, "hl": 594, "due": "21 May" },
-    { "of": "VO13LTMP", "status": "queued", "sku": "Voll-Damm · lata 33cl",     "units": 6000,  "hl": 198, "due": "24 May" },
-    { "of": "AM05LTST", "status": "queued", "sku": "AmiBock · lata 50cl",       "units": 9500,  "hl": 475, "due": "26 May" },
-    { "of": "FDT13LT",  "status": "queued", "sku": "Free Damm · lata 33cl",     "units": 4200,  "hl": 139, "due": "28 May" },
-    { "of": "ED05LTNN", "status": "done",   "sku": "Estrella Damm · lata 50cl", "units": 12000, "hl": 600, "due": "18 May" }
+    {
+      "of": "ED13LTNN",
+      "status": "urgent",
+      "sku": "BEER MOLEN 4,8ºNA 33CL L B24SH P KR6BNML5",
+      "units": 18000,
+      "hl": 594,
+      "due": "28 May"
+    },
+    {
+      "of": "ED12LTW",
+      "status": "queued",
+      "sku": "ESTRELLA DAMM 1/2 LATA KR00127",
+      "units": 6000,
+      "hl": 198,
+      "due": "31 May"
+    }
   ],
-
-  "lineBaseline": { "14": 0.52, "17": 0.56, "19": 0.49 },
-
+  "lineBaseline": {
+    "14": 0.422,
+    "17": 0.531,
+    "19": 0.481
+  },
   "yearCompare": {
-    "weekLabel": "Week 21 · 18–24 May",
+    "weekLabel": "Week 1 · 29 Dec–4 Jan",
     "lines": {
-      "14": { "oeeNow": 0.535, "oeeLast": 0.491, "volNow": 276000, "volLast": 248000, "changesNow": 3, "changesLast": 6 },
-      "17": { "oeeNow": 0.562, "oeeLast": 0.548, "volNow": 312000, "volLast": 301000, "changesNow": 2, "changesLast": 4 },
-      "19": { "oeeNow": 0.518, "oeeLast": 0.503, "volNow": 241000, "volLast": 233000, "changesNow": 4, "changesLast": 5 }
+      "14": {
+        "oeeNow": 0.258,
+        "oeeLast": 0.19,
+        "volNow": 1407.6,
+        "volLast": 1410.7,
+        "changesNow": 3.0,
+        "changesLast": 2.0
+      },
+      "17": {
+        "oeeNow": 0.455,
+        "oeeLast": 0.518,
+        "volNow": 5758.0,
+        "volLast": 5950.5,
+        "changesNow": 8.0,
+        "changesLast": 3.0
+      },
+      "19": {
+        "oeeNow": 0.424,
+        "oeeLast": 0.556,
+        "volNow": 5914.8,
+        "volLast": 7094.8,
+        "changesNow": 5.0,
+        "changesLast": 6.0
+      }
     }
   },
-
   "executedHistory": {
     "14": [
-      { "of": "ED05LTNN", "sku": "Estrella Damm · lata 50cl", "vol": 71000, "start": 0.0, "w": 1.9, "oee": 0.53 },
-      { "kind": "clean",  "start": 1.9, "w": 0.5 },
-      { "of": "AM05LTST", "sku": "AmiBock · lata 50cl", "vol": 54000, "start": 2.4, "w": 1.7, "oee": 0.56 },
-      { "of": "FDT13LT",  "sku": "Free Damm · lata 33cl", "vol": 88000, "start": 4.1, "w": 2.6, "oee": 0.48 }
+      {
+        "of": "0000704824-1",
+        "sku": "SK1312MN",
+        "vol": 186,
+        "start": 0.0,
+        "w": 3.55,
+        "oee": 0.204
+      },
+      {
+        "of": "0000704825-1",
+        "sku": "SK13L12",
+        "vol": 201,
+        "start": 3.55,
+        "w": 2.14,
+        "oee": 0.296
+      },
+      {
+        "of": "0000708383-1",
+        "sku": "SK13LN",
+        "vol": 662,
+        "start": 5.69,
+        "w": 3.83,
+        "oee": 0.353
+      },
+      {
+        "of": "0000704815-1",
+        "sku": "3BNEBL23",
+        "vol": 1116,
+        "start": 9.52,
+        "w": 6.97,
+        "oee": 0.425
+      },
+      {
+        "of": "PRT9900016836-M",
+        "sku": "VO13L6M1",
+        "vol": 333,
+        "start": 16.49,
+        "w": 1.14,
+        "oee": 0.472
+      }
     ],
     "17": [
-      { "of": "VO13LTMP", "sku": "Voll-Damm · lata 33cl", "vol": 46000, "start": 0.0, "w": 1.6, "oee": 0.57 },
-      { "of": "ED13LTNN", "sku": "Estrella Damm · lata 33cl", "vol": 62000, "start": 1.6, "w": 2.0, "oee": 0.54 },
-      { "kind": "clean",  "start": 3.6, "w": 0.5 },
-      { "of": "AM05LTST", "sku": "AmiBock · lata 50cl", "vol": 51000, "start": 4.1, "w": 1.5, "oee": 0.59 },
-      { "of": "FDT13LT",  "sku": "Free Damm · lata 33cl", "vol": 39000, "start": 5.6, "w": 1.4, "oee": 0.55 }
+      {
+        "of": "0000709064-1",
+        "sku": "FDL13LN",
+        "vol": 1561,
+        "start": 0.0,
+        "w": 2.62,
+        "oee": 0.649
+      },
+      {
+        "of": "PRT9900016863-M",
+        "sku": "ED13LTW",
+        "vol": 323,
+        "start": 2.62,
+        "w": 0.98,
+        "oee": 0.505
+      },
+      {
+        "of": "PRT9900016861-M",
+        "sku": "FD13LTNN",
+        "vol": 647,
+        "start": 3.6,
+        "w": 0.64,
+        "oee": 0.665
+      },
+      {
+        "of": "0000709057-1",
+        "sku": "EC13LTNN",
+        "vol": 647,
+        "start": 4.24,
+        "w": 1.88,
+        "oee": 0.519
+      },
+      {
+        "of": "0000709067-1",
+        "sku": "TU13LTN",
+        "vol": 705,
+        "start": 6.12,
+        "w": 0.97,
+        "oee": 0.691
+      }
     ],
     "19": [
-      { "of": "FDT13LT",  "sku": "Free Damm · lata 33cl", "vol": 64000, "start": 0.0, "w": 1.9, "oee": 0.50 },
-      { "of": "ED05LTNN", "sku": "Estrella Damm · lata 50cl", "vol": 79000, "start": 1.9, "w": 2.3, "oee": 0.47 },
-      { "kind": "maint",  "start": 4.2, "w": 0.6 },
-      { "of": "VO13LTMP", "sku": "Voll-Damm · lata 33cl", "vol": 58000, "start": 4.8, "w": 1.9, "oee": 0.52 }
+      {
+        "of": "0000712122-1",
+        "sku": "TU13LP12",
+        "vol": 1163,
+        "start": 0.0,
+        "w": 1.4,
+        "oee": 0.631
+      },
+      {
+        "of": "0000712120-1",
+        "sku": "FDL13L12",
+        "vol": 293,
+        "start": 1.4,
+        "w": 0.42,
+        "oee": 0.516
+      },
+      {
+        "of": "0000709070-1",
+        "sku": "EX12LBN",
+        "vol": 864,
+        "start": 1.82,
+        "w": 4.17,
+        "oee": 0.329
+      },
+      {
+        "of": "0000709074-1",
+        "sku": "VO12LT",
+        "vol": 743,
+        "start": 5.98,
+        "w": 1.91,
+        "oee": 0.457
+      },
+      {
+        "kind": "clean",
+        "start": 7.89,
+        "w": 0.25
+      }
     ]
   },
-
   "basePlan": {
     "14": [
-      { "of": "FDT13LT",  "sku": "Free Damm · lata 33cl", "vol": 48000, "start": 0,    "w": 1.4, "oee": 0.54 },
-      { "of": "ED13LTNN", "sku": "Estrella Damm · lata 33cl", "vol": 92000, "start": 1.4,  "w": 2.6, "oee": 0.51 },
-      { "of": "VO13LTMP", "sku": "Voll-Damm · lata 33cl", "vol": 34000, "start": 4.0,  "w": 1.0, "oee": 0.56 },
-      { "kind": "clean",  "start": 5.0,  "w": 0.5 },
-      { "of": "AM05LTST", "sku": "AmiBock · lata 50cl", "vol": 70000, "start": 6.2,  "w": 2.0, "oee": 0.55 },
-      { "of": "ED05LTNN", "sku": "Estrella Damm · lata 50cl", "vol": 84000, "start": 8.4,  "w": 2.4, "oee": 0.53 },
-      { "of": "FDT13LT",  "sku": "Free Damm · lata 33cl", "vol": 60000, "start": 11.0, "w": 1.8, "oee": 0.57 },
-      { "of": "VO13LTMP", "sku": "Voll-Damm · lata 33cl", "vol": 31000, "start": 12.9, "w": 1.0, "oee": 0.55 }
+      {
+        "of": "FDT13LT",
+        "sku": "FREE DAMM TOSTADA 1/3 LATA LC",
+        "vol": 610,
+        "start": 0.0,
+        "w": 6.0,
+        "oee": 0.497
+      },
+      {
+        "of": "FDT13LT",
+        "sku": "FREE DAMM TOSTADA 1/3 LATA LC",
+        "vol": 714,
+        "start": 6.0,
+        "w": 16.0,
+        "oee": 0.497
+      },
+      {
+        "of": "ED13LTNN",
+        "sku": "ESTRELLA DAMM 1/3 LATA LC",
+        "vol": 832,
+        "start": 22.0,
+        "w": 8.0
+      },
+      {
+        "of": "ED13LTNN",
+        "sku": "ESTRELLA DAMM 1/3 LATA LC",
+        "vol": 832,
+        "start": 30.0,
+        "w": 8.0
+      },
+      {
+        "of": "ED13LTNN",
+        "sku": "ESTRELLA DAMM 1/3 LATA LC",
+        "vol": 832,
+        "start": 38.0,
+        "w": 8.0
+      },
+      {
+        "of": "ED13LTNN",
+        "sku": "ESTRELLA DAMM 1/3 LATA LC",
+        "vol": 832,
+        "start": 46.0,
+        "w": 8.0
+      },
+      {
+        "of": "ED13LTNN",
+        "sku": "ESTRELLA DAMM 1/3 LATA LC",
+        "vol": 665,
+        "start": 54.0,
+        "w": 16.0
+      },
+      {
+        "of": "VO13LTMP",
+        "sku": "VOLL DAMM 33CL LT LC6 MP",
+        "vol": 337,
+        "start": 70.0,
+        "w": 2.0
+      },
+      {
+        "of": "VO13LTMP",
+        "sku": "VOLL DAMM 33CL LT LC6 MP",
+        "vol": 238,
+        "start": 72.0,
+        "w": 6.0
+      },
+      {
+        "of": "ED13LTNN",
+        "sku": "ESTRELLA DAMM 1/3 LATA LC",
+        "vol": 475,
+        "start": 78.0,
+        "w": 8.0
+      },
+      {
+        "of": "ED13LTNN",
+        "sku": "ESTRELLA DAMM 1/3 LATA LC",
+        "vol": 832,
+        "start": 86.0,
+        "w": 8.0
+      },
+      {
+        "of": "ED13LTNN",
+        "sku": "ESTRELLA DAMM 1/3 LATA LC",
+        "vol": 832,
+        "start": 94.0,
+        "w": 8.0
+      },
+      {
+        "of": "ED13LTNN",
+        "sku": "ESTRELLA DAMM 1/3 LATA LC",
+        "vol": 832,
+        "start": 102.0,
+        "w": 8.0
+      },
+      {
+        "of": "ED13LTNN",
+        "sku": "ESTRELLA DAMM 1/3 LATA LC",
+        "vol": 790,
+        "start": 110.0,
+        "w": 8.0
+      },
+      {
+        "of": "ED13LTNN",
+        "sku": "ESTRELLA DAMM 1/3 LATA LC",
+        "vol": 790,
+        "start": 118.0,
+        "w": 8.0
+      },
+      {
+        "of": "ED13LTNN",
+        "sku": "ESTRELLA DAMM 1/3 LATA LC",
+        "vol": 790,
+        "start": 126.0,
+        "w": 8.0
+      },
+      {
+        "of": "ED13LTNN",
+        "sku": "ESTRELLA DAMM 1/3 LATA LC",
+        "vol": 790,
+        "start": 134.0,
+        "w": 8.0
+      },
+      {
+        "of": "ED13LTNN",
+        "sku": "ESTRELLA DAMM 1/3 LATA LC",
+        "vol": 790,
+        "start": 142.0,
+        "w": 8.0
+      },
+      {
+        "of": "ED13LTNN",
+        "sku": "ESTRELLA DAMM 1/3 LATA LC",
+        "vol": 790,
+        "start": 150.0,
+        "w": 8.0
+      }
     ],
     "17": [
-      { "of": "AM05LTST", "sku": "AmiBock · lata 50cl", "vol": 63000, "start": 0,    "w": 1.8, "oee": 0.58 },
-      { "of": "ED13LTNN", "sku": "Estrella Damm · lata 33cl", "vol": 55000, "start": 1.8,  "w": 1.6, "oee": 0.55 },
-      { "of": "FDT13LT",  "sku": "Free Damm · lata 33cl", "vol": 47000, "start": 3.6,  "w": 1.4, "oee": 0.57 },
-      { "kind": "clean",  "start": 5.0,  "w": 0.5 },
-      { "of": "ED05LTNN", "sku": "Estrella Damm · lata 50cl", "vol": 76000, "start": 5.4,  "w": 2.2, "oee": 0.53 },
-      { "of": "VO13LTMP", "sku": "Voll-Damm · lata 33cl", "vol": 52000, "start": 7.8,  "w": 1.6, "oee": 0.56 },
-      { "of": "AM05LTST", "sku": "AmiBock · lata 50cl", "vol": 69000, "start": 9.6,  "w": 2.0, "oee": 0.58 },
-      { "of": "ED13LTNN", "sku": "Estrella Damm · lata 33cl", "vol": 71000, "start": 11.8, "w": 2.0, "oee": 0.54 }
+      {
+        "of": "XI13P24M",
+        "sku": "XIBECA 1/3 LATA PACK CARTON 24U. MP",
+        "vol": 350,
+        "start": 0.0,
+        "w": 2.0,
+        "oee": 0.546
+      },
+      {
+        "of": "XI13LTN",
+        "sku": "XIBECA 1/3 LATA LC",
+        "vol": 976,
+        "start": 2.0,
+        "w": 6.0,
+        "oee": 0.614
+      },
+      {
+        "of": "XI13LTN",
+        "sku": "XIBECA 1/3 LATA LC",
+        "vol": 655,
+        "start": 8.0,
+        "w": 2.0,
+        "oee": 0.614
+      },
+      {
+        "of": "FD13LTNN",
+        "sku": "FREE DAMM 33CL LATA LC",
+        "vol": 843,
+        "start": 10.0,
+        "w": 9.87,
+        "oee": 0.549
+      },
+      {
+        "of": "FD13LTNN",
+        "sku": "FREE DAMM 33CL LATA LC",
+        "vol": 317,
+        "start": 19.87,
+        "w": 1.0,
+        "oee": 0.549
+      },
+      {
+        "of": "FDL13LN",
+        "sku": "FREE DAMM LIMON 1/3 LATA LC",
+        "vol": 721,
+        "start": 20.0,
+        "w": 1.0,
+        "oee": 0.501
+      },
+      {
+        "of": "DL13LT",
+        "sku": "DAMM LEMON 1/3 LATA LC",
+        "vol": 948,
+        "start": 20.13,
+        "w": 5.87,
+        "oee": 0.539
+      },
+      {
+        "of": "DL13LT",
+        "sku": "DAMM LEMON 1/3 LATA LC",
+        "vol": 1703,
+        "start": 26.0,
+        "w": 8.0,
+        "oee": 0.539
+      },
+      {
+        "of": "DL13LT",
+        "sku": "DAMM LEMON 1/3 LATA LC",
+        "vol": 467,
+        "start": 34.0,
+        "w": 10.0,
+        "oee": 0.539
+      },
+      {
+        "of": "KE13PL12",
+        "sku": "KELER LATA 33CL. PACK C. 12U.",
+        "vol": 586,
+        "start": 44.0,
+        "w": 4.0,
+        "oee": 0.508
+      },
+      {
+        "of": "KE13LTNN",
+        "sku": "KELER 33 CL LATA LC",
+        "vol": 218,
+        "start": 48.0,
+        "w": 2.0,
+        "oee": 0.498
+      },
+      {
+        "of": "TU13LTN",
+        "sku": "TURIA 33CL LATA LC",
+        "vol": 666,
+        "start": 50.0,
+        "w": 2.98,
+        "oee": 0.599
+      },
+      {
+        "of": "TU13LTN",
+        "sku": "TURIA 33CL LATA LC",
+        "vol": 759,
+        "start": 52.98,
+        "w": 5.02,
+        "oee": 0.599
+      },
+      {
+        "of": "TUP13LT",
+        "sku": "TURIA STARK 1/3 LATA LC 24U.",
+        "vol": 251,
+        "start": 58.0,
+        "w": 11.77,
+        "oee": 0.457
+      },
+      {
+        "of": "KE13LTNN",
+        "sku": "KELER 33 CL LATA LC",
+        "vol": 378,
+        "start": 69.77,
+        "w": 1.0,
+        "oee": 0.498
+      },
+      {
+        "of": "LC13LTNN",
+        "sku": "ESTRELLA LEVANTE 1/3 LATA LC",
+        "vol": 516,
+        "start": 70.0,
+        "w": 2.0,
+        "oee": 0.563
+      },
+      {
+        "of": "LC13LTNN",
+        "sku": "ESTRELLA LEVANTE 1/3 LATA LC",
+        "vol": 1253,
+        "start": 72.0,
+        "w": 2.0,
+        "oee": 0.563
+      },
+      {
+        "of": "SK13LN",
+        "sku": "SKOL 1/3 LATA LC",
+        "vol": 224,
+        "start": 74.0,
+        "w": 8.0,
+        "oee": 0.59
+      },
+      {
+        "of": "SK13LN",
+        "sku": "SKOL 1/3 LATA LC",
+        "vol": 1703,
+        "start": 82.0,
+        "w": 8.0,
+        "oee": 0.59
+      },
+      {
+        "of": "SK13LN",
+        "sku": "SKOL 1/3 LATA LC",
+        "vol": 1607,
+        "start": 90.0,
+        "w": 8.0,
+        "oee": 0.59
+      },
+      {
+        "of": "VO13LT",
+        "sku": "VOLL DAMM 1/3 LATA LC",
+        "vol": 1594,
+        "start": 98.0,
+        "w": 15.98
+      },
+      {
+        "of": "VO13LT",
+        "sku": "VOLL DAMM 1/3 LATA LC",
+        "vol": 1703,
+        "start": 113.98,
+        "w": 1.0
+      },
+      {
+        "of": "VO13LT",
+        "sku": "VOLL DAMM 1/3 LATA LC",
+        "vol": 1618,
+        "start": 114.0,
+        "w": 2.0
+      },
+      {
+        "of": "VO13LT",
+        "sku": "VOLL DAMM 1/3 LATA LC",
+        "vol": 1174,
+        "start": 116.0,
+        "w": 6.0
+      },
+      {
+        "of": "ED13LCN",
+        "sku": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+        "vol": 239,
+        "start": 122.0,
+        "w": 8.0
+      },
+      {
+        "of": "ED13LCN",
+        "sku": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+        "vol": 1618,
+        "start": 130.0,
+        "w": 8.0
+      },
+      {
+        "of": "ED13LCN",
+        "sku": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+        "vol": 1618,
+        "start": 138.0,
+        "w": 8.0
+      },
+      {
+        "of": "ED13LCN",
+        "sku": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+        "vol": 1618,
+        "start": 146.0,
+        "w": 8.0
+      },
+      {
+        "of": "ED13LCN",
+        "sku": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+        "vol": 1618,
+        "start": 154.0,
+        "w": 8.0
+      }
     ],
     "19": [
-      { "of": "VO13LTMP", "sku": "Voll-Damm · lata 33cl", "vol": 38000, "start": 0,    "w": 1.2, "oee": 0.52 },
-      { "of": "AM05LTST", "sku": "AmiBock · lata 50cl", "vol": 67000, "start": 1.2,  "w": 2.0, "oee": 0.50 },
-      { "of": "ED05LTNN", "sku": "Estrella Damm · lata 50cl", "vol": 55000, "start": 3.4,  "w": 1.6, "oee": 0.49 },
-      { "kind": "maint",  "start": 5.0,  "w": 0.6 },
-      { "of": "FDT13LT",  "sku": "Free Damm · lata 33cl", "vol": 83000, "start": 5.6,  "w": 2.4, "oee": 0.54 },
-      { "of": "VO13LTMP", "sku": "Voll-Damm · lata 33cl", "vol": 61000, "start": 8.2,  "w": 1.8, "oee": 0.53 },
-      { "of": "ED05LTNN", "sku": "Estrella Damm · lata 50cl", "vol": 74000, "start": 10.2, "w": 2.2, "oee": 0.51 },
-      { "of": "AM05LTST", "sku": "AmiBock · lata 50cl", "vol": 49000, "start": 12.6, "w": 1.5, "oee": 0.55 }
+      {
+        "of": "XI13L12M",
+        "sku": "XIBECA 1/3 LATA PACK CARTON 12U. MP",
+        "vol": 792,
+        "start": 0.0,
+        "w": 6.4,
+        "oee": 0.545
+      },
+      {
+        "of": "EX12LB24",
+        "sku": "ESTRELLA DAMM BCN 4,6 1/2 LATA B-24 P.HT",
+        "vol": 198,
+        "start": 6.4,
+        "w": 2.0,
+        "oee": 0.52
+      },
+      {
+        "of": "EN12B24I",
+        "sku": "ESTRELLA DAMM BCN 0,0 1/2 LATA B24U P.HT",
+        "vol": 168,
+        "start": 8.4,
+        "w": 6.0,
+        "oee": 0.398
+      },
+      {
+        "of": "EX12LBN",
+        "sku": "ESTRELLA DAMM BCN 4,6 1/2 LATA BAND. LC",
+        "vol": 540,
+        "start": 14.4,
+        "w": 8.0,
+        "oee": 0.36
+      },
+      {
+        "of": "EX12LBN",
+        "sku": "ESTRELLA DAMM BCN 4,6 1/2 LATA BAND. LC",
+        "vol": 356,
+        "start": 22.4,
+        "w": 2.0,
+        "oee": 0.36
+      },
+      {
+        "of": "VO12LTN",
+        "sku": "VOLL DAMM 1/2 LATA CAJA 24U LC",
+        "vol": 402,
+        "start": 24.4,
+        "w": 6.0
+      },
+      {
+        "of": "VO12LTN",
+        "sku": "VOLL DAMM 1/2 LATA CAJA 24U LC",
+        "vol": 378,
+        "start": 30.4,
+        "w": 2.0
+      },
+      {
+        "of": "ED12LNF",
+        "sku": "ESTRELLA DAMM 50CL LATA LC PA08F",
+        "vol": 180,
+        "start": 32.4,
+        "w": 6.0
+      },
+      {
+        "of": "ED12LN",
+        "sku": "ESTRELLA DAMM 50CL LATA LC",
+        "vol": 900,
+        "start": 38.4,
+        "w": 8.0
+      },
+      {
+        "of": "ED12LN",
+        "sku": "ESTRELLA DAMM 50CL LATA LC",
+        "vol": 900,
+        "start": 46.4,
+        "w": 8.0
+      },
+      {
+        "of": "ED12LN",
+        "sku": "ESTRELLA DAMM 50CL LATA LC",
+        "vol": 900,
+        "start": 54.4,
+        "w": 8.0
+      },
+      {
+        "of": "ED12LN",
+        "sku": "ESTRELLA DAMM 50CL LATA LC",
+        "vol": 804,
+        "start": 62.4,
+        "w": 10.0
+      },
+      {
+        "of": "DL12LT",
+        "sku": "DAMM LEMON 50CL LT LC6 F24",
+        "vol": 198,
+        "start": 72.4,
+        "w": 2.0,
+        "oee": 0.276
+      },
+      {
+        "of": "LC12LTW",
+        "sku": "ESTRELLA LEVANTE 1/2 LATA LC",
+        "vol": 388,
+        "start": 74.4,
+        "w": 4.0,
+        "oee": 0.364
+      },
+      {
+        "of": "VI12LTW",
+        "sku": "VICTORIA 1/2 LATA CAJA 24U. LC",
+        "vol": 180,
+        "start": 78.4,
+        "w": 8.0,
+        "oee": 0.421
+      },
+      {
+        "of": "VI12LTX",
+        "sku": "VICTORIA 1/2 LATA CAJA 24U. LC PR.SELEC.",
+        "vol": 438,
+        "start": 78.4,
+        "w": 6.0,
+        "oee": 0.393
+      },
+      {
+        "of": "ID12LBN",
+        "sku": "INEDIT DAMM LATA 50CL. BANDEJA 24U. 15M",
+        "vol": 90,
+        "start": 84.4,
+        "w": 2.0,
+        "oee": 0.147
+      },
+      {
+        "of": "EN1324BI",
+        "sku": "ESTRELLA DAMM BCN 0,0 1/3 LATA B24U FIN.",
+        "vol": 475,
+        "start": 86.4,
+        "w": 8.0
+      },
+      {
+        "of": "EX1324NB",
+        "sku": "ESTRELLA DAMM BCN 4,6 1/3 LATA BANDEJA24",
+        "vol": 119,
+        "start": 86.4,
+        "w": 8.0,
+        "oee": 0.27
+      },
+      {
+        "of": "EX1324NB",
+        "sku": "ESTRELLA DAMM BCN 4,6 1/3 LATA BANDEJA24",
+        "vol": 1069,
+        "start": 94.4,
+        "w": 2.0,
+        "oee": 0.27
+      },
+      {
+        "of": "ENB13LBF",
+        "sku": "ESTRELLA DAMM BCN 0,0 33CLLATA B24 FCBHT",
+        "vol": 400,
+        "start": 96.4,
+        "w": 6.0
+      },
+      {
+        "of": "3BNMSL20",
+        "sku": "BEER MARK SPENCER 4,5º 33CL L P12P UK X",
+        "vol": 10613,
+        "start": 102.4,
+        "w": 8.0
+      },
+      {
+        "of": "3BNZFLB1",
+        "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+        "vol": 27381,
+        "start": 102.4,
+        "w": 15.98,
+        "oee": 0.736
+      },
+      {
+        "of": "3BNZFLB1",
+        "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+        "vol": 40867,
+        "start": 118.38,
+        "w": 1.0,
+        "oee": 0.736
+      },
+      {
+        "of": "3BNZFLB1",
+        "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+        "vol": 38824,
+        "start": 118.4,
+        "w": 8.0,
+        "oee": 0.736
+      },
+      {
+        "of": "3BNZFLB1",
+        "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+        "vol": 38824,
+        "start": 126.4,
+        "w": 8.0,
+        "oee": 0.736
+      },
+      {
+        "of": "3BNZFLB1",
+        "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+        "vol": 38824,
+        "start": 134.4,
+        "w": 8.0,
+        "oee": 0.736
+      },
+      {
+        "of": "3BNZFLB1",
+        "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+        "vol": 38824,
+        "start": 142.4,
+        "w": 8.0,
+        "oee": 0.736
+      },
+      {
+        "of": "3BNZFLB1",
+        "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+        "vol": 37598,
+        "start": 150.4,
+        "w": 8.0,
+        "oee": 0.736
+      },
+      {
+        "of": "ED13LTNN",
+        "sku": "ESTRELLA DAMM 1/3 LATA LC",
+        "vol": 1533,
+        "start": 158.4,
+        "w": 8.0
+      }
     ]
   },
-
-  "lineCentre": { "14": "CF Prat", "17": "CF Prat", "19": "CF Prat" },
-
+  "lineCentre": {
+    "14": "CF Prat",
+    "17": "CF Prat",
+    "19": "CF Prat"
+  },
   "recommendations": {
-    "17": {
-      "line": "Line 17", "position": "after AM05LTST",
-      "oeeDelta": "+6.2", "oeeGood": true,
-      "deadline": "+1 day", "ordersMoved": 1,
-      "naiveBand": { "line": "14", "start": 4.0, "w": 1.5 },
-      "plan": {
-        "14": [ { "of": "FDT13LT", "start": 0, "w": 1.4, "oee": 0.54 }, { "of": "ED13LTNN", "start": 1.4, "w": 2.6, "oee": 0.51 }, { "of": "VO13LTMP", "start": 4.0, "w": 1.0, "oee": 0.56 } ],
-        "17": [ { "of": "AM05LTST", "start": 0, "w": 1.8, "oee": 0.58 }, { "of": "ED13LTNN", "start": 1.8, "w": 1.6, "oee": 0.55 }, { "of": "ED13LTNN", "start": 3.4, "w": 1.6, "oee": 0.57, "kind": "ins" }, { "of": "FDT13LT", "start": 5.0, "w": 1.4, "oee": 0.56, "kind": "shift" } ],
-        "19": [ { "of": "VO13LTMP", "start": 0, "w": 1.2, "oee": 0.52 }, { "of": "AM05LTST", "start": 1.2, "w": 2.0, "oee": 0.50 }, { "of": "ED05LTNN", "start": 3.4, "w": 1.6, "oee": 0.49 } ]
-      },
-      "ghosts": { "17": [{ "of": "FDT13LT", "start": 3.6, "w": 1.4 }] },
-      "recovery": { "line": "17", "start": 5.0, "w": 0.6, "hours": 14, "note": "Line 17 returns to baseline OEE ~14h after the urgent order — a clean same-envase restart." },
-      "moves": [
-        { "of": "FDT13LT", "line": "17", "shift": "+6h", "why": "pushed back to make room for the insertion" }
-      ],
-      "evidence": {
-        "reason": "Inserting after AM05LTST means the urgent order follows a <b>same-envase</b> neighbour — both lata 33cl. History shows that transition is cheap. The naive slot on Line 14 would instead force a brand-and-clean changeover.",
-        "breakdown": [
-          { "name": "Envase change",    "pct": 8,  "band": "lo", "val": "none" },
-          { "name": "Brand change",     "pct": 35, "band": "hi", "val": "−1.4 OEE" },
-          { "name": "Pack-size change", "pct": 15, "band": "lo", "val": "−0.3 OEE" },
-          { "name": "Cleaning / CIP",   "pct": 22, "band": "hi", "val": "−0.9 OEE" }
-        ],
-        "analogues": [
-          { "of": "004182", "date": "14 Mar 2025", "line": "17", "type": "same-envase", "oee": "0.61" },
-          { "of": "004773", "date": "02 Jun 2025", "line": "17", "type": "same-envase", "oee": "0.58" },
-          { "of": "005219", "date": "19 Sep 2025", "line": "19", "type": "same-envase", "oee": "0.55" }
-        ],
-        "n": 38, "analogueMean": "0.57", "naiveMean": "0.51", "gain": "+6.2"
-      }
-    },
     "14": {
-      "line": "Line 14", "position": "end of queue",
-      "oeeDelta": "+2.1", "oeeGood": true,
-      "deadline": "on time", "ordersMoved": 1,
+      "line": "Line 14",
+      "position": "after VO13LTMP",
+      "oeeDelta": "+0.0",
+      "oeeGood": true,
+      "deadline": "+~1 day",
+      "ordersMoved": 11,
       "naiveBand": null,
       "plan": {
-        "14": [ { "of": "FDT13LT", "start": 0, "w": 1.4, "oee": 0.54 }, { "of": "ED13LTNN", "start": 1.4, "w": 2.6, "oee": 0.51 }, { "of": "ED13LTNN", "start": 4.0, "w": 1.5, "oee": 0.52, "kind": "ins" }, { "of": "VO13LTMP", "start": 5.5, "w": 1.0, "oee": 0.55, "kind": "shift" } ],
-        "17": [ { "of": "AM05LTST", "start": 0, "w": 1.8, "oee": 0.58 }, { "of": "ED13LTNN", "start": 1.8, "w": 1.6, "oee": 0.55 }, { "of": "FDT13LT", "start": 3.6, "w": 1.4, "oee": 0.57 } ],
-        "19": [ { "of": "VO13LTMP", "start": 0, "w": 1.2, "oee": 0.52 }, { "of": "AM05LTST", "start": 1.2, "w": 2.0, "oee": 0.50 }, { "of": "ED05LTNN", "start": 3.4, "w": 1.6, "oee": 0.49 } ]
+        "14": [
+          {
+            "of": "FDT13LT",
+            "sku": "FREE DAMM TOSTADA 1/3 LATA LC",
+            "vol": 610,
+            "start": 0.0,
+            "w": 6.0,
+            "oee": 0.497
+          },
+          {
+            "of": "FDT13LT",
+            "sku": "FREE DAMM TOSTADA 1/3 LATA LC",
+            "vol": 714,
+            "start": 6.0,
+            "w": 16.0,
+            "oee": 0.497
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 832,
+            "start": 22.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 832,
+            "start": 30.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 832,
+            "start": 38.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 832,
+            "start": 46.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 665,
+            "start": 54.0,
+            "w": 16.0
+          },
+          {
+            "of": "VO13LTMP",
+            "sku": "VOLL DAMM 33CL LT LC6 MP",
+            "vol": 337,
+            "start": 70.0,
+            "w": 2.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ED13LTNN",
+            "vol": 594,
+            "start": 72.0,
+            "w": 2.7,
+            "oee": 0.48,
+            "kind": "ins"
+          },
+          {
+            "of": "VO13LTMP",
+            "sku": "VOLL DAMM 33CL LT LC6 MP",
+            "vol": 238,
+            "start": 74.7,
+            "w": 6.0,
+            "kind": "shift"
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 475,
+            "start": 80.7,
+            "w": 8.0,
+            "kind": "shift"
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 832,
+            "start": 88.7,
+            "w": 8.0,
+            "kind": "shift"
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 832,
+            "start": 96.7,
+            "w": 8.0,
+            "kind": "shift"
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 832,
+            "start": 104.7,
+            "w": 8.0,
+            "kind": "shift"
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 790,
+            "start": 112.7,
+            "w": 8.0,
+            "kind": "shift"
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 790,
+            "start": 120.7,
+            "w": 8.0,
+            "kind": "shift"
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 790,
+            "start": 128.7,
+            "w": 8.0,
+            "kind": "shift"
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 790,
+            "start": 136.7,
+            "w": 8.0,
+            "kind": "shift"
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 790,
+            "start": 144.7,
+            "w": 8.0,
+            "kind": "shift"
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 790,
+            "start": 152.7,
+            "w": 8.0,
+            "kind": "shift"
+          }
+        ],
+        "17": [
+          {
+            "of": "XI13P24M",
+            "sku": "XIBECA 1/3 LATA PACK CARTON 24U. MP",
+            "vol": 350,
+            "start": 0.0,
+            "w": 2.0,
+            "oee": 0.546
+          },
+          {
+            "of": "XI13LTN",
+            "sku": "XIBECA 1/3 LATA LC",
+            "vol": 976,
+            "start": 2.0,
+            "w": 6.0,
+            "oee": 0.614
+          },
+          {
+            "of": "XI13LTN",
+            "sku": "XIBECA 1/3 LATA LC",
+            "vol": 655,
+            "start": 8.0,
+            "w": 2.0,
+            "oee": 0.614
+          },
+          {
+            "of": "FD13LTNN",
+            "sku": "FREE DAMM 33CL LATA LC",
+            "vol": 843,
+            "start": 10.0,
+            "w": 9.87,
+            "oee": 0.549
+          },
+          {
+            "of": "FD13LTNN",
+            "sku": "FREE DAMM 33CL LATA LC",
+            "vol": 317,
+            "start": 19.87,
+            "w": 1.0,
+            "oee": 0.549
+          },
+          {
+            "of": "FDL13LN",
+            "sku": "FREE DAMM LIMON 1/3 LATA LC",
+            "vol": 721,
+            "start": 20.87,
+            "w": 1.0,
+            "oee": 0.501
+          },
+          {
+            "of": "DL13LT",
+            "sku": "DAMM LEMON 1/3 LATA LC",
+            "vol": 948,
+            "start": 21.87,
+            "w": 5.87,
+            "oee": 0.539
+          },
+          {
+            "of": "DL13LT",
+            "sku": "DAMM LEMON 1/3 LATA LC",
+            "vol": 1703,
+            "start": 27.74,
+            "w": 8.0,
+            "oee": 0.539
+          },
+          {
+            "of": "DL13LT",
+            "sku": "DAMM LEMON 1/3 LATA LC",
+            "vol": 467,
+            "start": 35.74,
+            "w": 10.0,
+            "oee": 0.539
+          },
+          {
+            "of": "KE13PL12",
+            "sku": "KELER LATA 33CL. PACK C. 12U.",
+            "vol": 586,
+            "start": 45.74,
+            "w": 4.0,
+            "oee": 0.508
+          },
+          {
+            "of": "KE13LTNN",
+            "sku": "KELER 33 CL LATA LC",
+            "vol": 218,
+            "start": 49.74,
+            "w": 2.0,
+            "oee": 0.498
+          },
+          {
+            "of": "TU13LTN",
+            "sku": "TURIA 33CL LATA LC",
+            "vol": 666,
+            "start": 51.74,
+            "w": 2.98,
+            "oee": 0.599
+          },
+          {
+            "of": "TU13LTN",
+            "sku": "TURIA 33CL LATA LC",
+            "vol": 759,
+            "start": 54.72,
+            "w": 5.02,
+            "oee": 0.599
+          },
+          {
+            "of": "TUP13LT",
+            "sku": "TURIA STARK 1/3 LATA LC 24U.",
+            "vol": 251,
+            "start": 59.74,
+            "w": 11.77,
+            "oee": 0.457
+          },
+          {
+            "of": "KE13LTNN",
+            "sku": "KELER 33 CL LATA LC",
+            "vol": 378,
+            "start": 71.51,
+            "w": 1.0,
+            "oee": 0.498
+          },
+          {
+            "of": "LC13LTNN",
+            "sku": "ESTRELLA LEVANTE 1/3 LATA LC",
+            "vol": 516,
+            "start": 72.51,
+            "w": 2.0,
+            "oee": 0.563
+          },
+          {
+            "of": "LC13LTNN",
+            "sku": "ESTRELLA LEVANTE 1/3 LATA LC",
+            "vol": 1253,
+            "start": 74.51,
+            "w": 2.0,
+            "oee": 0.563
+          },
+          {
+            "of": "SK13LN",
+            "sku": "SKOL 1/3 LATA LC",
+            "vol": 224,
+            "start": 76.51,
+            "w": 8.0,
+            "oee": 0.59
+          },
+          {
+            "of": "SK13LN",
+            "sku": "SKOL 1/3 LATA LC",
+            "vol": 1703,
+            "start": 84.51,
+            "w": 8.0,
+            "oee": 0.59
+          },
+          {
+            "of": "SK13LN",
+            "sku": "SKOL 1/3 LATA LC",
+            "vol": 1607,
+            "start": 92.51,
+            "w": 8.0,
+            "oee": 0.59
+          },
+          {
+            "of": "VO13LT",
+            "sku": "VOLL DAMM 1/3 LATA LC",
+            "vol": 1594,
+            "start": 100.51,
+            "w": 15.98
+          },
+          {
+            "of": "VO13LT",
+            "sku": "VOLL DAMM 1/3 LATA LC",
+            "vol": 1703,
+            "start": 116.49,
+            "w": 1.0
+          },
+          {
+            "of": "VO13LT",
+            "sku": "VOLL DAMM 1/3 LATA LC",
+            "vol": 1618,
+            "start": 117.49,
+            "w": 2.0
+          },
+          {
+            "of": "VO13LT",
+            "sku": "VOLL DAMM 1/3 LATA LC",
+            "vol": 1174,
+            "start": 119.49,
+            "w": 6.0
+          },
+          {
+            "of": "ED13LCN",
+            "sku": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+            "vol": 239,
+            "start": 125.49,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LCN",
+            "sku": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+            "vol": 1618,
+            "start": 133.49,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LCN",
+            "sku": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+            "vol": 1618,
+            "start": 141.49,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LCN",
+            "sku": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+            "vol": 1618,
+            "start": 149.49,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LCN",
+            "sku": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+            "vol": 1618,
+            "start": 157.49,
+            "w": 8.0
+          }
+        ],
+        "19": [
+          {
+            "of": "XI13L12M",
+            "sku": "XIBECA 1/3 LATA PACK CARTON 12U. MP",
+            "vol": 792,
+            "start": 0.0,
+            "w": 6.4,
+            "oee": 0.545
+          },
+          {
+            "of": "EX12LB24",
+            "sku": "ESTRELLA DAMM BCN 4,6 1/2 LATA B-24 P.HT",
+            "vol": 198,
+            "start": 6.4,
+            "w": 2.0,
+            "oee": 0.52
+          },
+          {
+            "of": "EN12B24I",
+            "sku": "ESTRELLA DAMM BCN 0,0 1/2 LATA B24U P.HT",
+            "vol": 168,
+            "start": 8.4,
+            "w": 6.0,
+            "oee": 0.398
+          },
+          {
+            "of": "EX12LBN",
+            "sku": "ESTRELLA DAMM BCN 4,6 1/2 LATA BAND. LC",
+            "vol": 540,
+            "start": 14.4,
+            "w": 8.0,
+            "oee": 0.36
+          },
+          {
+            "of": "EX12LBN",
+            "sku": "ESTRELLA DAMM BCN 4,6 1/2 LATA BAND. LC",
+            "vol": 356,
+            "start": 22.4,
+            "w": 2.0,
+            "oee": 0.36
+          },
+          {
+            "of": "VO12LTN",
+            "sku": "VOLL DAMM 1/2 LATA CAJA 24U LC",
+            "vol": 402,
+            "start": 24.4,
+            "w": 6.0
+          },
+          {
+            "of": "VO12LTN",
+            "sku": "VOLL DAMM 1/2 LATA CAJA 24U LC",
+            "vol": 378,
+            "start": 30.4,
+            "w": 2.0
+          },
+          {
+            "of": "ED12LNF",
+            "sku": "ESTRELLA DAMM 50CL LATA LC PA08F",
+            "vol": 180,
+            "start": 32.4,
+            "w": 6.0
+          },
+          {
+            "of": "ED12LN",
+            "sku": "ESTRELLA DAMM 50CL LATA LC",
+            "vol": 900,
+            "start": 38.4,
+            "w": 8.0
+          },
+          {
+            "of": "ED12LN",
+            "sku": "ESTRELLA DAMM 50CL LATA LC",
+            "vol": 900,
+            "start": 46.4,
+            "w": 8.0
+          },
+          {
+            "of": "ED12LN",
+            "sku": "ESTRELLA DAMM 50CL LATA LC",
+            "vol": 900,
+            "start": 54.4,
+            "w": 8.0
+          },
+          {
+            "of": "ED12LN",
+            "sku": "ESTRELLA DAMM 50CL LATA LC",
+            "vol": 804,
+            "start": 62.4,
+            "w": 10.0
+          },
+          {
+            "of": "DL12LT",
+            "sku": "DAMM LEMON 50CL LT LC6 F24",
+            "vol": 198,
+            "start": 72.4,
+            "w": 2.0,
+            "oee": 0.276
+          },
+          {
+            "of": "LC12LTW",
+            "sku": "ESTRELLA LEVANTE 1/2 LATA LC",
+            "vol": 388,
+            "start": 74.4,
+            "w": 4.0,
+            "oee": 0.364
+          },
+          {
+            "of": "VI12LTW",
+            "sku": "VICTORIA 1/2 LATA CAJA 24U. LC",
+            "vol": 180,
+            "start": 78.4,
+            "w": 8.0,
+            "oee": 0.421
+          },
+          {
+            "of": "VI12LTX",
+            "sku": "VICTORIA 1/2 LATA CAJA 24U. LC PR.SELEC.",
+            "vol": 438,
+            "start": 86.4,
+            "w": 6.0,
+            "oee": 0.393
+          },
+          {
+            "of": "ID12LBN",
+            "sku": "INEDIT DAMM LATA 50CL. BANDEJA 24U. 15M",
+            "vol": 90,
+            "start": 92.4,
+            "w": 2.0,
+            "oee": 0.147
+          },
+          {
+            "of": "EN1324BI",
+            "sku": "ESTRELLA DAMM BCN 0,0 1/3 LATA B24U FIN.",
+            "vol": 475,
+            "start": 94.4,
+            "w": 8.0
+          },
+          {
+            "of": "EX1324NB",
+            "sku": "ESTRELLA DAMM BCN 4,6 1/3 LATA BANDEJA24",
+            "vol": 119,
+            "start": 102.4,
+            "w": 8.0,
+            "oee": 0.27
+          },
+          {
+            "of": "EX1324NB",
+            "sku": "ESTRELLA DAMM BCN 4,6 1/3 LATA BANDEJA24",
+            "vol": 1069,
+            "start": 110.4,
+            "w": 2.0,
+            "oee": 0.27
+          },
+          {
+            "of": "ENB13LBF",
+            "sku": "ESTRELLA DAMM BCN 0,0 33CLLATA B24 FCBHT",
+            "vol": 400,
+            "start": 112.4,
+            "w": 6.0
+          },
+          {
+            "of": "3BNMSL20",
+            "sku": "BEER MARK SPENCER 4,5º 33CL L P12P UK X",
+            "vol": 10613,
+            "start": 118.4,
+            "w": 8.0
+          },
+          {
+            "of": "3BNZFLB1",
+            "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+            "vol": 27381,
+            "start": 126.4,
+            "w": 15.98,
+            "oee": 0.736
+          },
+          {
+            "of": "3BNZFLB1",
+            "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+            "vol": 40867,
+            "start": 142.38,
+            "w": 1.0,
+            "oee": 0.736
+          },
+          {
+            "of": "3BNZFLB1",
+            "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+            "vol": 38824,
+            "start": 143.38,
+            "w": 8.0,
+            "oee": 0.736
+          },
+          {
+            "of": "3BNZFLB1",
+            "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+            "vol": 38824,
+            "start": 151.38,
+            "w": 8.0,
+            "oee": 0.736
+          },
+          {
+            "of": "3BNZFLB1",
+            "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+            "vol": 38824,
+            "start": 159.38,
+            "w": 8.0,
+            "oee": 0.736
+          },
+          {
+            "of": "3BNZFLB1",
+            "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+            "vol": 38824,
+            "start": 167.38,
+            "w": 8.0,
+            "oee": 0.736
+          },
+          {
+            "of": "3BNZFLB1",
+            "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+            "vol": 37598,
+            "start": 175.38,
+            "w": 8.0,
+            "oee": 0.736
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 1533,
+            "start": 183.38,
+            "w": 8.0
+          }
+        ]
       },
-      "ghosts": { "14": [{ "of": "VO13LTMP", "start": 4.0, "w": 1.0 }] },
-      "recovery": { "line": "14", "start": 5.5, "w": 1.1, "hours": 26, "note": "Line 14 needs ~26h to recover — the brand change leaves a longer dirty-restart tail that drags the next order down." },
+      "ghosts": {
+        "14": [
+          {
+            "of": "VO13LTMP",
+            "start": 72.0,
+            "w": 6.0
+          },
+          {
+            "of": "ED13LTNN",
+            "start": 78.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "start": 86.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "start": 94.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "start": 102.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "start": 110.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "start": 118.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "start": 126.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "start": 134.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "start": 142.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "start": 150.0,
+            "w": 8.0
+          }
+        ]
+      },
+      "recovery": {
+        "line": "14",
+        "start": 74.7,
+        "w": 7.0,
+        "hours": 7,
+        "note": "Modelled estimate: hours for the line to return to baseline OEE after the urgent insertion. Built from changeover + transition-type tail; not a measurement."
+      },
       "moves": [
-        { "of": "VO13LTMP", "line": "14", "shift": "+6h", "why": "pushed back behind the inserted order" }
+        {
+          "of": "VO13LTMP",
+          "line": 14,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LTNN",
+          "line": 14,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LTNN",
+          "line": 14,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LTNN",
+          "line": 14,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LTNN",
+          "line": 14,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LTNN",
+          "line": 14,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LTNN",
+          "line": 14,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LTNN",
+          "line": 14,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LTNN",
+          "line": 14,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LTNN",
+          "line": 14,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LTNN",
+          "line": 14,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        }
       ],
       "evidence": {
-        "reason": "The naive slot — the urgent order sits at the end of Line 14’s existing queue, right after FDT13LT. That is a <b>brand change</b> with moderate historical cost. It hits the deadline but leaves OEE on the table versus Line 17.",
+        "reason": "On Line 14 after VO13LTMP, the urgent order matches a <b>same-sku</b> changeover. CF format matrix shows no format change and no other change components. History across <b>6</b> same-line, same-transition, same-format cases shows an average OEE of <b>0.48</b>. That is <b>+0.0</b> OEE points above the naive slot.",
         "breakdown": [
-          { "name": "Envase change",    "pct": 12, "band": "lo", "val": "none" },
-          { "name": "Brand change",     "pct": 48, "band": "hi", "val": "−2.0 OEE" },
-          { "name": "Pack-size change", "pct": 20, "band": "lo", "val": "−0.4 OEE" },
-          { "name": "Cleaning / CIP",   "pct": 30, "band": "hi", "val": "−1.1 OEE" }
+          {
+            "name": "Format / Envase CF",
+            "pct": 0,
+            "band": "lo",
+            "val": "0 min — same format"
+          },
+          {
+            "name": "Brand / product / packaging change",
+            "pct": 0,
+            "band": "lo",
+            "val": "none"
+          },
+          {
+            "name": "Cleaning between runs",
+            "pct": 13,
+            "band": "lo",
+            "val": "55 min (mean of analogue pool)"
+          },
+          {
+            "name": "PNP / restart",
+            "pct": 57,
+            "band": "hi",
+            "val": "229 min historical mean"
+          },
+          {
+            "name": "Historical actual changeover",
+            "pct": 1,
+            "band": "lo",
+            "val": "9 min mean"
+          },
+          {
+            "name": "Predicted OEE (analogue mean)",
+            "pct": 48,
+            "band": "hi",
+            "val": "0.48"
+          },
+          {
+            "name": "Line baseline OEE",
+            "pct": 42,
+            "band": "hi",
+            "val": "0.42"
+          }
         ],
         "analogues": [
-          { "of": "003901", "date": "22 Feb 2025", "line": "14", "type": "brand", "oee": "0.53" },
-          { "of": "004540", "date": "11 May 2025", "line": "14", "type": "brand", "oee": "0.50" },
-          { "of": "005077", "date": "30 Aug 2025", "line": "17", "type": "brand", "oee": "0.52" }
+          {
+            "of": "0000529456-1",
+            "date": "23 Jan 2025",
+            "line": "14",
+            "type": "same-sku",
+            "oee": "0.52"
+          },
+          {
+            "of": "0000616549-1",
+            "date": "14 Jul 2025",
+            "line": "14",
+            "type": "same-sku",
+            "oee": "0.28"
+          },
+          {
+            "of": "PRT9900016193-M",
+            "date": "24 Jul 2025",
+            "line": "14",
+            "type": "same-sku",
+            "oee": "0.47"
+          },
+          {
+            "of": "PRT9900016234-M",
+            "date": "27 Jul 2025",
+            "line": "14",
+            "type": "same-sku",
+            "oee": "0.52"
+          },
+          {
+            "of": "0000630542-1",
+            "date": "28 Jul 2025",
+            "line": "14",
+            "type": "same-sku",
+            "oee": "0.48"
+          },
+          {
+            "of": "0000626534-1",
+            "date": "29 Jul 2025",
+            "line": "14",
+            "type": "same-sku",
+            "oee": "0.42"
+          }
         ],
-        "n": 24, "analogueMean": "0.52", "naiveMean": "0.51", "gain": "+2.1"
+        "n": 6,
+        "analogueMean": "0.480",
+        "naiveMean": "0.480",
+        "gain": "+0.0"
+      }
+    },
+    "17": {
+      "line": "Line 17",
+      "position": "after ED13LCN",
+      "oeeDelta": "+9.4",
+      "oeeGood": true,
+      "deadline": "+~1 day",
+      "ordersMoved": 4,
+      "naiveBand": {
+        "line": "14",
+        "start": 6.0,
+        "w": 3.3
+      },
+      "plan": {
+        "14": [
+          {
+            "of": "FDT13LT",
+            "sku": "FREE DAMM TOSTADA 1/3 LATA LC",
+            "vol": 610,
+            "start": 0.0,
+            "w": 6.0,
+            "oee": 0.497
+          },
+          {
+            "of": "FDT13LT",
+            "sku": "FREE DAMM TOSTADA 1/3 LATA LC",
+            "vol": 714,
+            "start": 6.0,
+            "w": 16.0,
+            "oee": 0.497
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 832,
+            "start": 22.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 832,
+            "start": 30.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 832,
+            "start": 38.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 832,
+            "start": 46.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 665,
+            "start": 54.0,
+            "w": 16.0
+          },
+          {
+            "of": "VO13LTMP",
+            "sku": "VOLL DAMM 33CL LT LC6 MP",
+            "vol": 337,
+            "start": 70.0,
+            "w": 2.0
+          },
+          {
+            "of": "VO13LTMP",
+            "sku": "VOLL DAMM 33CL LT LC6 MP",
+            "vol": 238,
+            "start": 72.0,
+            "w": 6.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 475,
+            "start": 78.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 832,
+            "start": 86.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 832,
+            "start": 94.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 832,
+            "start": 102.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 790,
+            "start": 110.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 790,
+            "start": 118.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 790,
+            "start": 126.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 790,
+            "start": 134.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 790,
+            "start": 142.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 790,
+            "start": 150.0,
+            "w": 8.0
+          }
+        ],
+        "17": [
+          {
+            "of": "XI13P24M",
+            "sku": "XIBECA 1/3 LATA PACK CARTON 24U. MP",
+            "vol": 350,
+            "start": 0.0,
+            "w": 2.0,
+            "oee": 0.546
+          },
+          {
+            "of": "XI13LTN",
+            "sku": "XIBECA 1/3 LATA LC",
+            "vol": 976,
+            "start": 2.0,
+            "w": 6.0,
+            "oee": 0.614
+          },
+          {
+            "of": "XI13LTN",
+            "sku": "XIBECA 1/3 LATA LC",
+            "vol": 655,
+            "start": 8.0,
+            "w": 2.0,
+            "oee": 0.614
+          },
+          {
+            "of": "FD13LTNN",
+            "sku": "FREE DAMM 33CL LATA LC",
+            "vol": 843,
+            "start": 10.0,
+            "w": 9.87,
+            "oee": 0.549
+          },
+          {
+            "of": "FD13LTNN",
+            "sku": "FREE DAMM 33CL LATA LC",
+            "vol": 317,
+            "start": 19.87,
+            "w": 1.0,
+            "oee": 0.549
+          },
+          {
+            "of": "FDL13LN",
+            "sku": "FREE DAMM LIMON 1/3 LATA LC",
+            "vol": 721,
+            "start": 20.87,
+            "w": 1.0,
+            "oee": 0.501
+          },
+          {
+            "of": "DL13LT",
+            "sku": "DAMM LEMON 1/3 LATA LC",
+            "vol": 948,
+            "start": 21.87,
+            "w": 5.87,
+            "oee": 0.539
+          },
+          {
+            "of": "DL13LT",
+            "sku": "DAMM LEMON 1/3 LATA LC",
+            "vol": 1703,
+            "start": 27.74,
+            "w": 8.0,
+            "oee": 0.539
+          },
+          {
+            "of": "DL13LT",
+            "sku": "DAMM LEMON 1/3 LATA LC",
+            "vol": 467,
+            "start": 35.74,
+            "w": 10.0,
+            "oee": 0.539
+          },
+          {
+            "of": "KE13PL12",
+            "sku": "KELER LATA 33CL. PACK C. 12U.",
+            "vol": 586,
+            "start": 45.74,
+            "w": 4.0,
+            "oee": 0.508
+          },
+          {
+            "of": "KE13LTNN",
+            "sku": "KELER 33 CL LATA LC",
+            "vol": 218,
+            "start": 49.74,
+            "w": 2.0,
+            "oee": 0.498
+          },
+          {
+            "of": "TU13LTN",
+            "sku": "TURIA 33CL LATA LC",
+            "vol": 666,
+            "start": 51.74,
+            "w": 2.98,
+            "oee": 0.599
+          },
+          {
+            "of": "TU13LTN",
+            "sku": "TURIA 33CL LATA LC",
+            "vol": 759,
+            "start": 54.72,
+            "w": 5.02,
+            "oee": 0.599
+          },
+          {
+            "of": "TUP13LT",
+            "sku": "TURIA STARK 1/3 LATA LC 24U.",
+            "vol": 251,
+            "start": 59.74,
+            "w": 11.77,
+            "oee": 0.457
+          },
+          {
+            "of": "KE13LTNN",
+            "sku": "KELER 33 CL LATA LC",
+            "vol": 378,
+            "start": 71.51,
+            "w": 1.0,
+            "oee": 0.498
+          },
+          {
+            "of": "LC13LTNN",
+            "sku": "ESTRELLA LEVANTE 1/3 LATA LC",
+            "vol": 516,
+            "start": 72.51,
+            "w": 2.0,
+            "oee": 0.563
+          },
+          {
+            "of": "LC13LTNN",
+            "sku": "ESTRELLA LEVANTE 1/3 LATA LC",
+            "vol": 1253,
+            "start": 74.51,
+            "w": 2.0,
+            "oee": 0.563
+          },
+          {
+            "of": "SK13LN",
+            "sku": "SKOL 1/3 LATA LC",
+            "vol": 224,
+            "start": 76.51,
+            "w": 8.0,
+            "oee": 0.59
+          },
+          {
+            "of": "SK13LN",
+            "sku": "SKOL 1/3 LATA LC",
+            "vol": 1703,
+            "start": 84.51,
+            "w": 8.0,
+            "oee": 0.59
+          },
+          {
+            "of": "SK13LN",
+            "sku": "SKOL 1/3 LATA LC",
+            "vol": 1607,
+            "start": 92.51,
+            "w": 8.0,
+            "oee": 0.59
+          },
+          {
+            "of": "VO13LT",
+            "sku": "VOLL DAMM 1/3 LATA LC",
+            "vol": 1594,
+            "start": 100.51,
+            "w": 15.98
+          },
+          {
+            "of": "VO13LT",
+            "sku": "VOLL DAMM 1/3 LATA LC",
+            "vol": 1703,
+            "start": 116.49,
+            "w": 1.0
+          },
+          {
+            "of": "VO13LT",
+            "sku": "VOLL DAMM 1/3 LATA LC",
+            "vol": 1618,
+            "start": 117.49,
+            "w": 2.0
+          },
+          {
+            "of": "VO13LT",
+            "sku": "VOLL DAMM 1/3 LATA LC",
+            "vol": 1174,
+            "start": 119.49,
+            "w": 6.0
+          },
+          {
+            "of": "ED13LCN",
+            "sku": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+            "vol": 239,
+            "start": 125.49,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ED13LTNN",
+            "vol": 594,
+            "start": 133.49,
+            "w": 3.3,
+            "oee": 0.574,
+            "kind": "ins"
+          },
+          {
+            "of": "ED13LCN",
+            "sku": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+            "vol": 1618,
+            "start": 136.79,
+            "w": 8.0,
+            "kind": "shift"
+          },
+          {
+            "of": "ED13LCN",
+            "sku": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+            "vol": 1618,
+            "start": 144.79,
+            "w": 8.0,
+            "kind": "shift"
+          },
+          {
+            "of": "ED13LCN",
+            "sku": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+            "vol": 1618,
+            "start": 152.79,
+            "w": 8.0,
+            "kind": "shift"
+          },
+          {
+            "of": "ED13LCN",
+            "sku": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+            "vol": 1618,
+            "start": 160.79,
+            "w": 8.0,
+            "kind": "shift"
+          }
+        ],
+        "19": [
+          {
+            "of": "XI13L12M",
+            "sku": "XIBECA 1/3 LATA PACK CARTON 12U. MP",
+            "vol": 792,
+            "start": 0.0,
+            "w": 6.4,
+            "oee": 0.545
+          },
+          {
+            "of": "EX12LB24",
+            "sku": "ESTRELLA DAMM BCN 4,6 1/2 LATA B-24 P.HT",
+            "vol": 198,
+            "start": 6.4,
+            "w": 2.0,
+            "oee": 0.52
+          },
+          {
+            "of": "EN12B24I",
+            "sku": "ESTRELLA DAMM BCN 0,0 1/2 LATA B24U P.HT",
+            "vol": 168,
+            "start": 8.4,
+            "w": 6.0,
+            "oee": 0.398
+          },
+          {
+            "of": "EX12LBN",
+            "sku": "ESTRELLA DAMM BCN 4,6 1/2 LATA BAND. LC",
+            "vol": 540,
+            "start": 14.4,
+            "w": 8.0,
+            "oee": 0.36
+          },
+          {
+            "of": "EX12LBN",
+            "sku": "ESTRELLA DAMM BCN 4,6 1/2 LATA BAND. LC",
+            "vol": 356,
+            "start": 22.4,
+            "w": 2.0,
+            "oee": 0.36
+          },
+          {
+            "of": "VO12LTN",
+            "sku": "VOLL DAMM 1/2 LATA CAJA 24U LC",
+            "vol": 402,
+            "start": 24.4,
+            "w": 6.0
+          },
+          {
+            "of": "VO12LTN",
+            "sku": "VOLL DAMM 1/2 LATA CAJA 24U LC",
+            "vol": 378,
+            "start": 30.4,
+            "w": 2.0
+          },
+          {
+            "of": "ED12LNF",
+            "sku": "ESTRELLA DAMM 50CL LATA LC PA08F",
+            "vol": 180,
+            "start": 32.4,
+            "w": 6.0
+          },
+          {
+            "of": "ED12LN",
+            "sku": "ESTRELLA DAMM 50CL LATA LC",
+            "vol": 900,
+            "start": 38.4,
+            "w": 8.0
+          },
+          {
+            "of": "ED12LN",
+            "sku": "ESTRELLA DAMM 50CL LATA LC",
+            "vol": 900,
+            "start": 46.4,
+            "w": 8.0
+          },
+          {
+            "of": "ED12LN",
+            "sku": "ESTRELLA DAMM 50CL LATA LC",
+            "vol": 900,
+            "start": 54.4,
+            "w": 8.0
+          },
+          {
+            "of": "ED12LN",
+            "sku": "ESTRELLA DAMM 50CL LATA LC",
+            "vol": 804,
+            "start": 62.4,
+            "w": 10.0
+          },
+          {
+            "of": "DL12LT",
+            "sku": "DAMM LEMON 50CL LT LC6 F24",
+            "vol": 198,
+            "start": 72.4,
+            "w": 2.0,
+            "oee": 0.276
+          },
+          {
+            "of": "LC12LTW",
+            "sku": "ESTRELLA LEVANTE 1/2 LATA LC",
+            "vol": 388,
+            "start": 74.4,
+            "w": 4.0,
+            "oee": 0.364
+          },
+          {
+            "of": "VI12LTW",
+            "sku": "VICTORIA 1/2 LATA CAJA 24U. LC",
+            "vol": 180,
+            "start": 78.4,
+            "w": 8.0,
+            "oee": 0.421
+          },
+          {
+            "of": "VI12LTX",
+            "sku": "VICTORIA 1/2 LATA CAJA 24U. LC PR.SELEC.",
+            "vol": 438,
+            "start": 86.4,
+            "w": 6.0,
+            "oee": 0.393
+          },
+          {
+            "of": "ID12LBN",
+            "sku": "INEDIT DAMM LATA 50CL. BANDEJA 24U. 15M",
+            "vol": 90,
+            "start": 92.4,
+            "w": 2.0,
+            "oee": 0.147
+          },
+          {
+            "of": "EN1324BI",
+            "sku": "ESTRELLA DAMM BCN 0,0 1/3 LATA B24U FIN.",
+            "vol": 475,
+            "start": 94.4,
+            "w": 8.0
+          },
+          {
+            "of": "EX1324NB",
+            "sku": "ESTRELLA DAMM BCN 4,6 1/3 LATA BANDEJA24",
+            "vol": 119,
+            "start": 102.4,
+            "w": 8.0,
+            "oee": 0.27
+          },
+          {
+            "of": "EX1324NB",
+            "sku": "ESTRELLA DAMM BCN 4,6 1/3 LATA BANDEJA24",
+            "vol": 1069,
+            "start": 110.4,
+            "w": 2.0,
+            "oee": 0.27
+          },
+          {
+            "of": "ENB13LBF",
+            "sku": "ESTRELLA DAMM BCN 0,0 33CLLATA B24 FCBHT",
+            "vol": 400,
+            "start": 112.4,
+            "w": 6.0
+          },
+          {
+            "of": "3BNMSL20",
+            "sku": "BEER MARK SPENCER 4,5º 33CL L P12P UK X",
+            "vol": 10613,
+            "start": 118.4,
+            "w": 8.0
+          },
+          {
+            "of": "3BNZFLB1",
+            "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+            "vol": 27381,
+            "start": 126.4,
+            "w": 15.98,
+            "oee": 0.736
+          },
+          {
+            "of": "3BNZFLB1",
+            "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+            "vol": 40867,
+            "start": 142.38,
+            "w": 1.0,
+            "oee": 0.736
+          },
+          {
+            "of": "3BNZFLB1",
+            "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+            "vol": 38824,
+            "start": 143.38,
+            "w": 8.0,
+            "oee": 0.736
+          },
+          {
+            "of": "3BNZFLB1",
+            "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+            "vol": 38824,
+            "start": 151.38,
+            "w": 8.0,
+            "oee": 0.736
+          },
+          {
+            "of": "3BNZFLB1",
+            "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+            "vol": 38824,
+            "start": 159.38,
+            "w": 8.0,
+            "oee": 0.736
+          },
+          {
+            "of": "3BNZFLB1",
+            "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+            "vol": 38824,
+            "start": 167.38,
+            "w": 8.0,
+            "oee": 0.736
+          },
+          {
+            "of": "3BNZFLB1",
+            "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+            "vol": 37598,
+            "start": 175.38,
+            "w": 8.0,
+            "oee": 0.736
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 1533,
+            "start": 183.38,
+            "w": 8.0
+          }
+        ]
+      },
+      "ghosts": {
+        "17": [
+          {
+            "of": "ED13LCN",
+            "start": 133.49,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LCN",
+            "start": 141.49,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LCN",
+            "start": 149.49,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LCN",
+            "start": 157.49,
+            "w": 8.0
+          }
+        ]
+      },
+      "recovery": {
+        "line": "17",
+        "start": 136.79,
+        "w": 7.0,
+        "hours": 7,
+        "note": "Modelled estimate: hours for the line to return to baseline OEE after the urgent insertion. Built from changeover + transition-type tail; not a measurement."
+      },
+      "moves": [
+        {
+          "of": "ED13LCN",
+          "line": 17,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LCN",
+          "line": 17,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LCN",
+          "line": 17,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LCN",
+          "line": 17,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        }
+      ],
+      "evidence": {
+        "reason": "On Line 17 after ED13LCN, the urgent order matches a <b>same-sku</b> changeover. CF format matrix shows no format change and no other change components. History across <b>6</b> same-line, same-transition, same-format cases shows an average OEE of <b>0.57</b>. That is <b>+9.4</b> OEE points above the naive slot.",
+        "breakdown": [
+          {
+            "name": "Format / Envase CF",
+            "pct": 0,
+            "band": "lo",
+            "val": "0 min — same format"
+          },
+          {
+            "name": "Brand / product / packaging change",
+            "pct": 0,
+            "band": "lo",
+            "val": "none"
+          },
+          {
+            "name": "Cleaning between runs",
+            "pct": 7,
+            "band": "lo",
+            "val": "29 min (mean of analogue pool)"
+          },
+          {
+            "name": "PNP / restart",
+            "pct": 57,
+            "band": "hi",
+            "val": "229 min historical mean"
+          },
+          {
+            "name": "Historical actual changeover",
+            "pct": 1,
+            "band": "lo",
+            "val": "9 min mean"
+          },
+          {
+            "name": "Predicted OEE (analogue mean)",
+            "pct": 57,
+            "band": "lo",
+            "val": "0.57"
+          },
+          {
+            "name": "Line baseline OEE",
+            "pct": 53,
+            "band": "hi",
+            "val": "0.53"
+          }
+        ],
+        "analogues": [
+          {
+            "of": "0000530612-1",
+            "date": "31 Jan 2025",
+            "line": "17",
+            "type": "same-sku",
+            "oee": "0.52"
+          },
+          {
+            "of": "PRT9900016666-M",
+            "date": "04 Nov 2025",
+            "line": "17",
+            "type": "same-sku",
+            "oee": "0.13"
+          },
+          {
+            "of": "0000637885-1",
+            "date": "01 Sep 2025",
+            "line": "17",
+            "type": "same-sku",
+            "oee": "0.62"
+          },
+          {
+            "of": "PRT9900016453-M",
+            "date": "08 Sep 2025",
+            "line": "17",
+            "type": "same-sku",
+            "oee": "0.64"
+          },
+          {
+            "of": "PRT9900016474-M",
+            "date": "13 Sep 2025",
+            "line": "17",
+            "type": "same-sku",
+            "oee": "0.77"
+          },
+          {
+            "of": "0000664561-1",
+            "date": "26 Sep 2025",
+            "line": "17",
+            "type": "same-sku",
+            "oee": "0.68"
+          }
+        ],
+        "n": 6,
+        "analogueMean": "0.574",
+        "naiveMean": "0.480",
+        "gain": "+9.4"
       }
     },
     "19": {
-      "line": "Line 19", "position": "end of queue",
-      "oeeDelta": "−0.4", "oeeGood": false,
-      "deadline": "+1 day", "ordersMoved": 0,
-      "naiveBand": null,
+      "line": "Line 19",
+      "position": "after ED13LTNN",
+      "oeeDelta": "+16.9",
+      "oeeGood": true,
+      "deadline": "on time",
+      "ordersMoved": 0,
+      "naiveBand": {
+        "line": "14",
+        "start": 6.0,
+        "w": 2.48
+      },
       "plan": {
-        "14": [ { "of": "FDT13LT", "start": 0, "w": 1.4, "oee": 0.54 }, { "of": "ED13LTNN", "start": 1.4, "w": 2.6, "oee": 0.51 }, { "of": "VO13LTMP", "start": 4.0, "w": 1.0, "oee": 0.56 } ],
-        "17": [ { "of": "AM05LTST", "start": 0, "w": 1.8, "oee": 0.58 }, { "of": "ED13LTNN", "start": 1.8, "w": 1.6, "oee": 0.55 }, { "of": "FDT13LT", "start": 3.6, "w": 1.4, "oee": 0.57 } ],
-        "19": [ { "of": "VO13LTMP", "start": 0, "w": 1.2, "oee": 0.52 }, { "of": "AM05LTST", "start": 1.2, "w": 2.0, "oee": 0.50 }, { "of": "ED05LTNN", "start": 3.4, "w": 1.6, "oee": 0.49 }, { "of": "ED13LTNN", "start": 5.0, "w": 1.6, "oee": 0.48, "kind": "ins" } ]
+        "14": [
+          {
+            "of": "FDT13LT",
+            "sku": "FREE DAMM TOSTADA 1/3 LATA LC",
+            "vol": 610,
+            "start": 0.0,
+            "w": 6.0,
+            "oee": 0.497
+          },
+          {
+            "of": "FDT13LT",
+            "sku": "FREE DAMM TOSTADA 1/3 LATA LC",
+            "vol": 714,
+            "start": 6.0,
+            "w": 16.0,
+            "oee": 0.497
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 832,
+            "start": 22.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 832,
+            "start": 30.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 832,
+            "start": 38.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 832,
+            "start": 46.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 665,
+            "start": 54.0,
+            "w": 16.0
+          },
+          {
+            "of": "VO13LTMP",
+            "sku": "VOLL DAMM 33CL LT LC6 MP",
+            "vol": 337,
+            "start": 70.0,
+            "w": 2.0
+          },
+          {
+            "of": "VO13LTMP",
+            "sku": "VOLL DAMM 33CL LT LC6 MP",
+            "vol": 238,
+            "start": 72.0,
+            "w": 6.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 475,
+            "start": 78.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 832,
+            "start": 86.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 832,
+            "start": 94.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 832,
+            "start": 102.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 790,
+            "start": 110.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 790,
+            "start": 118.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 790,
+            "start": 126.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 790,
+            "start": 134.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 790,
+            "start": 142.0,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 790,
+            "start": 150.0,
+            "w": 8.0
+          }
+        ],
+        "17": [
+          {
+            "of": "XI13P24M",
+            "sku": "XIBECA 1/3 LATA PACK CARTON 24U. MP",
+            "vol": 350,
+            "start": 0.0,
+            "w": 2.0,
+            "oee": 0.546
+          },
+          {
+            "of": "XI13LTN",
+            "sku": "XIBECA 1/3 LATA LC",
+            "vol": 976,
+            "start": 2.0,
+            "w": 6.0,
+            "oee": 0.614
+          },
+          {
+            "of": "XI13LTN",
+            "sku": "XIBECA 1/3 LATA LC",
+            "vol": 655,
+            "start": 8.0,
+            "w": 2.0,
+            "oee": 0.614
+          },
+          {
+            "of": "FD13LTNN",
+            "sku": "FREE DAMM 33CL LATA LC",
+            "vol": 843,
+            "start": 10.0,
+            "w": 9.87,
+            "oee": 0.549
+          },
+          {
+            "of": "FD13LTNN",
+            "sku": "FREE DAMM 33CL LATA LC",
+            "vol": 317,
+            "start": 19.87,
+            "w": 1.0,
+            "oee": 0.549
+          },
+          {
+            "of": "FDL13LN",
+            "sku": "FREE DAMM LIMON 1/3 LATA LC",
+            "vol": 721,
+            "start": 20.87,
+            "w": 1.0,
+            "oee": 0.501
+          },
+          {
+            "of": "DL13LT",
+            "sku": "DAMM LEMON 1/3 LATA LC",
+            "vol": 948,
+            "start": 21.87,
+            "w": 5.87,
+            "oee": 0.539
+          },
+          {
+            "of": "DL13LT",
+            "sku": "DAMM LEMON 1/3 LATA LC",
+            "vol": 1703,
+            "start": 27.74,
+            "w": 8.0,
+            "oee": 0.539
+          },
+          {
+            "of": "DL13LT",
+            "sku": "DAMM LEMON 1/3 LATA LC",
+            "vol": 467,
+            "start": 35.74,
+            "w": 10.0,
+            "oee": 0.539
+          },
+          {
+            "of": "KE13PL12",
+            "sku": "KELER LATA 33CL. PACK C. 12U.",
+            "vol": 586,
+            "start": 45.74,
+            "w": 4.0,
+            "oee": 0.508
+          },
+          {
+            "of": "KE13LTNN",
+            "sku": "KELER 33 CL LATA LC",
+            "vol": 218,
+            "start": 49.74,
+            "w": 2.0,
+            "oee": 0.498
+          },
+          {
+            "of": "TU13LTN",
+            "sku": "TURIA 33CL LATA LC",
+            "vol": 666,
+            "start": 51.74,
+            "w": 2.98,
+            "oee": 0.599
+          },
+          {
+            "of": "TU13LTN",
+            "sku": "TURIA 33CL LATA LC",
+            "vol": 759,
+            "start": 54.72,
+            "w": 5.02,
+            "oee": 0.599
+          },
+          {
+            "of": "TUP13LT",
+            "sku": "TURIA STARK 1/3 LATA LC 24U.",
+            "vol": 251,
+            "start": 59.74,
+            "w": 11.77,
+            "oee": 0.457
+          },
+          {
+            "of": "KE13LTNN",
+            "sku": "KELER 33 CL LATA LC",
+            "vol": 378,
+            "start": 71.51,
+            "w": 1.0,
+            "oee": 0.498
+          },
+          {
+            "of": "LC13LTNN",
+            "sku": "ESTRELLA LEVANTE 1/3 LATA LC",
+            "vol": 516,
+            "start": 72.51,
+            "w": 2.0,
+            "oee": 0.563
+          },
+          {
+            "of": "LC13LTNN",
+            "sku": "ESTRELLA LEVANTE 1/3 LATA LC",
+            "vol": 1253,
+            "start": 74.51,
+            "w": 2.0,
+            "oee": 0.563
+          },
+          {
+            "of": "SK13LN",
+            "sku": "SKOL 1/3 LATA LC",
+            "vol": 224,
+            "start": 76.51,
+            "w": 8.0,
+            "oee": 0.59
+          },
+          {
+            "of": "SK13LN",
+            "sku": "SKOL 1/3 LATA LC",
+            "vol": 1703,
+            "start": 84.51,
+            "w": 8.0,
+            "oee": 0.59
+          },
+          {
+            "of": "SK13LN",
+            "sku": "SKOL 1/3 LATA LC",
+            "vol": 1607,
+            "start": 92.51,
+            "w": 8.0,
+            "oee": 0.59
+          },
+          {
+            "of": "VO13LT",
+            "sku": "VOLL DAMM 1/3 LATA LC",
+            "vol": 1594,
+            "start": 100.51,
+            "w": 15.98
+          },
+          {
+            "of": "VO13LT",
+            "sku": "VOLL DAMM 1/3 LATA LC",
+            "vol": 1703,
+            "start": 116.49,
+            "w": 1.0
+          },
+          {
+            "of": "VO13LT",
+            "sku": "VOLL DAMM 1/3 LATA LC",
+            "vol": 1618,
+            "start": 117.49,
+            "w": 2.0
+          },
+          {
+            "of": "VO13LT",
+            "sku": "VOLL DAMM 1/3 LATA LC",
+            "vol": 1174,
+            "start": 119.49,
+            "w": 6.0
+          },
+          {
+            "of": "ED13LCN",
+            "sku": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+            "vol": 239,
+            "start": 125.49,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LCN",
+            "sku": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+            "vol": 1618,
+            "start": 133.49,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LCN",
+            "sku": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+            "vol": 1618,
+            "start": 141.49,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LCN",
+            "sku": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+            "vol": 1618,
+            "start": 149.49,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LCN",
+            "sku": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+            "vol": 1618,
+            "start": 157.49,
+            "w": 8.0
+          }
+        ],
+        "19": [
+          {
+            "of": "XI13L12M",
+            "sku": "XIBECA 1/3 LATA PACK CARTON 12U. MP",
+            "vol": 792,
+            "start": 0.0,
+            "w": 6.4,
+            "oee": 0.545
+          },
+          {
+            "of": "EX12LB24",
+            "sku": "ESTRELLA DAMM BCN 4,6 1/2 LATA B-24 P.HT",
+            "vol": 198,
+            "start": 6.4,
+            "w": 2.0,
+            "oee": 0.52
+          },
+          {
+            "of": "EN12B24I",
+            "sku": "ESTRELLA DAMM BCN 0,0 1/2 LATA B24U P.HT",
+            "vol": 168,
+            "start": 8.4,
+            "w": 6.0,
+            "oee": 0.398
+          },
+          {
+            "of": "EX12LBN",
+            "sku": "ESTRELLA DAMM BCN 4,6 1/2 LATA BAND. LC",
+            "vol": 540,
+            "start": 14.4,
+            "w": 8.0,
+            "oee": 0.36
+          },
+          {
+            "of": "EX12LBN",
+            "sku": "ESTRELLA DAMM BCN 4,6 1/2 LATA BAND. LC",
+            "vol": 356,
+            "start": 22.4,
+            "w": 2.0,
+            "oee": 0.36
+          },
+          {
+            "of": "VO12LTN",
+            "sku": "VOLL DAMM 1/2 LATA CAJA 24U LC",
+            "vol": 402,
+            "start": 24.4,
+            "w": 6.0
+          },
+          {
+            "of": "VO12LTN",
+            "sku": "VOLL DAMM 1/2 LATA CAJA 24U LC",
+            "vol": 378,
+            "start": 30.4,
+            "w": 2.0
+          },
+          {
+            "of": "ED12LNF",
+            "sku": "ESTRELLA DAMM 50CL LATA LC PA08F",
+            "vol": 180,
+            "start": 32.4,
+            "w": 6.0
+          },
+          {
+            "of": "ED12LN",
+            "sku": "ESTRELLA DAMM 50CL LATA LC",
+            "vol": 900,
+            "start": 38.4,
+            "w": 8.0
+          },
+          {
+            "of": "ED12LN",
+            "sku": "ESTRELLA DAMM 50CL LATA LC",
+            "vol": 900,
+            "start": 46.4,
+            "w": 8.0
+          },
+          {
+            "of": "ED12LN",
+            "sku": "ESTRELLA DAMM 50CL LATA LC",
+            "vol": 900,
+            "start": 54.4,
+            "w": 8.0
+          },
+          {
+            "of": "ED12LN",
+            "sku": "ESTRELLA DAMM 50CL LATA LC",
+            "vol": 804,
+            "start": 62.4,
+            "w": 10.0
+          },
+          {
+            "of": "DL12LT",
+            "sku": "DAMM LEMON 50CL LT LC6 F24",
+            "vol": 198,
+            "start": 72.4,
+            "w": 2.0,
+            "oee": 0.276
+          },
+          {
+            "of": "LC12LTW",
+            "sku": "ESTRELLA LEVANTE 1/2 LATA LC",
+            "vol": 388,
+            "start": 74.4,
+            "w": 4.0,
+            "oee": 0.364
+          },
+          {
+            "of": "VI12LTW",
+            "sku": "VICTORIA 1/2 LATA CAJA 24U. LC",
+            "vol": 180,
+            "start": 78.4,
+            "w": 8.0,
+            "oee": 0.421
+          },
+          {
+            "of": "VI12LTX",
+            "sku": "VICTORIA 1/2 LATA CAJA 24U. LC PR.SELEC.",
+            "vol": 438,
+            "start": 86.4,
+            "w": 6.0,
+            "oee": 0.393
+          },
+          {
+            "of": "ID12LBN",
+            "sku": "INEDIT DAMM LATA 50CL. BANDEJA 24U. 15M",
+            "vol": 90,
+            "start": 92.4,
+            "w": 2.0,
+            "oee": 0.147
+          },
+          {
+            "of": "EN1324BI",
+            "sku": "ESTRELLA DAMM BCN 0,0 1/3 LATA B24U FIN.",
+            "vol": 475,
+            "start": 94.4,
+            "w": 8.0
+          },
+          {
+            "of": "EX1324NB",
+            "sku": "ESTRELLA DAMM BCN 4,6 1/3 LATA BANDEJA24",
+            "vol": 119,
+            "start": 102.4,
+            "w": 8.0,
+            "oee": 0.27
+          },
+          {
+            "of": "EX1324NB",
+            "sku": "ESTRELLA DAMM BCN 4,6 1/3 LATA BANDEJA24",
+            "vol": 1069,
+            "start": 110.4,
+            "w": 2.0,
+            "oee": 0.27
+          },
+          {
+            "of": "ENB13LBF",
+            "sku": "ESTRELLA DAMM BCN 0,0 33CLLATA B24 FCBHT",
+            "vol": 400,
+            "start": 112.4,
+            "w": 6.0
+          },
+          {
+            "of": "3BNMSL20",
+            "sku": "BEER MARK SPENCER 4,5º 33CL L P12P UK X",
+            "vol": 10613,
+            "start": 118.4,
+            "w": 8.0
+          },
+          {
+            "of": "3BNZFLB1",
+            "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+            "vol": 27381,
+            "start": 126.4,
+            "w": 15.98,
+            "oee": 0.736
+          },
+          {
+            "of": "3BNZFLB1",
+            "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+            "vol": 40867,
+            "start": 142.38,
+            "w": 1.0,
+            "oee": 0.736
+          },
+          {
+            "of": "3BNZFLB1",
+            "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+            "vol": 38824,
+            "start": 143.38,
+            "w": 8.0,
+            "oee": 0.736
+          },
+          {
+            "of": "3BNZFLB1",
+            "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+            "vol": 38824,
+            "start": 151.38,
+            "w": 8.0,
+            "oee": 0.736
+          },
+          {
+            "of": "3BNZFLB1",
+            "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+            "vol": 38824,
+            "start": 159.38,
+            "w": 8.0,
+            "oee": 0.736
+          },
+          {
+            "of": "3BNZFLB1",
+            "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+            "vol": 38824,
+            "start": 167.38,
+            "w": 8.0,
+            "oee": 0.736
+          },
+          {
+            "of": "3BNZFLB1",
+            "sku": "BEER LA FRIA 4,5º 33CL L B24SH P X",
+            "vol": 37598,
+            "start": 175.38,
+            "w": 8.0,
+            "oee": 0.736
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ESTRELLA DAMM 1/3 LATA LC",
+            "vol": 1533,
+            "start": 183.38,
+            "w": 8.0
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ED13LTNN",
+            "vol": 594,
+            "start": 191.38,
+            "w": 2.48,
+            "oee": 0.649,
+            "kind": "ins"
+          }
+        ]
       },
       "ghosts": {},
-      "recovery": { "line": "19", "start": 6.6, "w": 1.6, "hours": 38, "note": "Line 19 takes ~38h to return to baseline — the familia change has the slowest recovery of the three options." },
+      "recovery": {
+        "line": "19",
+        "start": 193.86,
+        "w": 7.0,
+        "hours": 7,
+        "note": "Modelled estimate: hours for the line to return to baseline OEE after the urgent insertion. Built from changeover + transition-type tail; not a measurement."
+      },
       "moves": [],
       "evidence": {
-        "reason": "Line 19 would run the urgent order after ED05LTNN — a <b>familia change</b> that history shows recovers slowly. Nothing else on the plan moves, which is its only advantage; OEE takes a small loss versus simply doing nothing.",
+        "reason": "On Line 19 after ED13LTNN, the urgent order matches a <b>same-sku</b> changeover. CF format matrix shows no format change and no other change components. History across <b>6</b> same-line, same-transition, same-format cases shows an average OEE of <b>0.65</b>. That is <b>+16.9</b> OEE points above the naive slot.",
         "breakdown": [
-          { "name": "Envase change",  "pct": 10, "band": "lo", "val": "none" },
-          { "name": "Brand change",   "pct": 30, "band": "hi", "val": "−1.0 OEE" },
-          { "name": "Familia change", "pct": 60, "band": "hi", "val": "−2.6 OEE" },
-          { "name": "Cleaning / CIP", "pct": 38, "band": "hi", "val": "−1.4 OEE" }
+          {
+            "name": "Format / Envase CF",
+            "pct": 0,
+            "band": "lo",
+            "val": "0 min — same format"
+          },
+          {
+            "name": "Brand / product / packaging change",
+            "pct": 0,
+            "band": "lo",
+            "val": "none"
+          },
+          {
+            "name": "Cleaning between runs",
+            "pct": 0,
+            "band": "lo",
+            "val": "Not available"
+          },
+          {
+            "name": "PNP / restart",
+            "pct": 57,
+            "band": "hi",
+            "val": "229 min historical mean"
+          },
+          {
+            "name": "Historical actual changeover",
+            "pct": 1,
+            "band": "lo",
+            "val": "9 min mean"
+          },
+          {
+            "name": "Predicted OEE (analogue mean)",
+            "pct": 65,
+            "band": "lo",
+            "val": "0.65"
+          },
+          {
+            "name": "Line baseline OEE",
+            "pct": 48,
+            "band": "hi",
+            "val": "0.48"
+          }
         ],
         "analogues": [
-          { "of": "004310", "date": "08 Apr 2025", "line": "19", "type": "familia", "oee": "0.47" },
-          { "of": "004988", "date": "25 Jul 2025", "line": "19", "type": "familia", "oee": "0.49" },
-          { "of": "005402", "date": "14 Nov 2025", "line": "17", "type": "familia", "oee": "0.46" }
+          {
+            "of": "0000519488-1",
+            "date": "09 Jan 2025",
+            "line": "19",
+            "type": "same-sku",
+            "oee": "0.55"
+          },
+          {
+            "of": "0000568062-1",
+            "date": "21 Apr 2025",
+            "line": "19",
+            "type": "same-sku",
+            "oee": "0.58"
+          },
+          {
+            "of": "0000660060-1",
+            "date": "29 Sep 2025",
+            "line": "19",
+            "type": "same-sku",
+            "oee": "0.83"
+          },
+          {
+            "of": "0000661648-1",
+            "date": "09 Sep 2025",
+            "line": "19",
+            "type": "same-sku",
+            "oee": "0.78"
+          },
+          {
+            "of": "0000630849-1",
+            "date": "11 Aug 2025",
+            "line": "19",
+            "type": "same-sku",
+            "oee": "0.26"
+          },
+          {
+            "of": "PRT9900016066-M",
+            "date": "17 Jul 2025",
+            "line": "19",
+            "type": "same-sku",
+            "oee": "0.52"
+          }
         ],
-        "n": 19, "analogueMean": "0.48", "naiveMean": "0.51", "gain": "−0.4"
+        "n": 6,
+        "analogueMean": "0.649",
+        "naiveMean": "0.480",
+        "gain": "+16.9"
       }
     }
   },
-
   "objectives": {
-    "oee":  { "label": "OEE", "icon": "◉", "order": ["17", "14", "19"],
-              "notes": { "17": "Same-envase run — the lowest changeover loss of the three.",
-                         "14": "The naive plan line. A modest gain, deadline respected.",
-                         "19": "A familia change here genuinely costs OEE." } },
-    "time": { "label": "Time", "icon": "◷", "order": ["14", "17", "19"],
-              "notes": { "14": "The only option that meets the 21 May due date.",
-                         "17": "Best OEE of all options, but misses the deadline by a day.",
-                         "19": "Misses the deadline and loses OEE — weakest on this axis." } },
-    "dis":  { "label": "Disruption", "icon": "⇄", "order": ["19", "14", "17"],
-              "notes": { "19": "Nothing else on the plan moves — zero knock-on.",
-                         "14": "Shifts VO13LTMP back by roughly 6 hours.",
-                         "17": "Shifts FDT13LT back by roughly 6 hours." } }
+    "oee": {
+      "label": "OEE",
+      "icon": "◉",
+      "order": [
+        "19",
+        "17",
+        "14"
+      ],
+      "notes": {
+        "14": "Expected OEE +0.0 pts vs comparable naive history.",
+        "17": "Expected OEE +9.4 pts vs comparable naive history.",
+        "19": "Expected OEE +16.9 pts vs comparable naive history."
+      }
+    },
+    "time": {
+      "label": "Time",
+      "icon": "◷",
+      "order": [
+        "19",
+        "17",
+        "14"
+      ],
+      "notes": {
+        "14": "Shifts 11 order(s) on Line 14.",
+        "17": "Shifts 4 order(s) on Line 17.",
+        "19": "Nothing else moves — deadline respected."
+      }
+    },
+    "dis": {
+      "label": "Disruption",
+      "icon": "⇄",
+      "order": [
+        "19",
+        "17",
+        "14"
+      ],
+      "notes": {
+        "14": "Shifts 11 order(s) on Line 14.",
+        "17": "Shifts 4 order(s) on Line 17.",
+        "19": "Zero knock-on — nothing else moves."
+      }
+    }
   },
-
   "manualSlots": {
-    "17-after-AM05LTST": { "recKey": "17", "verdict": "match",
-      "label": "Line 17 · after AM05LTST",
-      "banner": "This is also LineWise’s top recommendation — same-envase, lowest loss." },
-    "14-end": { "recKey": "14", "verdict": "ok",
+    "14-after-FDT13LT": {
+      "recKey": "14",
+      "verdict": "ok",
+      "label": "Line 14 · after FDT13LT",
+      "banner": "Alternative slot on this line — feasible but not the chosen one."
+    },
+    "14-after-ED13LTNN": {
+      "recKey": "14",
+      "verdict": "ok",
+      "label": "Line 14 · after ED13LTNN",
+      "banner": "Alternative slot on this line — feasible but not the chosen one."
+    },
+    "14-end": {
+      "recKey": "14",
+      "verdict": "ok",
       "label": "Line 14 · end of queue",
-      "banner": "A workable slot. LineWise rates Line 17 higher by +4.1 OEE — a brand change costs more here." },
-    "19-end": { "recKey": "19", "verdict": "worse",
+      "banner": "End of queue — zero knock-on to scheduled orders."
+    },
+    "17-after-XI13P24M": {
+      "recKey": "17",
+      "verdict": "ok",
+      "label": "Line 17 · after XI13P24M",
+      "banner": "Alternative slot on this line — feasible but not the chosen one."
+    },
+    "17-after-XI13LTN": {
+      "recKey": "17",
+      "verdict": "ok",
+      "label": "Line 17 · after XI13LTN",
+      "banner": "Alternative slot on this line — feasible but not the chosen one."
+    },
+    "17-after-FD13LTNN": {
+      "recKey": "17",
+      "verdict": "ok",
+      "label": "Line 17 · after FD13LTNN",
+      "banner": "Alternative slot on this line — feasible but not the chosen one."
+    },
+    "17-after-FDL13LN": {
+      "recKey": "17",
+      "verdict": "ok",
+      "label": "Line 17 · after FDL13LN",
+      "banner": "Alternative slot on this line — feasible but not the chosen one."
+    },
+    "17-end": {
+      "recKey": "17",
+      "verdict": "ok",
+      "label": "Line 17 · end of queue",
+      "banner": "End of queue — zero knock-on to scheduled orders."
+    },
+    "19-after-XI13L12M": {
+      "recKey": "19",
+      "verdict": "ok",
+      "label": "Line 19 · after XI13L12M",
+      "banner": "Alternative slot on this line — feasible but not the chosen one."
+    },
+    "19-after-EX12LB24": {
+      "recKey": "19",
+      "verdict": "ok",
+      "label": "Line 19 · after EX12LB24",
+      "banner": "Alternative slot on this line — feasible but not the chosen one."
+    },
+    "19-after-EN12B24I": {
+      "recKey": "19",
+      "verdict": "ok",
+      "label": "Line 19 · after EN12B24I",
+      "banner": "Alternative slot on this line — feasible but not the chosen one."
+    },
+    "19-after-EX12LBN": {
+      "recKey": "19",
+      "verdict": "ok",
+      "label": "Line 19 · after EX12LBN",
+      "banner": "Alternative slot on this line — feasible but not the chosen one."
+    },
+    "19-after-VO12LTN": {
+      "recKey": "19",
+      "verdict": "ok",
+      "label": "Line 19 · after VO12LTN",
+      "banner": "Alternative slot on this line — feasible but not the chosen one."
+    },
+    "19-end": {
+      "recKey": "19",
+      "verdict": "ok",
       "label": "Line 19 · end of queue",
-      "banner": "History disagrees with this placement. The familia change on Line 19 predicts a net OEE loss — LineWise’s recommended slot is +6.6 OEE better." },
-    "14-after-FDT13LT": { "recKey": "14", "verdict": "worse",
-      "label": "Line 14 · squeezed after FDT13LT",
-      "banner": "This slot forces a brand change mid-queue. Predicted OEE is below the line baseline — consider the recommended option instead." }
+      "banner": "End of queue — zero knock-on to scheduled orders."
+    }
   }
 }
