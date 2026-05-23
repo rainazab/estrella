@@ -1,0 +1,326 @@
+import { useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  deriveFormat, oeeBand, fmtDelta, formatVol, formatDuration,
+} from './TimelineCard.jsx';
+import InfoPopover from './InfoPopover.jsx';
+
+/* Which trenes can run a given format. Mirrors the production rules:
+     L14: 50cl, 33cl
+     L17: 33cl only
+     L19: 50cl, 33cl, 44cl                                       */
+const LINE_FORMATS = {
+  '14': new Set(['50cl', '33cl']),
+  '17': new Set(['33cl']),
+  '19': new Set(['50cl', '33cl', '44cl']),
+};
+const LINE_LABELS = { '14': 'Line 14', '17': 'Line 17', '19': 'Line 19' };
+
+/* RunDetailModal — click a TimelineCard, get this.
+   Sections (top → bottom):
+     1. Header (material, SKU, format, kind badge, close)
+     2. Stat row (volume, OEE, delta, duration)
+     3. Sequence strip (prev → this → next, with changeover classification)
+     4. Why-this-OEE narrative
+     5. Compatible lines per the production rules
+     6. Actions (Move, Lock)                                  */
+export default function RunDetailModal({
+  open,
+  run,
+  prev,
+  next,
+  lineKey,
+  lineBaseline,
+  onClose,
+  onMove,
+  onLock,
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  return (
+    <AnimatePresence>
+      {open && run && (
+        <motion.div
+          className="rd-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+        >
+          <motion.div
+            className="rd-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Run detail for ${run.material}`}
+            onClick={(e) => e.stopPropagation()}
+            initial={{ opacity: 0, y: 8, scale: 0.985 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.99 }}
+            transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
+          >
+            <Body
+              run={run}
+              prev={prev}
+              next={next}
+              lineKey={lineKey}
+              lineBaseline={lineBaseline}
+              onClose={onClose}
+              onMove={onMove}
+              onLock={onLock}
+            />
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function Body({ run, prev, next, lineKey, lineBaseline, onClose, onMove, onLock }) {
+  const fmt = run.format || deriveFormat({ sku: run.sku, material: run.material });
+  const delta = lineBaseline != null && run.oee != null ? run.oee - lineBaseline : null;
+  const band = oeeBand(delta);
+
+  const prevFmt = prev ? (prev.format || deriveFormat({ sku: prev.sku, material: prev.material })) : null;
+  const nextFmt = next ? (next.format || deriveFormat({ sku: next.sku, material: next.material })) : null;
+
+  const inCost = classifyChangeover(prev, run);
+  const outCost = classifyChangeover(run, next);
+
+  return (
+    <>
+      {/* Header */}
+      <header className="rd-head">
+        <div className="rd-head-main">
+          <div className="rd-head-row1">
+            <h2 className="rd-mat">{run.material}</h2>
+            {fmt && <span className={`rd-fmt rd-fmt-${formatTone(fmt)}`}>{fmt}</span>}
+            {run.kind === 'ins' && <span className="rd-kind rd-kind-ins">Inserted urgent</span>}
+            {run.kind === 'shift' && <span className="rd-kind rd-kind-shift">Shifted +{run.shiftFromHours ?? 0}h</span>}
+          </div>
+          {run.sku && <div className="rd-sku">{run.sku}</div>}
+          {lineKey && <div className="rd-line">{LINE_LABELS[lineKey] ?? `Line ${lineKey}`} · CF Prat</div>}
+        </div>
+        <button className="rd-close" onClick={onClose} aria-label="Close">×</button>
+      </header>
+
+      {/* Stat row */}
+      <section className="rd-stats">
+        <Stat label="Volume" value={`${formatVol(run.volume)}`} sub="units" />
+        <Stat
+          label="OEE"
+          value={run.oee != null ? run.oee.toFixed(2) : '—'}
+          sub={lineBaseline != null ? (
+            <>
+              line avg {lineBaseline.toFixed(2)}
+              <InfoPopover title="Line baseline">
+                <p>
+                  <b>{lineBaseline.toFixed(2)}</b> is the <b>30-day rolling average OEE</b>
+                  {' '}for this line.
+                </p>
+                <p>
+                  <span className="ip-k">Source</span>
+                  <span className="ip-v">MES pull (Damm El&nbsp;Prat)</span>
+                </p>
+                <p>
+                  <span className="ip-k">Refresh</span>
+                  <span className="ip-v">Daily at 06:00 CET</span>
+                </p>
+                <p className="ip-foot">
+                  Runs above the baseline are favourable; below it are flagged for review.
+                </p>
+              </InfoPopover>
+            </>
+          ) : null}
+          tone={band}
+        />
+        <Stat
+          label="vs line"
+          value={delta != null ? fmtDelta(delta).replace(' vs line', '') : '—'}
+          sub={delta != null ? `${(delta * 100).toFixed(1)} pts` : null}
+          tone={band}
+        />
+        <Stat label="Duration" value={formatDuration(run.durationHours)} sub={run.startLabel} />
+      </section>
+
+      {/* Sequence strip */}
+      <section className="rd-section">
+        <div className="rd-section-h">Sequence</div>
+        <div className="rd-seq">
+          <SeqSlot item={prev} role="prev" />
+          <Changeover cost={inCost} />
+          <SeqSlot item={{ ...run, format: fmt }} role="current" />
+          <Changeover cost={outCost} />
+          <SeqSlot item={next} role="next" />
+        </div>
+      </section>
+
+      {/* Why this OEE */}
+      <section className="rd-section">
+        <div className="rd-section-h">Why this OEE estimate</div>
+        <p className="rd-prose">
+          {whyProse({ run, prev, inCost, band, delta })}
+        </p>
+      </section>
+
+      {/* Compatible lines */}
+      <section className="rd-section">
+        <div className="rd-section-h">Compatible lines for {fmt ?? 'this format'}</div>
+        <div className="rd-lines">
+          {['14', '17', '19'].map((k) => {
+            const allowed = fmt ? LINE_FORMATS[k].has(fmt) : true;
+            const current = String(lineKey) === k;
+            return (
+              <div
+                key={k}
+                className={`rd-lpill ${allowed ? 'ok' : 'no'} ${current ? 'cur' : ''}`}
+                title={
+                  current ? 'Currently here' :
+                  allowed ? 'Could run this format' :
+                  `Cannot run ${fmt} on this line`
+                }
+              >
+                <span className="rd-lpill-k">L{k}</span>
+                <span className="rd-lpill-fmts">
+                  {[...LINE_FORMATS[k]].join(' · ')}
+                </span>
+                {current && <span className="rd-lpill-tag">current</span>}
+                {!allowed && <span className="rd-lpill-tag bad">not compatible</span>}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Actions */}
+      <footer className="rd-foot">
+        <button className="rd-btn rd-btn-ghost" onClick={onLock}>Lock this run</button>
+        <button className="rd-btn rd-btn-primary" onClick={onMove}>Move to another line</button>
+      </footer>
+    </>
+  );
+}
+
+/* ---------- presentational pieces ---------- */
+
+function Stat({ label, value, sub, tone }) {
+  return (
+    <div className={`rd-stat ${tone ? `rd-stat-${tone}` : ''}`}>
+      <div className="rd-stat-l">{label}</div>
+      <div className="rd-stat-v">{value}</div>
+      {sub && <div className="rd-stat-s">{sub}</div>}
+    </div>
+  );
+}
+
+function SeqSlot({ item, role }) {
+  if (!item) {
+    return (
+      <div className={`rd-seqslot rd-seqslot-empty rd-seqslot-${role}`}>
+        <div className="rd-seqslot-l">{role === 'prev' ? 'Start of plan' : 'End of plan'}</div>
+      </div>
+    );
+  }
+  if (item.kind === 'clean' || item.kind === 'maint') {
+    return (
+      <div className={`rd-seqslot rd-seqslot-svc rd-seqslot-${role}`}>
+        <div className="rd-seqslot-l">{role === 'prev' ? 'Before' : 'After'}</div>
+        <div className="rd-seqslot-v">{item.kind === 'clean' ? 'Cleaning' : 'Maintenance'}</div>
+        <div className="rd-seqslot-s">{formatDuration(item.durationHours)}</div>
+      </div>
+    );
+  }
+  const fmt = item.format || deriveFormat({ sku: item.sku, material: item.material });
+  return (
+    <div className={`rd-seqslot rd-seqslot-${role}`}>
+      <div className="rd-seqslot-l">{role === 'prev' ? 'Before' : role === 'next' ? 'After' : 'This run'}</div>
+      <div className="rd-seqslot-v">{item.material}</div>
+      <div className="rd-seqslot-s">
+        {fmt && <span className={`rd-fmt rd-fmt-${formatTone(fmt)}`}>{fmt}</span>}
+      </div>
+    </div>
+  );
+}
+
+function Changeover({ cost }) {
+  if (!cost) return <span className="rd-arrow">→</span>;
+  return (
+    <div className={`rd-changeover rd-co-${cost.band}`} title={cost.detail}>
+      <span className="rd-co-arrow">→</span>
+      <span className="rd-co-label">{cost.label}</span>
+    </div>
+  );
+}
+
+/* ---------- logic helpers ---------- */
+
+function classifyChangeover(a, b) {
+  if (!a || !b) return null;
+  if (a.kind === 'clean' || a.kind === 'maint') {
+    return { band: 'mid', label: 'post-service restart', detail: 'Coming out of a service block — typical OEE dip on first hour.' };
+  }
+  if (b.kind === 'clean' || b.kind === 'maint') {
+    return { band: 'mid', label: 'into service', detail: 'Run ends before scheduled cleaning / maintenance.' };
+  }
+  const af = a.format || deriveFormat({ sku: a.sku, material: a.material });
+  const bf = b.format || deriveFormat({ sku: b.sku, material: b.material });
+  const sameFmt = af && bf && af === bf;
+  const sameBrand = brandKey(a.material) && brandKey(a.material) === brandKey(b.material);
+
+  if (sameFmt && sameBrand) {
+    return { band: 'good', label: 'same envase, same brand', detail: 'Cheapest possible transition — no format change, no brand change.' };
+  }
+  if (sameFmt) {
+    return { band: 'mid', label: 'same envase, brand change', detail: 'No format change, but brand switch costs ~1.4 OEE points historically.' };
+  }
+  return { band: 'bad', label: 'format change', detail: 'Different can format — implies tooling change and a CIP step.' };
+}
+
+function brandKey(material) {
+  if (!material) return null;
+  return material.slice(0, 2).toUpperCase();
+}
+
+function whyProse({ run, prev, inCost, band, delta }) {
+  const parts = [];
+  if (inCost) {
+    if (inCost.band === 'good') {
+      parts.push(`Follows a same-format, same-brand run (${prev?.material ?? 'previous'}) — the cheapest transition available.`);
+    } else if (inCost.band === 'mid' && inCost.label.startsWith('same envase')) {
+      parts.push(`Same can format as the previous run (${prev?.material ?? 'previous'}), but a brand switch — expect a small OEE drag.`);
+    } else if (inCost.band === 'bad') {
+      parts.push(`Different format from ${prev?.material ?? 'previous'} — a CIP/tooling change weighs on the first hour of OEE.`);
+    } else {
+      parts.push(`Restart after a service block — first-hour ramp pulls the run average down.`);
+    }
+  } else {
+    parts.push('First run of the plan — no predecessor cost.');
+  }
+
+  if (delta != null) {
+    if (band === 'good') {
+      parts.push(`Estimate lands ${Math.abs(delta * 100).toFixed(1)} pts above the line baseline — favourable.`);
+    } else if (band === 'bad') {
+      parts.push(`Estimate lands ${Math.abs(delta * 100).toFixed(1)} pts below the line baseline — flagged for review.`);
+    } else {
+      parts.push(`Estimate is within ±2 pts of the line baseline.`);
+    }
+  }
+
+  if (run.analogue) {
+    parts.push(`Historical analogue: ${run.analogue}.`);
+  }
+
+  return parts.join(' ');
+}
+
+function formatTone(fmt) {
+  if (fmt === '33cl') return 'tercio';
+  if (fmt === '50cl') return 'medio';
+  if (fmt === '44cl') return 'cuarenta';
+  return 'other';
+}

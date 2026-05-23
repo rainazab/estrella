@@ -1,0 +1,201 @@
+{
+  "urgentOrders": [
+    { "of": "ED13LTNN", "status": "urgent", "sku": "Estrella Damm · lata 33cl", "units": 18000, "hl": 594, "due": "21 May" },
+    { "of": "VO13LTMP", "status": "queued", "sku": "Voll-Damm · lata 33cl",     "units": 6000,  "hl": 198, "due": "24 May" },
+    { "of": "AM05LTST", "status": "queued", "sku": "AmiBock · lata 50cl",       "units": 9500,  "hl": 475, "due": "26 May" },
+    { "of": "FDT13LT",  "status": "queued", "sku": "Free Damm · lata 33cl",     "units": 4200,  "hl": 139, "due": "28 May" },
+    { "of": "ED05LTNN", "status": "done",   "sku": "Estrella Damm · lata 50cl", "units": 12000, "hl": 600, "due": "18 May" }
+  ],
+
+  "lineBaseline": { "14": 0.52, "17": 0.56, "19": 0.49 },
+
+  "yearCompare": {
+    "weekLabel": "Week 21 · 18–24 May",
+    "lines": {
+      "14": { "oeeNow": 0.535, "oeeLast": 0.491, "volNow": 276000, "volLast": 248000, "changesNow": 3, "changesLast": 6 },
+      "17": { "oeeNow": 0.562, "oeeLast": 0.548, "volNow": 312000, "volLast": 301000, "changesNow": 2, "changesLast": 4 },
+      "19": { "oeeNow": 0.518, "oeeLast": 0.503, "volNow": 241000, "volLast": 233000, "changesNow": 4, "changesLast": 5 }
+    }
+  },
+
+  "executedHistory": {
+    "14": [
+      { "of": "ED05LTNN", "sku": "Estrella Damm · lata 50cl", "vol": 71000, "start": 0.0, "w": 1.9, "oee": 0.53 },
+      { "kind": "clean",  "start": 1.9, "w": 0.5 },
+      { "of": "AM05LTST", "sku": "AmiBock · lata 50cl", "vol": 54000, "start": 2.4, "w": 1.7, "oee": 0.56 },
+      { "of": "FDT13LT",  "sku": "Free Damm · lata 33cl", "vol": 88000, "start": 4.1, "w": 2.6, "oee": 0.48 }
+    ],
+    "17": [
+      { "of": "VO13LTMP", "sku": "Voll-Damm · lata 33cl", "vol": 46000, "start": 0.0, "w": 1.6, "oee": 0.57 },
+      { "of": "ED13LTNN", "sku": "Estrella Damm · lata 33cl", "vol": 62000, "start": 1.6, "w": 2.0, "oee": 0.54 },
+      { "kind": "clean",  "start": 3.6, "w": 0.5 },
+      { "of": "AM05LTST", "sku": "AmiBock · lata 50cl", "vol": 51000, "start": 4.1, "w": 1.5, "oee": 0.59 },
+      { "of": "FDT13LT",  "sku": "Free Damm · lata 33cl", "vol": 39000, "start": 5.6, "w": 1.4, "oee": 0.55 }
+    ],
+    "19": [
+      { "of": "FDT13LT",  "sku": "Free Damm · lata 33cl", "vol": 64000, "start": 0.0, "w": 1.9, "oee": 0.50 },
+      { "of": "ED05LTNN", "sku": "Estrella Damm · lata 50cl", "vol": 79000, "start": 1.9, "w": 2.3, "oee": 0.47 },
+      { "kind": "maint",  "start": 4.2, "w": 0.6 },
+      { "of": "VO13LTMP", "sku": "Voll-Damm · lata 33cl", "vol": 58000, "start": 4.8, "w": 1.9, "oee": 0.52 }
+    ]
+  },
+
+  "basePlan": {
+    "14": [
+      { "of": "FDT13LT",  "sku": "Free Damm · lata 33cl", "vol": 48000, "start": 0,    "w": 1.4, "oee": 0.54 },
+      { "of": "ED13LTNN", "sku": "Estrella Damm · lata 33cl", "vol": 92000, "start": 1.4,  "w": 2.6, "oee": 0.51 },
+      { "of": "VO13LTMP", "sku": "Voll-Damm · lata 33cl", "vol": 34000, "start": 4.0,  "w": 1.0, "oee": 0.56 },
+      { "kind": "clean",  "start": 5.0,  "w": 0.5 },
+      { "of": "AM05LTST", "sku": "AmiBock · lata 50cl", "vol": 70000, "start": 6.2,  "w": 2.0, "oee": 0.55 },
+      { "of": "ED05LTNN", "sku": "Estrella Damm · lata 50cl", "vol": 84000, "start": 8.4,  "w": 2.4, "oee": 0.53 },
+      { "of": "FDT13LT",  "sku": "Free Damm · lata 33cl", "vol": 60000, "start": 11.0, "w": 1.8, "oee": 0.57 },
+      { "of": "VO13LTMP", "sku": "Voll-Damm · lata 33cl", "vol": 31000, "start": 12.9, "w": 1.0, "oee": 0.55 }
+    ],
+    "17": [
+      { "of": "AM05LTST", "sku": "AmiBock · lata 50cl", "vol": 63000, "start": 0,    "w": 1.8, "oee": 0.58 },
+      { "of": "ED13LTNN", "sku": "Estrella Damm · lata 33cl", "vol": 55000, "start": 1.8,  "w": 1.6, "oee": 0.55 },
+      { "of": "FDT13LT",  "sku": "Free Damm · lata 33cl", "vol": 47000, "start": 3.6,  "w": 1.4, "oee": 0.57 },
+      { "kind": "clean",  "start": 5.0,  "w": 0.5 },
+      { "of": "ED05LTNN", "sku": "Estrella Damm · lata 50cl", "vol": 76000, "start": 5.4,  "w": 2.2, "oee": 0.53 },
+      { "of": "VO13LTMP", "sku": "Voll-Damm · lata 33cl", "vol": 52000, "start": 7.8,  "w": 1.6, "oee": 0.56 },
+      { "of": "AM05LTST", "sku": "AmiBock · lata 50cl", "vol": 69000, "start": 9.6,  "w": 2.0, "oee": 0.58 },
+      { "of": "ED13LTNN", "sku": "Estrella Damm · lata 33cl", "vol": 71000, "start": 11.8, "w": 2.0, "oee": 0.54 }
+    ],
+    "19": [
+      { "of": "VO13LTMP", "sku": "Voll-Damm · lata 33cl", "vol": 38000, "start": 0,    "w": 1.2, "oee": 0.52 },
+      { "of": "AM05LTST", "sku": "AmiBock · lata 50cl", "vol": 67000, "start": 1.2,  "w": 2.0, "oee": 0.50 },
+      { "of": "ED05LTNN", "sku": "Estrella Damm · lata 50cl", "vol": 55000, "start": 3.4,  "w": 1.6, "oee": 0.49 },
+      { "kind": "maint",  "start": 5.0,  "w": 0.6 },
+      { "of": "FDT13LT",  "sku": "Free Damm · lata 33cl", "vol": 83000, "start": 5.6,  "w": 2.4, "oee": 0.54 },
+      { "of": "VO13LTMP", "sku": "Voll-Damm · lata 33cl", "vol": 61000, "start": 8.2,  "w": 1.8, "oee": 0.53 },
+      { "of": "ED05LTNN", "sku": "Estrella Damm · lata 50cl", "vol": 74000, "start": 10.2, "w": 2.2, "oee": 0.51 },
+      { "of": "AM05LTST", "sku": "AmiBock · lata 50cl", "vol": 49000, "start": 12.6, "w": 1.5, "oee": 0.55 }
+    ]
+  },
+
+  "lineCentre": { "14": "CF Prat", "17": "CF Prat", "19": "CF Prat" },
+
+  "recommendations": {
+    "17": {
+      "line": "Line 17", "position": "after AM05LTST",
+      "oeeDelta": "+6.2", "oeeGood": true,
+      "deadline": "+1 day", "ordersMoved": 1,
+      "naiveBand": { "line": "14", "start": 4.0, "w": 1.5 },
+      "plan": {
+        "14": [ { "of": "FDT13LT", "start": 0, "w": 1.4, "oee": 0.54 }, { "of": "ED13LTNN", "start": 1.4, "w": 2.6, "oee": 0.51 }, { "of": "VO13LTMP", "start": 4.0, "w": 1.0, "oee": 0.56 } ],
+        "17": [ { "of": "AM05LTST", "start": 0, "w": 1.8, "oee": 0.58 }, { "of": "ED13LTNN", "start": 1.8, "w": 1.6, "oee": 0.55 }, { "of": "ED13LTNN", "start": 3.4, "w": 1.6, "oee": 0.57, "kind": "ins" }, { "of": "FDT13LT", "start": 5.0, "w": 1.4, "oee": 0.56, "kind": "shift" } ],
+        "19": [ { "of": "VO13LTMP", "start": 0, "w": 1.2, "oee": 0.52 }, { "of": "AM05LTST", "start": 1.2, "w": 2.0, "oee": 0.50 }, { "of": "ED05LTNN", "start": 3.4, "w": 1.6, "oee": 0.49 } ]
+      },
+      "ghosts": { "17": [{ "of": "FDT13LT", "start": 3.6, "w": 1.4 }] },
+      "recovery": { "line": "17", "start": 5.0, "w": 0.6, "hours": 14, "note": "Line 17 returns to baseline OEE ~14h after the urgent order — a clean same-envase restart." },
+      "moves": [
+        { "of": "FDT13LT", "line": "17", "shift": "+6h", "why": "pushed back to make room for the insertion" }
+      ],
+      "evidence": {
+        "reason": "Inserting after AM05LTST means the urgent order follows a <b>same-envase</b> neighbour — both lata 33cl. History shows that transition is cheap. The naive slot on Line 14 would instead force a brand-and-clean changeover.",
+        "breakdown": [
+          { "name": "Envase change",    "pct": 8,  "band": "lo", "val": "none" },
+          { "name": "Brand change",     "pct": 35, "band": "hi", "val": "−1.4 OEE" },
+          { "name": "Pack-size change", "pct": 15, "band": "lo", "val": "−0.3 OEE" },
+          { "name": "Cleaning / CIP",   "pct": 22, "band": "hi", "val": "−0.9 OEE" }
+        ],
+        "analogues": [
+          { "of": "004182", "date": "14 Mar 2025", "line": "17", "type": "same-envase", "oee": "0.61" },
+          { "of": "004773", "date": "02 Jun 2025", "line": "17", "type": "same-envase", "oee": "0.58" },
+          { "of": "005219", "date": "19 Sep 2025", "line": "19", "type": "same-envase", "oee": "0.55" }
+        ],
+        "n": 38, "analogueMean": "0.57", "naiveMean": "0.51", "gain": "+6.2"
+      }
+    },
+    "14": {
+      "line": "Line 14", "position": "end of queue",
+      "oeeDelta": "+2.1", "oeeGood": true,
+      "deadline": "on time", "ordersMoved": 1,
+      "naiveBand": null,
+      "plan": {
+        "14": [ { "of": "FDT13LT", "start": 0, "w": 1.4, "oee": 0.54 }, { "of": "ED13LTNN", "start": 1.4, "w": 2.6, "oee": 0.51 }, { "of": "ED13LTNN", "start": 4.0, "w": 1.5, "oee": 0.52, "kind": "ins" }, { "of": "VO13LTMP", "start": 5.5, "w": 1.0, "oee": 0.55, "kind": "shift" } ],
+        "17": [ { "of": "AM05LTST", "start": 0, "w": 1.8, "oee": 0.58 }, { "of": "ED13LTNN", "start": 1.8, "w": 1.6, "oee": 0.55 }, { "of": "FDT13LT", "start": 3.6, "w": 1.4, "oee": 0.57 } ],
+        "19": [ { "of": "VO13LTMP", "start": 0, "w": 1.2, "oee": 0.52 }, { "of": "AM05LTST", "start": 1.2, "w": 2.0, "oee": 0.50 }, { "of": "ED05LTNN", "start": 3.4, "w": 1.6, "oee": 0.49 } ]
+      },
+      "ghosts": { "14": [{ "of": "VO13LTMP", "start": 4.0, "w": 1.0 }] },
+      "recovery": { "line": "14", "start": 5.5, "w": 1.1, "hours": 26, "note": "Line 14 needs ~26h to recover — the brand change leaves a longer dirty-restart tail that drags the next order down." },
+      "moves": [
+        { "of": "VO13LTMP", "line": "14", "shift": "+6h", "why": "pushed back behind the inserted order" }
+      ],
+      "evidence": {
+        "reason": "The naive slot — the urgent order sits at the end of Line 14’s existing queue, right after FDT13LT. That is a <b>brand change</b> with moderate historical cost. It hits the deadline but leaves OEE on the table versus Line 17.",
+        "breakdown": [
+          { "name": "Envase change",    "pct": 12, "band": "lo", "val": "none" },
+          { "name": "Brand change",     "pct": 48, "band": "hi", "val": "−2.0 OEE" },
+          { "name": "Pack-size change", "pct": 20, "band": "lo", "val": "−0.4 OEE" },
+          { "name": "Cleaning / CIP",   "pct": 30, "band": "hi", "val": "−1.1 OEE" }
+        ],
+        "analogues": [
+          { "of": "003901", "date": "22 Feb 2025", "line": "14", "type": "brand", "oee": "0.53" },
+          { "of": "004540", "date": "11 May 2025", "line": "14", "type": "brand", "oee": "0.50" },
+          { "of": "005077", "date": "30 Aug 2025", "line": "17", "type": "brand", "oee": "0.52" }
+        ],
+        "n": 24, "analogueMean": "0.52", "naiveMean": "0.51", "gain": "+2.1"
+      }
+    },
+    "19": {
+      "line": "Line 19", "position": "end of queue",
+      "oeeDelta": "−0.4", "oeeGood": false,
+      "deadline": "+1 day", "ordersMoved": 0,
+      "naiveBand": null,
+      "plan": {
+        "14": [ { "of": "FDT13LT", "start": 0, "w": 1.4, "oee": 0.54 }, { "of": "ED13LTNN", "start": 1.4, "w": 2.6, "oee": 0.51 }, { "of": "VO13LTMP", "start": 4.0, "w": 1.0, "oee": 0.56 } ],
+        "17": [ { "of": "AM05LTST", "start": 0, "w": 1.8, "oee": 0.58 }, { "of": "ED13LTNN", "start": 1.8, "w": 1.6, "oee": 0.55 }, { "of": "FDT13LT", "start": 3.6, "w": 1.4, "oee": 0.57 } ],
+        "19": [ { "of": "VO13LTMP", "start": 0, "w": 1.2, "oee": 0.52 }, { "of": "AM05LTST", "start": 1.2, "w": 2.0, "oee": 0.50 }, { "of": "ED05LTNN", "start": 3.4, "w": 1.6, "oee": 0.49 }, { "of": "ED13LTNN", "start": 5.0, "w": 1.6, "oee": 0.48, "kind": "ins" } ]
+      },
+      "ghosts": {},
+      "recovery": { "line": "19", "start": 6.6, "w": 1.6, "hours": 38, "note": "Line 19 takes ~38h to return to baseline — the familia change has the slowest recovery of the three options." },
+      "moves": [],
+      "evidence": {
+        "reason": "Line 19 would run the urgent order after ED05LTNN — a <b>familia change</b> that history shows recovers slowly. Nothing else on the plan moves, which is its only advantage; OEE takes a small loss versus simply doing nothing.",
+        "breakdown": [
+          { "name": "Envase change",  "pct": 10, "band": "lo", "val": "none" },
+          { "name": "Brand change",   "pct": 30, "band": "hi", "val": "−1.0 OEE" },
+          { "name": "Familia change", "pct": 60, "band": "hi", "val": "−2.6 OEE" },
+          { "name": "Cleaning / CIP", "pct": 38, "band": "hi", "val": "−1.4 OEE" }
+        ],
+        "analogues": [
+          { "of": "004310", "date": "08 Apr 2025", "line": "19", "type": "familia", "oee": "0.47" },
+          { "of": "004988", "date": "25 Jul 2025", "line": "19", "type": "familia", "oee": "0.49" },
+          { "of": "005402", "date": "14 Nov 2025", "line": "17", "type": "familia", "oee": "0.46" }
+        ],
+        "n": 19, "analogueMean": "0.48", "naiveMean": "0.51", "gain": "−0.4"
+      }
+    }
+  },
+
+  "objectives": {
+    "oee":  { "label": "OEE", "icon": "◉", "order": ["17", "14", "19"],
+              "notes": { "17": "Same-envase run — the lowest changeover loss of the three.",
+                         "14": "The naive plan line. A modest gain, deadline respected.",
+                         "19": "A familia change here genuinely costs OEE." } },
+    "time": { "label": "Time", "icon": "◷", "order": ["14", "17", "19"],
+              "notes": { "14": "The only option that meets the 21 May due date.",
+                         "17": "Best OEE of all options, but misses the deadline by a day.",
+                         "19": "Misses the deadline and loses OEE — weakest on this axis." } },
+    "dis":  { "label": "Disruption", "icon": "⇄", "order": ["19", "14", "17"],
+              "notes": { "19": "Nothing else on the plan moves — zero knock-on.",
+                         "14": "Shifts VO13LTMP back by roughly 6 hours.",
+                         "17": "Shifts FDT13LT back by roughly 6 hours." } }
+  },
+
+  "manualSlots": {
+    "17-after-AM05LTST": { "recKey": "17", "verdict": "match",
+      "label": "Line 17 · after AM05LTST",
+      "banner": "This is also LineWise’s top recommendation — same-envase, lowest loss." },
+    "14-end": { "recKey": "14", "verdict": "ok",
+      "label": "Line 14 · end of queue",
+      "banner": "A workable slot. LineWise rates Line 17 higher by +4.1 OEE — a brand change costs more here." },
+    "19-end": { "recKey": "19", "verdict": "worse",
+      "label": "Line 19 · end of queue",
+      "banner": "History disagrees with this placement. The familia change on Line 19 predicts a net OEE loss — LineWise’s recommended slot is +6.6 OEE better." },
+    "14-after-FDT13LT": { "recKey": "14", "verdict": "worse",
+      "label": "Line 14 · squeezed after FDT13LT",
+      "banner": "This slot forces a brand change mid-queue. Predicted OEE is below the line baseline — consider the recommended option instead." }
+  }
+}
