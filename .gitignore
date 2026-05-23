@@ -1,17 +1,37 @@
-# Local environment files. These may contain OPENAI_API_KEY or other secrets.
+# --- secrets / env ---
 .env
 .env.*
 !.env.example
 !*.env.example
 
-# Python / backend local state
+# --- python local state ---
 __pycache__/
 *.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .venv/
+venv/
 
-# Node / frontend local state
-node_modules/
-.next/
+# --- raw and generated data (confidential) ---
+# Damm Excel exports never leave the local machine.
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/output/*
+!data/output/.gitkeep
 
-# OS/editor noise
+# Spreadsheet / tabular formats — never commit, regardless of folder.
+*.xlsx
+*.xls
+*.xlsm
+*.XLSX
+*.csv
+*.parquet
+
+# --- OS / editor noise ---
 .DS_Store
+.idea/
+.vscode/
