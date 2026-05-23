@@ -140,13 +140,19 @@ def _validate_analogues(problems: list[str], data: dict[str, Any], production_ru
                 )
 
 
+WEAK_SCOPES = {"line_only", "global_fallback", "no_match", "no_history"}
+
+
 def _validate_recommendations(problems: list[str], data: dict[str, Any]) -> None:
     gains_by_line: dict[str, float] = {}
+    adjusted_by_line: dict[str, float] = {}
+    base_plan = data.get("basePlan") or {}
     for rec_key, rec in (data.get("recommendations") or {}).items():
         evidence = rec.get("evidence") or {}
         analogues = evidence.get("analogues") or []
         n = int(evidence.get("n") or 0)
-        expected_quality = evidence_quality_label(n)
+        scope = evidence.get("scope")
+        expected_quality = evidence_quality_label(n, scope)
         _assert(problems, n > 0, f"recommendations.{rec_key}.evidence.n must be > 0")
         _assert(problems, len(analogues) > 0, f"recommendations.{rec_key}.evidence.analogues must not be empty")
         _assert(
@@ -159,14 +165,57 @@ def _validate_recommendations(problems: list[str], data: dict[str, Any]) -> None
             evidence.get("qualityLabel") == expected_quality,
             f"recommendations.{rec_key}.evidence.qualityLabel must be {expected_quality!r}",
         )
-        if n < 8:
+
+        # Position / anchor sanity (slot search transparency).
+        position = str(rec.get("position") or "")
+        _assert(problems, len(position) > 0, f"recommendations.{rec_key}.position must be non-empty")
+        slots_evaluated = rec.get("candidateSlotsEvaluated")
+        if slots_evaluated is not None:
+            _assert(
+                problems,
+                int(slots_evaluated) >= 1,
+                f"recommendations.{rec_key}.candidateSlotsEvaluated must be >= 1",
+            )
+        line_plan = base_plan.get(str(rec_key)) or []
+        of_set = {str(seg.get("of")) for seg in line_plan if isinstance(seg, dict)}
+        if position.startswith("after "):
+            anchor_of = position[len("after "):].strip()
+            _assert(
+                problems,
+                anchor_of in of_set,
+                f"recommendations.{rec_key} anchor {anchor_of!r} not present in basePlan[{rec_key}]",
+            )
+
+        adj = rec.get("adjustedOeeGain")
+        if adj is not None:
+            adjusted_by_line[str(rec_key)] = float(adj)
+
+        # Evidence honesty checks.
+        if n < 8 or (scope in WEAK_SCOPES):
             reason = str(evidence.get("reason") or "").lower()
             risk_note = str(evidence.get("riskNote") or "").lower()
             limitations = " ".join(str(v).lower() for v in evidence.get("limitations") or [])
             _assert(
                 problems,
-                "limited" in reason or "limited" in risk_note or "limited" in limitations or "weak" in risk_note,
-                f"recommendations.{rec_key} has low evidence but does not say it is limited/weak",
+                "limited" in reason or "fallback" in reason
+                or "limited" in risk_note or "weak" in risk_note
+                or "limited" in limitations or "fallback" in limitations,
+                f"recommendations.{rec_key} has limited evidence (n={n}, scope={scope}) "
+                f"but the reason does not say limited/fallback",
+            )
+
+        # CF / theoretical evidence honesty: same-format with active components
+        # must not pretend there is no changeover.
+        same_format = bool(evidence.get("sameFormatTransition"))
+        components = evidence.get("transitionComponents") or []
+        cf_min = evidence.get("cfTheoreticalMinutes")
+        if same_format and components and (not cf_min or float(cf_min) <= 0):
+            reason_text = str(evidence.get("reason") or "").lower()
+            _assert(
+                problems,
+                "no changeover" not in reason_text,
+                f"recommendations.{rec_key}.evidence.reason claims 'no changeover' "
+                "despite active brand/product/packaging components",
             )
 
         analogue_mean = _parse_float(evidence.get("analogueMean"))
@@ -215,13 +264,18 @@ def _validate_recommendations(problems: list[str], data: dict[str, Any]) -> None
             _assert(problems, winner != "17", "Line 17 must not win for urgent format 1/2")
 
     oee_order = ((data.get("objectives") or {}).get("oee") or {}).get("order") or []
-    if oee_order and gains_by_line:
-        best_gain_line = max(gains_by_line.items(), key=lambda item: item[1])[0]
-        _assert(
-            problems,
-            str(oee_order[0]) == best_gain_line,
-            f"objectives.oee winner {oee_order[0]!r} does not have the highest evidence gain ({best_gain_line!r})",
-        )
+    if oee_order:
+        # Prefer adjustedOeeGain (penalty-discounted) when present, else fall
+        # back to raw gain points from evidence.gain.
+        ranking_source = adjusted_by_line or gains_by_line
+        if ranking_source:
+            best_line = max(ranking_source.items(), key=lambda item: item[1])[0]
+            _assert(
+                problems,
+                str(oee_order[0]) == best_line,
+                f"objectives.oee winner {oee_order[0]!r} does not have the highest "
+                f"{'adjusted' if adjusted_by_line else 'raw'} gain ({best_line!r})",
+            )
 
 
 def _validate_timelines(problems: list[str], data: dict[str, Any]) -> None:

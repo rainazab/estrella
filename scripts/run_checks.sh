@@ -26,6 +26,14 @@ echo
 echo "==> validate_model_outputs"
 "$PYTHON_BIN" -m app.validate_model_outputs "$OUT"
 
+echo
+echo "==> backtest (plausibility)"
+"$PYTHON_BIN" -m app.backtest \
+  --raw data/raw \
+  --processed data/processed \
+  --out data/processed/backtest_report.json \
+  --cases 50 --seed 42 || echo "  ! backtest reported a non-OK status (non-blocking)"
+
 if [[ -d tests ]]; then
   echo
   echo "==> pytest"
@@ -38,3 +46,4 @@ fi
 echo
 echo "✔ all checks passed"
 echo "  data.json: $OUT"
+echo "  backtest:  data/processed/backtest_report.json"

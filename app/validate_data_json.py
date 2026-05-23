@@ -158,6 +158,13 @@ def validate_payload(data: dict[str, Any]) -> list[str]:
         if str(line) in infeasible:
             _fail(problems, f"{path} exists but line is also marked infeasible")
 
+        position = str(rec.get("position") or "")
+        if not position:
+            _fail(problems, f"{path}.position must be non-empty")
+        slots_evaluated = rec.get("candidateSlotsEvaluated")
+        if slots_evaluated is not None and int(slots_evaluated) < 1:
+            _fail(problems, f"{path}.candidateSlotsEvaluated must be >= 1 when present")
+
         plan = _require_mapping(problems, rec.get("plan"), f"{path}.plan")
         for plan_line in LINE_KEYS:
             if plan_line not in plan:

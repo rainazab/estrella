@@ -48,13 +48,109 @@ transitions are only counted across consecutive production blocks — a
 cleaning row between two production rows breaks the transition chain by
 design.
 
-## CF Prat theoretical baseline + fallback
+## basePlan source — Planificado first, historical fallback
+
+`basePlan` is built from `data/raw/Planificado - producciones 14 - 17 - 19.XLSX`
+when it parses cleanly. The exporter:
+
+- Reads `Material`, `Tren`, `Fecha ini.`, `Hora ini.`, `Cntd plan`,
+  `Secuencia` and `Denominación`.
+- Sorts each line by start datetime, then by `Secuencia`.
+- Derives segment width from the gap to the next planned start (1h floor,
+  24h ceiling, 8h fallback for the tail segment).
+- Estimates HL from `Cntd plan` using a per-format cases→HL ratio.
+- Stamps `metadata.basePlanSource = "planificado"`.
+
+If the file is missing or unparseable, the exporter falls back to a
+historical-rows-derived plan and stamps `metadata.basePlanSource =
+"historical_fallback"`. Warnings are emitted on stdout and recorded in
+`data/processed/validation_report.txt`.
+
+## Full insertion-slot search
+
+For every feasible line, the recommender evaluates *every* valid
+production anchor in `basePlan[line]`, scores each candidate, and selects
+the best by adjusted OEE gain. The number of slots evaluated per line is
+written to each recommendation as `candidateSlotsEvaluated` (additive
+field). The chosen anchor index is `selectedAnchorIndex`.
+
+The naive baseline is the SKU's historically-most-common feasible line's
+*first* production anchor — that anchor is what `evidence.naiveMean` /
+`naiveBand` represent on the timeline.
+
+## Evidence scope and penalty
+
+Analogues are pulled from a five-level ladder, strongest first:
+
+| Scope                       | Penalty (OEE pts) |
+|-----------------------------|-------------------|
+| `line_transition_format`    | 0.0  |
+| `line_transition`           | 0.5  |
+| `transition_all_lines`      | 1.5  |
+| `line_only`                 | 3.0  |
+| `global_fallback`           | 5.0  |
+| `no_match` / `no_history`   | 6.0  |
+
+The penalty is subtracted from the raw OEE gain (in points) to compute
+`adjustedOeeGain`. Objective ranking uses `adjustedOeeGain` so that a
+recommendation with a thin scope cannot beat a stronger-evidence
+recommendation by a tiny raw delta.
+
+`evidenceStrengthLabel` combines sample size and scope:
+- `Strong`  — `n >= 20` AND scope in `{line_transition_format, line_transition}`.
+- `Medium`  — `n >= 8` (and scope better than `global_fallback`).
+- `Limited` — `n >= 3`.
+- `Weak`    — `n < 3`.
+
+When the scope is `line_only` or weaker, `evidence.reason` is required to
+contain the word *limited* or *fallback*. The validators enforce this.
+
+## Cleaning / maintenance between production runs
+
+`sequence_builder.build_sequence` now records the cleaning and maintenance
+blocks that sit between two production OFs on the same line. Each row in
+the transition table carries:
+
+- `clean_blocks_between`, `maint_blocks_between`
+- `cleaning_minutes_between`, `maintenance_minutes_between`,
+  `nonprod_minutes_between`
+- `had_cleaning_between`, `had_maintenance_between`
+
+The recommendation evidence breakdown surfaces the analogue-pool mean for
+`cleaning_minutes_between` and the % of analogues that had cleaning
+between runs.
+
+## CF Prat theoretical baseline + same-format honesty
 
 The CF Prat matrix (`Tabla CF Prat 2026_14_17_19.xlsx`) is the primary
-reference for changeover minutes. When a `(line, prev_format, cur_format)`
-triple is missing from the matrix, the exporter falls back to the historical
-mean actual changeover for that transition_type. The fallback is documented
-inside the recommendation evidence and reported in the validation report.
+reference for **format-vs-format** changeover minutes. When a
+`(line, prev_format, cur_format)` triple is missing, the exporter falls
+back to the historical mean actual changeover for the transition_type.
+
+A CF value of **0 min for a same-format transition** is *not* "no
+changeover". When `transitionComponents` carry brand / product /
+packaging changes, the exporter:
+
+- Splits the breakdown into discrete rows: Format CF, Brand change,
+  Product change, Packaging change, Cleaning between runs, PNP / restart,
+  Historical actual changeover, Predicted OEE.
+- Phrases the reason as: *"CF format matrix shows no format change, but
+  Cambios flags … — cleaning / restart loss is still expected."*
+- Validators block any `reason` that says "no changeover" when format is
+  the same but other components are active.
+
+## Backtest is plausibility, not causal proof
+
+`app/backtest.py` samples up to N historical production runs, treats each
+as a simulated urgent order, and compares the recommender's slot choice
+against a naive same-line baseline. Many SKUs are line-locked so most
+sampled cases tie; the *active* metrics (rows where the recommender
+chooses a different line than naive) are the discriminating signal. The
+analogue pool overlaps with the target rows even after best-effort
+exclusion by OF — leakage tends to inflate win rate. A clean zero in
+`active_loss_rate` under leaky conditions still tells us the recommender
+does not strictly underperform the naive baseline. See
+[`MODEL_CARD.md`](MODEL_CARD.md) for the latest figures.
 
 ## Recovery tail (modelled, not measured)
 

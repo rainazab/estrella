@@ -94,7 +94,51 @@ Or in one shot:
 ./scripts/run_checks.sh
 ```
 
-## 7. Frontend handoff
+### What the validators check
+
+- `validate_data_json` — contract shape: top-level keys, per-recommendation
+  required fields, evidence fields, segment validity, non-empty position,
+  slot-search counters, anchor OF present in `basePlan`.
+- `validate_model_outputs` — model invariants: OEE baselines exclude
+  cleaning/maintenance, every analogue OF is real and its OEE matches the
+  source row, `gain == analogueMean − naiveMean`, weak-scope recommendations
+  must mention *limited* / *fallback*, same-format zero CF must not claim
+  "no changeover", infeasible lines cannot top any objective ranking,
+  objectives.oee winner has the highest `adjustedOeeGain`.
+
+## 7. Backtest
+
+A plausibility check that the recommender does not strictly underperform
+the naive baseline:
+
+```bash
+python -m app.backtest \
+  --raw data/raw \
+  --processed data/processed \
+  --out data/processed/backtest_report.json \
+  --cases 50 \
+  --seed 42
+```
+
+Outputs `data/processed/backtest_report.{json,txt}`. The active-case win
+rate / loss rate are the discriminating signal — see
+[`docs/MODEL_CARD.md`](docs/MODEL_CARD.md).
+
+## Recommendation scoring in one paragraph
+
+For each feasible line, the recommender evaluates every valid production
+anchor in `basePlan[line]`, scores each candidate, and picks the best by
+penalty-adjusted OEE gain. The analogue pool is selected via a five-level
+scope ladder (strongest: same line + transition + format; weakest: any
+production transition); each scope carries a penalty in OEE points that
+discounts the raw gain. The naive baseline is the urgent SKU's
+historically-most-common feasible line's first anchor — its analogue
+mean is `evidence.naiveMean`. Objective rankings use the
+penalty-adjusted gain (OEE), a time score combining CF + overrun +
+recovery + shifted orders (Time), and a disruption score (Disruption).
+No LLM, no €/cost numbers, no fabricated analogues.
+
+## 8. Frontend handoff
 
 The frontend repo expects `public/data.json`. Either:
 
@@ -106,7 +150,7 @@ cp data/output/data.json /path/to/frontend/public/data.json
 [`docs/DATA_CONTRACT.md`](docs/DATA_CONTRACT.md). Step-by-step instructions for
 the frontend teammate are in [`docs/HANDOFF.md`](docs/HANDOFF.md).
 
-## 8. Assumptions
+## 9. Assumptions
 
 See [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md). Headlines:
 
@@ -120,7 +164,7 @@ See [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md). Headlines:
 - Every analogue is a real 2025 OF with the recorded OEE from the source.
 - No raw confidential data is committed.
 
-## 9. Troubleshooting
+## 10. Troubleshooting
 
 | Symptom | Likely cause |
 |---|---|
@@ -130,7 +174,7 @@ See [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md). Headlines:
 | `validate_model_outputs` complains about non-matching OEE | A recommendation references an OF that does not appear in production runs. Re-run the export — the analogue index has drifted. |
 | Frontend renders blanks for a line | That line is in `infeasibleByLine` for the urgent format. Expected for Line 17 with 1/2 cans. |
 
-## 10. Handoff checklist
+## 11. Handoff checklist
 
 - [ ] `data/raw/` contains all ten Excel files.
 - [ ] `./scripts/run_checks.sh` exits 0.

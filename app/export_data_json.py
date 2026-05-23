@@ -49,6 +49,7 @@ from .changeover_typing import annotate_master
 from .config import LINES
 from .data_contract import CONTRACT_VERSION, summarize, validate
 from .line_rules import LINE_FORMAT_CAPABILITIES, infeasibility_reason, is_feasible, normalize_format
+from .plan_loader import load_forward_plan
 from .sequence_builder import build_sequence
 
 DEFAULT_OUTPUT_PATH = config.OUTPUT_DIR / "data.json"
@@ -278,6 +279,33 @@ def transition_type_stats(tt: pd.DataFrame, line_baseline: Dict[str, Dict[str, A
 # ============================================================ analogues + prediction
 
 
+# Evidence scope ladder — strongest to weakest.
+SCOPE_ORDER = [
+    "line_transition_format",
+    "line_transition",
+    "transition_all_lines",
+    "line_only",
+    "global_fallback",
+]
+
+# Penalty applied to predicted gain (in OEE points) per scope.
+SCOPE_PENALTY_PTS: Dict[str, float] = {
+    "line_transition_format": 0.0,
+    "line_transition":        0.5,
+    "transition_all_lines":   1.5,
+    "line_only":              3.0,
+    "global_fallback":        5.0,
+    "no_match":               6.0,
+    "no_history":             6.0,
+}
+
+WEAK_SCOPES = {"line_only", "global_fallback", "no_match", "no_history"}
+
+
+def scope_penalty_pts(scope: Optional[str]) -> float:
+    return SCOPE_PENALTY_PTS.get(scope or "no_match", 6.0)
+
+
 def find_analogues(
     tt: pd.DataFrame,
     *,
@@ -287,45 +315,79 @@ def find_analogues(
     current_sku: Optional[str],
     cur_format_key: Optional[str],
     top_k: int = 6,
+    min_n: int = 3,
 ) -> Dict[str, Any]:
     """Score and return top-k REAL historical analogues (production-only).
 
-    Backs off through narrower → broader scopes:
-      1. same line + same transition_type
-      2. same transition_type (any line)
-      3. same line (any transition)
-    Always returns the actual scope used and `n`.
-    """
-    if tt is None or tt.empty:
-        return {"analogues": [], "n": 0, "scope": "no-history", "analogue_mean_oee": None}
+    Backs off through five scopes, strongest first:
 
-    base = tt[tt["oee"].notna()]
-    # Scope 1: same line + same transition_type
-    pool = base[(base["line"] == int(line)) & (base["transition_type"] == transition_type)]
-    scope = "line+transition"
-    if len(pool) < 3:
-        # Scope 2: same transition_type, any line
-        pool2 = base[base["transition_type"] == transition_type]
-        if len(pool2) >= 3:
-            pool, scope = pool2, "transition-only"
-    if len(pool) < 3:
-        # Scope 3: same line, any transition
-        pool = base[base["line"] == int(line)]
-        scope = "line-only"
+      1. line_transition_format — same line + transition_type + can format
+      2. line_transition        — same line + transition_type
+      3. transition_all_lines   — same transition_type, any line
+      4. line_only              — same line, any transition
+      5. global_fallback        — any production transition
+
+    The actual scope used is returned alongside the per-scope penalty.
+    """
+    empty_payload = {
+        "analogues": [],
+        "n": 0,
+        "scope": "no_history",
+        "analogue_mean_oee": None,
+        "pool_size": 0,
+        "scope_penalty_pts": scope_penalty_pts("no_history"),
+        "had_cleaning_between_rate": 0.0,
+        "mean_cleaning_minutes_between": None,
+    }
+    if tt is None or tt.empty:
+        return empty_payload
+
+    base = tt[tt["oee"].notna()].copy()
+    if base.empty:
+        return {**empty_payload, "scope": "no_match", "scope_penalty_pts": scope_penalty_pts("no_match")}
+
+    # Per-row normalized format key for the line_transition_format scope.
+    if "current_tipo_envase" in base.columns:
+        base["_fmt"] = base["current_tipo_envase"].apply(
+            lambda x: normalize_format(str(x)) if pd.notna(x) else None
+        )
+    else:
+        base["_fmt"] = None
+
+    ladder = [
+        ("line_transition_format",
+         (base["line"] == int(line))
+         & (base["transition_type"] == transition_type)
+         & (base["_fmt"] == cur_format_key)),
+        ("line_transition",
+         (base["line"] == int(line)) & (base["transition_type"] == transition_type)),
+        ("transition_all_lines",
+         (base["transition_type"] == transition_type)),
+        ("line_only",
+         (base["line"] == int(line))),
+        ("global_fallback",
+         pd.Series([True] * len(base), index=base.index)),
+    ]
+
+    scope = "no_match"
+    pool = base.iloc[0:0]
+    for name, mask in ladder:
+        candidate = base[mask]
+        if len(candidate) >= min_n:
+            pool, scope = candidate, name
+            break
 
     if pool.empty:
-        return {"analogues": [], "n": 0, "scope": "no-match", "analogue_mean_oee": None}
+        return {**empty_payload, "scope": "no_match", "scope_penalty_pts": scope_penalty_pts("no_match")}
 
-    # Score: extra weight when SKU matches
     def score_row(r):
-        s = 0.0
+        s = 0.5  # base
         if previous_sku and r.get("previous_sku") == previous_sku:
             s += 2.0
         if current_sku and r.get("current_sku") == current_sku:
             s += 2.5
-        if cur_format_key and (r.get("current_tipo_envase") and cur_format_key in str(r.get("current_tipo_envase"))):
+        if cur_format_key and r.get("_fmt") == cur_format_key:
             s += 1.0
-        s += 0.5  # base
         return s
 
     pool = pool.copy()
@@ -335,7 +397,7 @@ def find_analogues(
     top = pool.head(top_k)
     analogues = []
     for _, r in top.iterrows():
-        analogues.append({
+        analogue = {
             "of": str(r.get("current_of")),
             "previous_of": str(r.get("previous_of")),
             "line": str(int(r.get("line"))),
@@ -344,7 +406,21 @@ def find_analogues(
             "principal": r.get("principal_label") or "—",
             "actual_changeover_minutes": _round_min(r.get("actual_changeover_minutes")),
             "oee": _round_oee(r.get("oee")),
-        })
+        }
+        if "cleaning_minutes_between" in r.index:
+            analogue["cleaning_minutes_between"] = _round_min(r.get("cleaning_minutes_between"))
+        if "had_cleaning_between" in r.index:
+            analogue["had_cleaning_between"] = bool(r.get("had_cleaning_between"))
+        analogues.append(analogue)
+
+    cleaning_rate = 0.0
+    mean_cleaning_minutes = None
+    if "had_cleaning_between" in pool.columns:
+        cleaning_rate = float(pool["had_cleaning_between"].fillna(False).astype(int).mean())
+    if "cleaning_minutes_between" in pool.columns:
+        mean_cleaning_minutes = _round_min(
+            pool["cleaning_minutes_between"].dropna().mean()
+        )
 
     return {
         "analogues": analogues,
@@ -352,6 +428,9 @@ def find_analogues(
         "scope": scope,
         "analogue_mean_oee": _round_oee(pool["oee"].dropna().mean()),
         "pool_size": int(len(pool)),
+        "scope_penalty_pts": scope_penalty_pts(scope),
+        "had_cleaning_between_rate": round(cleaning_rate, 3),
+        "mean_cleaning_minutes_between": mean_cleaning_minutes,
     }
 
 
@@ -500,62 +579,151 @@ def _recovery_hours(transition_type: str, analogue_mean_oee: Optional[float], cf
     return round(base + tail, 1)
 
 
-def _evidence_breakdown(
-    cf_minutes: Optional[float],
+_COMPONENT_LABELS = {
+    "brand": "Brand change",
+    "product": "Product change",
+    "volume": "Packaging / volume change",
+    "format": "Format change",
+}
+
+
+def build_changeover_breakdown(
+    *,
+    cf_format_minutes: Optional[float],
     analogue_mean_oee: Optional[float],
     line_baseline_oee: Optional[float],
     transition_components: List[str],
+    historical_actual_minutes: Optional[float],
+    cleaning_minutes_between: Optional[float],
+    had_cleaning_between_rate: Optional[float],
+    pnp_minutes: Optional[float],
+    same_format: bool,
 ) -> List[Dict[str, Any]]:
-    """Build the changeover-breakdown bar rows shown in the evidence drawer.
-
-    Honest numbers — no invented values. Each row has {name, pct, band, val}.
-    """
+    """Honest breakdown rows. Truthful values only — no invented placeholders."""
     rows: List[Dict[str, Any]] = []
-    # Changeover effort (CF vs analogue)
-    if cf_minutes is not None:
+
+    # 1. Format CF — explicit "0 min — same format" message when no format change
+    if cf_format_minutes is not None and cf_format_minutes > 0:
         rows.append({
-            "name": "CF theoretical",
-            "pct": min(80, int(cf_minutes / 6)),  # 480 min → 80
-            "band": "lo",
-            "val": f"{int(cf_minutes)} min",
+            "name": "Format / Envase CF",
+            "pct": min(80, int(cf_format_minutes / 6)),
+            "band": "hi" if cf_format_minutes >= 120 else "lo",
+            "val": f"{int(cf_format_minutes)} min CF theoretical",
         })
+    else:
+        rows.append({
+            "name": "Format / Envase CF",
+            "pct": 0,
+            "band": "lo",
+            "val": "0 min — same format" if same_format else "Not available",
+        })
+
+    # 2. Discrete component changes (brand / product / volume / packaging)
+    other_changes = [c for c in transition_components if c and c != "same-sku"]
+    if other_changes:
+        for comp in other_changes:
+            label = _COMPONENT_LABELS.get(comp, f"Change: {comp.replace('_', ' ')}")
+            rows.append({
+                "name": label,
+                "pct": 55,
+                "band": "hi",
+                "val": "active",
+            })
+    elif not same_format:
+        # format already shown above; nothing else changes
+        pass
+    else:
+        rows.append({
+            "name": "Brand / product / packaging change",
+            "pct": 0,
+            "band": "lo",
+            "val": "none",
+        })
+
+    # 3. Cleaning between runs (historical mean for same-line / same-transition pool)
+    if cleaning_minutes_between is not None and cleaning_minutes_between > 0:
+        rows.append({
+            "name": "Cleaning between runs",
+            "pct": min(70, int(cleaning_minutes_between / 4)),
+            "band": "hi" if cleaning_minutes_between >= 60 else "lo",
+            "val": f"{int(round(cleaning_minutes_between))} min (mean of analogue pool)",
+        })
+    elif had_cleaning_between_rate and had_cleaning_between_rate > 0:
+        rows.append({
+            "name": "Cleaning between runs",
+            "pct": int(min(100, max(0, had_cleaning_between_rate * 100))),
+            "band": "hi" if had_cleaning_between_rate >= 0.3 else "lo",
+            "val": f"{had_cleaning_between_rate*100:.0f}% of analogues had cleaning between runs",
+        })
+    else:
+        rows.append({
+            "name": "Cleaning between runs",
+            "pct": 0,
+            "band": "lo",
+            "val": "Not available",
+        })
+
+    # 4. PNP / restart — from same-transition stats if available
+    if pnp_minutes is not None and pnp_minutes > 0:
+        rows.append({
+            "name": "PNP / restart",
+            "pct": min(70, int(pnp_minutes / 4)),
+            "band": "hi" if pnp_minutes >= 90 else "lo",
+            "val": f"{int(round(pnp_minutes))} min historical mean",
+        })
+    else:
+        rows.append({
+            "name": "PNP / restart",
+            "pct": 0,
+            "band": "lo",
+            "val": "Not available",
+        })
+
+    # 5. Historical actual changeover (vs CF theoretical)
+    if historical_actual_minutes is not None and historical_actual_minutes > 0:
+        rows.append({
+            "name": "Historical actual changeover",
+            "pct": min(80, int(historical_actual_minutes / 6)),
+            "band": "hi" if historical_actual_minutes > (cf_format_minutes or 0) + 20 else "lo",
+            "val": f"{int(round(historical_actual_minutes))} min mean",
+        })
+
+    # 6. Predicted OEE bar (anchored on analogue mean)
     if analogue_mean_oee is not None:
         rows.append({
-            "name": "Analogue OEE",
-            "pct": int(analogue_mean_oee * 100),
+            "name": "Predicted OEE (analogue mean)",
+            "pct": int(round(analogue_mean_oee * 100)),
             "band": "lo" if analogue_mean_oee >= 0.55 else "hi",
             "val": f"{analogue_mean_oee:.2f}",
         })
     if line_baseline_oee is not None:
         rows.append({
             "name": "Line baseline OEE",
-            "pct": int(line_baseline_oee * 100),
+            "pct": int(round(line_baseline_oee * 100)),
             "band": "lo" if line_baseline_oee >= 0.55 else "hi",
             "val": f"{line_baseline_oee:.2f}",
-        })
-    for comp in transition_components:
-        rows.append({
-            "name": f"Change: {comp.replace('_', ' ')}",
-            "pct": 50,
-            "band": "hi",
-            "val": "active",
         })
     return rows
 
 
-def evidence_quality_label(n: int) -> str:
-    """Human label for how much analogue evidence supports a recommendation."""
-    if n >= 20:
+def evidence_quality_label(n: int, scope: Optional[str] = None) -> str:
+    """Strength label combining sample size with evidence scope.
+
+    Strong requires both a large analogue pool AND a strong scope (same line,
+    same transition_type — optionally same format).
+    """
+    strong_scopes = {"line_transition_format", "line_transition"}
+    if n >= 20 and (scope is None or scope in strong_scopes):
         return "Strong"
-    if n >= 8:
+    if n >= 8 and (scope is None or scope != "global_fallback"):
         return "Medium"
     if n >= 3:
         return "Limited"
     return "Weak"
 
 
-def evidence_quality_note(n: int) -> str:
-    label = evidence_quality_label(n)
+def evidence_quality_note(n: int, scope: Optional[str] = None) -> str:
+    label = evidence_quality_label(n, scope)
     if label == "Strong":
         return f"Strong evidence: {n} historical analogues support this estimate."
     if label == "Medium":
@@ -563,6 +731,17 @@ def evidence_quality_note(n: int) -> str:
     if label == "Limited":
         return f"Limited evidence: only {n} historical analogues matched this estimate."
     return f"Weak evidence: only {n} historical analogue(s) matched this estimate."
+
+
+_SCOPE_LABEL = {
+    "line_transition_format": "same-line, same-transition, same-format",
+    "line_transition":        "same-line, same-transition",
+    "transition_all_lines":   "same-transition across all lines",
+    "line_only":              "same-line, any transition",
+    "global_fallback":        "any production transition across all lines",
+    "no_match":               "no comparable historical transitions",
+    "no_history":             "no transition history loaded",
+}
 
 
 def _deterministic_reason(
@@ -574,6 +753,9 @@ def _deterministic_reason(
     naive_oee: Optional[float],
     n: int,
     scope: str,
+    same_format: bool,
+    transition_components: List[str],
+    cf_format_minutes: Optional[float],
 ) -> str:
     """Plain-English explanation, deterministic — no LLM."""
     parts: List[str] = []
@@ -581,23 +763,172 @@ def _deterministic_reason(
         f"On Line {insertion_line} {position}, the urgent order matches a "
         f"<b>{transition_type}</b> changeover."
     )
+
+    # Honest CF interpretation for the same-format case.
+    components_active = [c for c in transition_components if c and c != "same-sku"]
+    if same_format and not components_active and not cf_format_minutes:
+        parts.append(
+            "CF format matrix shows no format change and no other change components."
+        )
+    elif same_format and (components_active or cf_format_minutes is None):
+        if components_active:
+            parts.append(
+                "CF format matrix shows no format change, but Cambios flags "
+                f"<b>{', '.join(components_active)}</b> — cleaning / restart "
+                "loss is still expected."
+            )
+        else:
+            parts.append(
+                "CF format matrix shows no format change; cleaning / restart "
+                "burden depends on the cleaning between runs and PNP rows below."
+            )
+
+    scope_label = _SCOPE_LABEL.get(scope, scope.replace("_", " "))
     if analogue_mean_oee is not None:
         parts.append(
-            f"History across {n} {scope.replace('-', ' ')} cases shows an "
-            f"average OEE of <b>{analogue_mean_oee:.2f}</b>."
+            f"History across <b>{n}</b> {scope_label} cases shows an average "
+            f"OEE of <b>{analogue_mean_oee:.2f}</b>."
         )
+
     if naive_oee is not None and analogue_mean_oee is not None:
         gain = (analogue_mean_oee - naive_oee) * 100.0
         if gain >= 0:
-            parts.append(
-                f"That is <b>{gain:+.1f}</b> OEE points above the naive slot."
-            )
+            parts.append(f"That is <b>{gain:+.1f}</b> OEE points above the naive slot.")
         else:
             parts.append(
                 f"That is <b>{gain:+.1f}</b> OEE points below the naive slot — "
                 "consider another option."
             )
+
+    if scope in WEAK_SCOPES:
+        parts.append(
+            "Evidence is <b>limited</b>: this estimate falls back to "
+            f"{scope_label} because few stronger analogues exist."
+        )
+
     return " ".join(parts)
+
+
+def _evaluate_candidate(
+    *,
+    line: int,
+    anchor_idx: int,
+    anchor: Dict[str, Any],
+    base_plan: Dict[str, List[Dict[str, Any]]],
+    transitions: pd.DataFrame,
+    transition_stats: Dict[str, Dict[str, Any]],
+    line_baseline: Dict[str, Dict[str, Any]],
+    cf,
+    urgent: Dict[str, Any],
+    cur_product: Dict[str, Any],
+    cur_format_key: Optional[str],
+) -> Dict[str, Any]:
+    """Build a single candidate (insertion after `anchor` on `line`)."""
+    prev_envase = anchor.get("envase") or anchor.get("sku")
+    prev_format_key = anchor.get("format_key") or normalize_format(prev_envase)
+    prev_marca = anchor.get("marca")
+    prev_fam = anchor.get("familia")
+    prev_sku = anchor.get("sku")
+
+    transition_type = _derive_transition_type_from_attrs(
+        prev_envase, cur_product.get("format"),
+        prev_marca, cur_product.get("marca"),
+        prev_fam, cur_product.get("family"),
+        prev_format_key, cur_format_key,
+    )
+
+    analogue = find_analogues(
+        transitions,
+        line=line,
+        transition_type=transition_type,
+        previous_sku=prev_sku,
+        current_sku=urgent["productSku"],
+        cur_format_key=cur_format_key,
+        top_k=6,
+    )
+
+    # CF — strictly the format-vs-format theoretical baseline.
+    cf_format_minutes = cf.with_fallback(line, prev_format_key, cur_format_key) if cf else None
+    # Historical actual changeover for the same transition_type (fallback).
+    hist_actual_minutes = (transition_stats.get(transition_type) or {}).get(
+        "mean_actual_changeover_minutes"
+    )
+    pnp_minutes_for_breakdown = (transition_stats.get(transition_type) or {}).get(
+        "mean_pnp_minutes"
+    )
+
+    same_format = bool(prev_format_key and cur_format_key and prev_format_key == cur_format_key)
+
+    # Throughput per line in HL/hr — used to estimate insertion duration only.
+    line_throughput = {14: 220.0, 17: 180.0, 19: 240.0}.get(line, 200.0)
+    proposed = _build_proposed_plan(
+        plan_by_line=base_plan,
+        insertion_line=line,
+        anchor_of=anchor["of"],
+        urgent_label=urgent["of"],
+        urgent_oee=(analogue.get("analogue_mean_oee") or (line_baseline.get(str(line)) or {}).get("avg_oee") or 0.55),
+        urgent_volume_hl=urgent["volume_hl"],
+        line_hl_per_hour=line_throughput,
+    )
+
+    return {
+        "line": line,
+        "anchor": anchor,
+        "anchor_idx": anchor_idx,
+        "transition_type": transition_type,
+        "analogue": analogue,
+        "cf_format_minutes": cf_format_minutes,
+        "historical_actual_minutes": hist_actual_minutes,
+        "pnp_minutes": pnp_minutes_for_breakdown,
+        "previous_sku": prev_sku,
+        "previous_envase": prev_envase,
+        "previous_format_key": prev_format_key,
+        "prev_marca": prev_marca,
+        "same_format": same_format,
+        "proposed": proposed,
+    }
+
+
+def _candidate_scores(
+    candidate: Dict[str, Any],
+    *,
+    naive_oee: Optional[float],
+    line_baseline_oee: Optional[float],
+) -> Dict[str, float]:
+    """Derive raw + adjusted scores for objective ranking and slot picking."""
+    analogue = candidate["analogue"]
+    analogue_mean = analogue.get("analogue_mean_oee")
+    predicted = analogue_mean if analogue_mean is not None else (line_baseline_oee or 0.55)
+    raw_gain_pts = ((predicted - naive_oee) * 100.0) if (naive_oee is not None) else 0.0
+
+    penalty = float(analogue.get("scope_penalty_pts") or 0.0)
+    if int(analogue.get("n") or 0) < 3:
+        penalty += 1.0  # very small sample additional caution
+
+    proposed = candidate["proposed"]
+    orders_moved = int(proposed.get("ordersMoved") or 0)
+    ghost_count = sum(len(v) for v in (proposed.get("ghosts") or {}).values())
+
+    cf_min = candidate.get("cf_format_minutes") or 0.0
+    hist_min = candidate.get("historical_actual_minutes") or 0.0
+    overrun_min = max(0.0, hist_min - cf_min)
+    recovery_h = _recovery_hours(candidate["transition_type"], analogue_mean, cf_min)
+
+    adjusted_gain = raw_gain_pts - penalty
+    disruption = orders_moved * 1.0 + ghost_count * 0.5 + recovery_h * 0.05 + penalty * 0.3
+    time_score = float(cf_min) + overrun_min + recovery_h * 60.0 + orders_moved * 30.0
+
+    return {
+        "predicted_oee": round(float(predicted), 4),
+        "raw_oee_gain_pts": round(raw_gain_pts, 2),
+        "evidence_penalty_pts": round(penalty, 2),
+        "adjusted_oee_gain_pts": round(adjusted_gain, 2),
+        "disruption_score": round(disruption, 3),
+        "time_score": round(time_score, 1),
+        "recovery_hours": float(recovery_h),
+        "orders_moved": int(orders_moved),
+        "ghost_count": int(ghost_count),
+    }
 
 
 def build_recommendations(
@@ -610,25 +941,21 @@ def build_recommendations(
     urgent: Dict[str, Any],
     products: List[Dict[str, Any]],
 ) -> Tuple[Dict[str, Any], Dict[str, str], Dict[int, Dict[str, Any]]]:
-    """Build one recommendation per feasible line.
+    """Build one recommendation per feasible line, after evaluating every slot.
 
     Returns (recommendations, infeasible_by_line, candidates_by_line).
     """
     cur_product = next((p for p in products if p["sku"] == urgent["productSku"]), {})
     cur_format_key = cur_product.get("format_key") or normalize_format(cur_product.get("format"))
-    cur_marca = cur_product.get("marca")
-    cur_familia = cur_product.get("family")
-    cur_envase = cur_product.get("format")
 
-    # Pick a naive baseline first: chronologically first production slot on the
-    # SKU's historically-most-common line if feasible, else first feasible line.
     historical_lines = cur_product.get("historical_lines") or [14, 17, 19]
     naive_line = next((l for l in historical_lines if is_feasible(l, cur_format_key)), None)
 
     infeasible_by_line: Dict[str, str] = {}
     candidates_by_line: Dict[int, Dict[str, Any]] = {}
+    all_candidates_by_line: Dict[int, List[Dict[str, Any]]] = {}
 
-    # First pass: compute per-line best candidate (skipping infeasible)
+    # Pass A: enumerate every valid insertion slot per feasible line.
     for line in LINES:
         if not is_feasible(line, cur_format_key):
             infeasible_by_line[str(line)] = infeasibility_reason(line, cur_format_key) or (
@@ -636,96 +963,76 @@ def build_recommendations(
             )
             continue
 
-        # Pick the first production OF on that line as the anchor
         line_segs = base_plan.get(str(line), [])
-        anchor = next(
-            (s for s in line_segs if s.get("kind") not in ("clean", "maint")),
-            None,
-        )
-        if not anchor:
+        valid_anchors = [
+            (idx, seg) for idx, seg in enumerate(line_segs)
+            if seg.get("kind") not in ("clean", "maint", "shift")
+        ]
+        if not valid_anchors:
+            infeasible_by_line[str(line)] = (
+                f"Line {line} has no valid production anchor in the current plan."
+            )
             continue
 
-        prev_envase = anchor.get("envase") or anchor.get("sku")
-        prev_format_key = anchor.get("format_key") or normalize_format(prev_envase)
-        prev_marca = anchor.get("marca")
-        prev_fam = anchor.get("familia")
-        prev_sku = anchor.get("sku")
-
-        transition_type = _derive_transition_type_from_attrs(
-            prev_envase, cur_envase, prev_marca, cur_marca,
-            prev_fam, cur_familia, prev_format_key, cur_format_key,
-        )
-
-        analogue = find_analogues(
-            transitions,
-            line=line,
-            transition_type=transition_type,
-            previous_sku=prev_sku,
-            current_sku=urgent["productSku"],
-            cur_format_key=cur_format_key,
-            top_k=6,
-        )
-
-        cf_minutes = cf.with_fallback(line, prev_format_key, cur_format_key) if cf else None
-        # When prev==cur format, CF is 0 — keep as 0
-        if cf_minutes is None:
-            cf_minutes = (transition_stats.get(transition_type) or {}).get(
-                "mean_actual_changeover_minutes"
+        line_candidates = []
+        for idx, anchor in valid_anchors:
+            cand = _evaluate_candidate(
+                line=line,
+                anchor_idx=idx,
+                anchor=anchor,
+                base_plan=base_plan,
+                transitions=transitions,
+                transition_stats=transition_stats,
+                line_baseline=line_baseline,
+                cf=cf,
+                urgent=urgent,
+                cur_product=cur_product,
+                cur_format_key=cur_format_key,
             )
+            line_candidates.append(cand)
+        all_candidates_by_line[line] = line_candidates
 
-        candidates_by_line[line] = {
-            "line": line,
-            "anchor": anchor,
-            "transition_type": transition_type,
-            "analogue": analogue,
-            "cf_minutes": cf_minutes,
-            "previous_sku": prev_sku,
-            "previous_envase": prev_envase,
-            "previous_format_key": prev_format_key,
-            "prev_marca": prev_marca,
-        }
-
-    # Naive predicted OEE = analogue_mean_oee on the naive line, falling back
-    # to line baseline.
+    # Naive baseline: analogue mean on the SKU's historically-most-common line,
+    # using its first production anchor.
     naive_oee: Optional[float] = None
-    if naive_line is not None and naive_line in candidates_by_line:
-        naive_oee = candidates_by_line[naive_line]["analogue"].get("analogue_mean_oee")
+    if naive_line is not None and naive_line in all_candidates_by_line and all_candidates_by_line[naive_line]:
+        first = all_candidates_by_line[naive_line][0]
+        naive_oee = first["analogue"].get("analogue_mean_oee")
         if naive_oee is None:
             naive_oee = (line_baseline.get(str(naive_line)) or {}).get("avg_oee")
 
-    # Second pass: build recommendation objects
+    # Pass B: score each candidate, pick the best per line.
+    for line, candidates in all_candidates_by_line.items():
+        line_base = (line_baseline.get(str(line)) or {}).get("avg_oee")
+        scored = []
+        for c in candidates:
+            scores = _candidate_scores(c, naive_oee=naive_oee, line_baseline_oee=line_base)
+            c["scores"] = scores
+            scored.append(c)
+        # Highest adjusted OEE gain wins; tie-break on lower disruption.
+        scored.sort(key=lambda c: (-c["scores"]["adjusted_oee_gain_pts"], c["scores"]["disruption_score"]))
+        best = scored[0]
+        best["slots_evaluated"] = len(scored)
+        candidates_by_line[line] = best
+
+    # Pass C: build the recommendation contract objects.
     recommendations: Dict[str, Any] = {}
     for line, c in candidates_by_line.items():
         analogue = c["analogue"]
         analogue_mean_oee = analogue.get("analogue_mean_oee")
         line_base = (line_baseline.get(str(line)) or {}).get("avg_oee")
-        cf_minutes = c["cf_minutes"]
+        cf_format_minutes = c["cf_format_minutes"]
+        hist_actual_minutes = c["historical_actual_minutes"]
+        pnp_min = c["pnp_minutes"]
         transition_type = c["transition_type"]
         anchor = c["anchor"]
+        proposed = c["proposed"]
+        scores = c["scores"]
 
-        # Predicted = analogue mean if available, else line baseline
-        predicted_oee = analogue_mean_oee if analogue_mean_oee is not None else line_base or 0.55
+        predicted_oee = scores["predicted_oee"]
+        gain = (analogue_mean_oee - naive_oee) if (analogue_mean_oee is not None and naive_oee is not None) else None
 
-        # Gain vs naive
-        if naive_oee is not None:
-            gain = predicted_oee - naive_oee
-        else:
-            gain = None
-
-        # Build the proposed plan + ghosts + moves
-        line_throughput = {14: 220.0, 17: 180.0, 19: 240.0}.get(line, 200.0)
-        proposed = _build_proposed_plan(
-            plan_by_line=base_plan,
-            insertion_line=line,
-            anchor_of=anchor["of"],
-            urgent_label=urgent["of"],
-            urgent_oee=predicted_oee,
-            urgent_volume_hl=urgent["volume_hl"],
-            line_hl_per_hour=line_throughput,
-        )
-
-        # Recovery zone (modelled estimate)
-        recovery_hours = _recovery_hours(transition_type, analogue_mean_oee, cf_minutes)
+        recovery_hours = scores["recovery_hours"]
         ins_seg = next(
             (s for s in proposed["plan"].get(str(line), []) if s.get("kind") == "ins"),
             None,
@@ -733,35 +1040,46 @@ def build_recommendations(
         recovery_start = (ins_seg["start"] + ins_seg["w"]) if ins_seg else 0.0
         recovery_width = max(0.4, recovery_hours / 24.0)
 
-        # Components (split by '+'): "brand+volume" → ["brand", "volume"]
         comps: List[str] = [t for t in transition_type.split("+") if t and t != "same-sku"]
-
-        evidence_breakdown = _evidence_breakdown(
-            cf_minutes,
-            analogue_mean_oee,
-            line_base,
-            comps,
+        breakdown = build_changeover_breakdown(
+            cf_format_minutes=cf_format_minutes,
+            analogue_mean_oee=analogue_mean_oee,
+            line_baseline_oee=line_base,
+            transition_components=comps,
+            historical_actual_minutes=hist_actual_minutes,
+            cleaning_minutes_between=analogue.get("mean_cleaning_minutes_between"),
+            had_cleaning_between_rate=analogue.get("had_cleaning_between_rate"),
+            pnp_minutes=pnp_min,
+            same_format=c["same_format"],
         )
 
-        # Evidence stats — only real numbers
-        evidence_label = evidence_quality_label(int(analogue["n"] or 0))
-        evidence_note = evidence_quality_note(int(analogue["n"] or 0))
+        n = int(analogue["n"] or 0)
+        scope = analogue["scope"]
+        evidence_label = evidence_quality_label(n, scope)
+        evidence_note = evidence_quality_note(n, scope)
+        reason = _deterministic_reason(
+            insertion_line=line,
+            position=f"after {anchor['of']}",
+            transition_type=transition_type,
+            analogue_mean_oee=analogue_mean_oee,
+            naive_oee=naive_oee,
+            n=n,
+            scope=scope,
+            same_format=c["same_format"],
+            transition_components=comps,
+            cf_format_minutes=cf_format_minutes,
+        )
+
         evidence = {
-            "reason": _deterministic_reason(
-                insertion_line=line,
-                position=f"after {anchor['of']}",
-                transition_type=transition_type,
-                analogue_mean_oee=analogue_mean_oee,
-                naive_oee=naive_oee,
-                n=analogue["n"],
-                scope=analogue["scope"],
-            ),
+            "reason": reason,
             "qualityLabel": evidence_label,
             "riskNote": evidence_note if evidence_label in ("Limited", "Weak") else None,
-            "scope": analogue["scope"],
-            "breakdown": evidence_breakdown,
+            "scope": scope,
+            "scopeLabel": _SCOPE_LABEL.get(scope, scope),
+            "scopePenaltyPts": round(float(analogue.get("scope_penalty_pts") or 0.0), 2),
+            "breakdown": breakdown,
             "analogues": analogue["analogues"],
-            "n": analogue["n"],
+            "n": n,
             "analogueMean": (f"{analogue_mean_oee:.3f}" if analogue_mean_oee is not None else "—"),
             "naiveMean": (f"{naive_oee:.3f}" if naive_oee is not None else "—"),
             "gain": _signed_pts(gain),
@@ -777,7 +1095,11 @@ def build_recommendations(
             "lineBaselineOee": _round_oee(line_base),
             "transitionTypeStats": transition_stats.get(transition_type) or {},
             "transitionComponents": comps,
-            "cfTheoreticalMinutes": _round_min(cf_minutes),
+            "cfTheoreticalMinutes": _round_min(cf_format_minutes),
+            "historicalActualChangeoverMinutes": _round_min(hist_actual_minutes),
+            "meanCleaningMinutesBetween": analogue.get("mean_cleaning_minutes_between"),
+            "hadCleaningBetweenRate": analogue.get("had_cleaning_between_rate"),
+            "sameFormatTransition": c["same_format"],
             "limitations": [
                 evidence_note,
                 "Crew experience and shift staffing are not in the data.",
@@ -786,10 +1108,9 @@ def build_recommendations(
             ],
         }
 
-        # Naive band — only on the naive line and only if this candidate isn't ON it
+        # Naive band (visual marker on the SKU's historical line, if different).
         naive_band = None
         if naive_line is not None and naive_line != line:
-            # Place naive band right after the first production order on the naive line
             naive_segs = base_plan.get(str(naive_line), [])
             naive_anchor = next(
                 (s for s in naive_segs if s.get("kind") not in ("clean", "maint")), None
@@ -825,14 +1146,20 @@ def build_recommendations(
             "moves": proposed["moves"],
             "decision": (
                 "ESCALATE" if gain is not None and gain < -0.02
-                else "ACCEPT" if gain is not None and gain >= 0.01
                 else "ACCEPT"
             ),
-            "predictedOee": round(float(predicted_oee), 4),
+            "predictedOee": predicted_oee,
             "naivePredictedOee": (round(float(naive_oee), 4) if naive_oee is not None else None),
             "evidenceStrengthLabel": evidence_label,
             "transitionType": transition_type,
             "evidence": evidence,
+            # Slot-search transparency (additive — not required by the contract).
+            "candidateSlotsEvaluated": int(c["slots_evaluated"]),
+            "selectedAnchorIndex": int(c["anchor_idx"]),
+            "adjustedOeeGain": float(scores["adjusted_oee_gain_pts"]),
+            "evidencePenaltyPts": float(scores["evidence_penalty_pts"]),
+            "disruptionScore": float(scores["disruption_score"]),
+            "timeScore": float(scores["time_score"]),
         }
         recommendations[str(line)] = rec
 
@@ -1015,13 +1342,29 @@ def build_objectives(recs: Dict[str, Any]) -> Dict[str, Any]:
         return {}
     items = list(recs.items())  # (line_key, rec)
 
-    def by_oee_gain(it): return -_signed_pts_value(it[1].get("oeeDelta"))
-    def by_orders_moved(it): return int(it[1].get("ordersMoved") or 0)
-    def by_recovery_hours(it): return int((it[1].get("recovery") or {}).get("hours") or 0)
+    def by_oee_gain(it):
+        # Adjusted gain (penalty-discounted) — preferred. Falls back to raw.
+        adj = it[1].get("adjustedOeeGain")
+        if adj is not None:
+            return -float(adj)
+        return -_signed_pts_value(it[1].get("oeeDelta"))
+
+    def by_time(it):
+        ts = it[1].get("timeScore")
+        if ts is not None:
+            return float(ts)
+        # Fallback: orders moved + recovery hours
+        return int(it[1].get("ordersMoved") or 0) * 30 + int((it[1].get("recovery") or {}).get("hours") or 0) * 60
+
+    def by_disruption(it):
+        ds = it[1].get("disruptionScore")
+        if ds is not None:
+            return float(ds)
+        return float(it[1].get("ordersMoved") or 0)
 
     order_oee = [k for k, _ in sorted(items, key=by_oee_gain)]
-    order_time = [k for k, _ in sorted(items, key=lambda it: (by_orders_moved(it), by_recovery_hours(it)))]
-    order_dis = [k for k, _ in sorted(items, key=by_orders_moved)]
+    order_time = [k for k, _ in sorted(items, key=by_time)]
+    order_dis = [k for k, _ in sorted(items, key=by_disruption)]
 
     def notes(kind: str) -> Dict[str, str]:
         out: Dict[str, str] = {}
@@ -1105,6 +1448,8 @@ def write_validation_report(
     join: Dict[str, Any],
     output_path: Path,
     processed_dir: Path,
+    plan_info: Optional[Dict[str, Any]] = None,
+    recommendations: Optional[Dict[str, Any]] = None,
 ) -> Path:
     """Persist a concise ingestion/contract report for demos and reviewers."""
     volumen_stats = _source_join_stats(master_blocks, data_loader.load_volumen(), ["of", "woid"])
@@ -1140,6 +1485,30 @@ def write_validation_report(
     ]
     for line in LINES:
         report_lines.append(f"Line {line}: {int(transitions_by_line.get(line, 0))}")
+
+    if plan_info is not None:
+        report_lines.extend([
+            "",
+            "basePlan source:",
+            f"  source: {plan_info.get('source')}",
+            f"  file:   {plan_info.get('file') or '—'}",
+            f"  rows:   {plan_info.get('rows', 0)}",
+        ])
+        for warning in plan_info.get("warnings") or []:
+            report_lines.append(f"  ! {warning}")
+
+    if recommendations:
+        report_lines.extend(["", "Recommendations (slot search):"])
+        for line_key, rec in recommendations.items():
+            slots = rec.get("candidateSlotsEvaluated")
+            scope = (rec.get("evidence") or {}).get("scope")
+            n = (rec.get("evidence") or {}).get("n")
+            adj = rec.get("adjustedOeeGain")
+            adj_text = f"{adj:+.2f} pts" if isinstance(adj, (int, float)) else "—"
+            report_lines.append(
+                f"  Line {line_key}: slots={slots}  scope={scope}  n={n}  adjusted_gain={adj_text}"
+            )
+
     report_lines.extend([
         "",
         "data.json written:",
@@ -1289,8 +1658,24 @@ def main(argv: Optional[List[str]] = None) -> int:
     line_baseline = build_line_baseline(transitions, master_prod)
     transition_stats = transition_type_stats(transitions, line_baseline)
 
-    print("→ Step 10: building executed history + base plan", flush=True)
-    executed_history, base_plan = build_executed_and_plan(master_blocks)
+    print("→ Step 10: executed history (from master)", flush=True)
+    executed_history, historical_plan = build_executed_and_plan(master_blocks)
+
+    print("→ Step 10b: forward plan from Planificado (with fallback)", flush=True)
+    plan_info = load_forward_plan(raw_dir, master_blocks)
+    if plan_info["by_line"] and all(plan_info["by_line"].get(str(l)) for l in LINES):
+        base_plan = plan_info["by_line"]
+        base_plan_source = "planificado"
+        print(
+            f"   basePlan source: planificado ({plan_info['rows']} rows from {Path(plan_info['file']).name})",
+            flush=True,
+        )
+    else:
+        base_plan = historical_plan
+        base_plan_source = "historical_fallback"
+        for warning in plan_info.get("warnings") or []:
+            print(f"   ! {warning}", flush=True)
+        print("   basePlan source: historical_fallback", flush=True)
 
     print("→ urgent orders", flush=True)
     urgents = build_urgent_orders(products)
@@ -1362,6 +1747,10 @@ def main(argv: Optional[List[str]] = None) -> int:
             "primary_urgent_of": primary["of"],
             "join_check": join,
             "transition_type_stats": transition_stats,
+            "basePlanSource": base_plan_source,
+            "basePlanFile": plan_info.get("file"),
+            "basePlanRows": plan_info.get("rows", 0),
+            "basePlanWarnings": plan_info.get("warnings") or [],
         },
         "infeasibleByLine": infeasible_by_line,
         "planReview": plan_review,
@@ -1386,6 +1775,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         join=join,
         output_path=output_path,
         processed_dir=processed_dir,
+        plan_info=plan_info,
+        recommendations=recommendations,
     )
 
     # Per-recommendation analogue counts, for the terminal summary
@@ -1405,10 +1796,23 @@ def main(argv: Optional[List[str]] = None) -> int:
     if isinstance(coverage, (int, float)):
         print(f"  Tiempo WOID/OF match    : {coverage*100:.1f}%", flush=True)
     print(f"  Transitions             : {int(len(transitions))}", flush=True)
+    print(f"  basePlan source         : {base_plan_source}", flush=True)
     print(f"  Recommendations         : {sorted(recommendations.keys()) or 'none'}", flush=True)
     if per_rec_n:
         analogues = ", ".join(f"L{k}: n={v}" for k, v in per_rec_n.items())
         print(f"  Analogues per rec       : {analogues}", flush=True)
+    slot_counts = ", ".join(
+        f"L{k}: slots={r.get('candidateSlotsEvaluated', 0)} (idx={r.get('selectedAnchorIndex')})"
+        for k, r in recommendations.items()
+    )
+    if slot_counts:
+        print(f"  Slot search             : {slot_counts}", flush=True)
+    scope_dist = ", ".join(
+        f"L{k}: {(r.get('evidence') or {}).get('scope')}"
+        for k, r in recommendations.items()
+    )
+    if scope_dist:
+        print(f"  Evidence scopes         : {scope_dist}", flush=True)
     print(f"  Output path             : {output_path}", flush=True)
     print("─────────────────────────────────────────────────────────", flush=True)
     print(f"  {summarize(payload)}", flush=True)
