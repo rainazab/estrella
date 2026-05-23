@@ -1,7 +1,16 @@
-# LineWise Backend / Data Layer
+# LineWise
 
-Turns Damm's 2025 Excel exports for canning lines 14, 17 and 19 into the
-LineWise frontend data contract (`data.json`).
+Monorepo for the LineWise demo:
+
+- `app/` — Python backend: ingests Damm's 2025 Excel exports, scores the
+  best line + slot for an urgent order, serves the result over HTTP.
+- `frontend/` — React/Vite web app consumed by operators. See
+  [`frontend/README.md`](frontend/README.md) for how partner code lands
+  in this directory.
+- `docs/` — contract, assumptions, model card, handoff, API contract.
+
+The backend turns Damm's 2025 Excel exports for canning lines 14, 17 and
+19 into the LineWise frontend data contract (`data.json` + `GET /plan`).
 
 ```
 Excel exports (data/raw)
@@ -215,22 +224,32 @@ See [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md). Headlines:
 │   ├── assumptions.py
 │   ├── export_data_json.py
 │   ├── validate_data_json.py
-│   └── validate_model_outputs.py
+│   ├── validate_model_outputs.py
+│   ├── plan_loader.py
+│   ├── frontend_payload.py   # canonical → frontend HTTP shape
+│   ├── server.py             # FastAPI /health, /plan, /plan/recompute
+│   └── backtest.py
+├── frontend/                # partner's React/Vite app (see frontend/README.md)
 ├── data/
 │   ├── raw/          # Excel inputs (gitignored)
 │   ├── processed/    # intermediate artifacts (gitignored)
 │   └── output/       # data.json (gitignored)
 ├── docs/
 │   ├── DATA_CONTRACT.md
+│   ├── API_CONTRACT.md
 │   ├── ASSUMPTIONS.md
+│   ├── MODEL_CARD.md
 │   └── HANDOFF.md
 ├── scripts/
 │   ├── run_export.sh
+│   ├── run_server.sh
 │   └── run_checks.sh
 ├── tests/
 │   ├── test_contract.py
 │   ├── test_line_rules.py
 │   ├── test_data_quality.py
+│   ├── test_frontend_payload.py
+│   ├── test_server.py
 │   └── golden/data_json_sample.json
 ├── requirements.txt
 └── README.md

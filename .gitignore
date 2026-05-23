@@ -31,6 +31,24 @@ data/output/*
 *.csv
 *.parquet
 
+# --- frontend (Node / Vite / Next / generic JS bundlers) ---
+node_modules/
+.next/
+.nuxt/
+.vite/
+.vite-cache/
+dist/
+build/
+out/
+coverage/
+.turbo/
+.parcel-cache/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
 # --- OS / editor noise ---
 .DS_Store
 .idea/

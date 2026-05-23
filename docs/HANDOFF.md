@@ -1,11 +1,15 @@
 # Handoff to the frontend teammate
 
-This repo is the backend / data layer. It emits one artifact:
+This repo is now a **monorepo**. Your code goes under
+[`frontend/`](../frontend/README.md); the backend stays under `app/` and
+emits two things the frontend can consume:
 
-> `data/output/data.json`
+- `data/output/data.json` — canonical file (richer, on-disk).
+- `GET /plan` over HTTP (frontend contract v2.0, served by FastAPI).
 
-The frontend in your repo loads it as `public/data.json` and renders the
-cockpit from it.
+See [`../frontend/README.md`](../frontend/README.md) for the drop-in /
+`git subtree` instructions to land your existing codebase here without
+losing history.
 
 ## TL;DR — HTTP path
 
