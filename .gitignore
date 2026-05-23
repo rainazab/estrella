@@ -1,0 +1,17 @@
+# Local environment files. These may contain OPENAI_API_KEY or other secrets.
+.env
+.env.*
+!.env.example
+!*.env.example
+
+# Python / backend local state
+__pycache__/
+*.py[cod]
+.venv/
+
+# Node / frontend local state
+node_modules/
+.next/
+
+# OS/editor noise
+.DS_Store

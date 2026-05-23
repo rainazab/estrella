@@ -20,6 +20,7 @@ from .sequence_builder import build_sequence
 from .validate_data_json import ValidationFailure, load_payload, original_plan_ofs, validate_payload
 
 DEFAULT_DATA_JSON = BASE_DIR.parent / "frontend" / "public" / "data.json"
+GOLDEN_SAMPLE = BASE_DIR / "tests" / "golden" / "data_json_sample.json"
 
 
 def _parse_float(value: Any) -> float | None:
@@ -140,6 +141,7 @@ def _validate_analogues(problems: list[str], data: dict[str, Any], production_ru
 
 
 def _validate_recommendations(problems: list[str], data: dict[str, Any]) -> None:
+    gains_by_line: dict[str, float] = {}
     for rec_key, rec in (data.get("recommendations") or {}).items():
         evidence = rec.get("evidence") or {}
         analogues = evidence.get("analogues") or []
@@ -159,6 +161,7 @@ def _validate_recommendations(problems: list[str], data: dict[str, Any]) -> None
         naive_mean = _parse_float(evidence.get("naiveMean"))
         gain = _parse_float(evidence.get("gain"))
         if analogue_mean is not None and naive_mean is not None and gain is not None:
+            gains_by_line[str(rec_key)] = gain
             expected_gain = (analogue_mean - naive_mean) * 100.0
             _assert(
                 problems,
@@ -187,6 +190,15 @@ def _validate_recommendations(problems: list[str], data: dict[str, Any]) -> None
         if urgent_format == "1/2":
             _assert(problems, winner != "17", "Line 17 must not win for urgent format 1/2")
 
+    oee_order = ((data.get("objectives") or {}).get("oee") or {}).get("order") or []
+    if oee_order and gains_by_line:
+        best_gain_line = max(gains_by_line.items(), key=lambda item: item[1])[0]
+        _assert(
+            problems,
+            str(oee_order[0]) == best_gain_line,
+            f"objectives.oee winner {oee_order[0]!r} does not have the highest evidence gain ({best_gain_line!r})",
+        )
+
 
 def _validate_timelines(problems: list[str], data: dict[str, Any]) -> None:
     base_ofs = original_plan_ofs(data)
@@ -209,6 +221,28 @@ def _validate_timelines(problems: list[str], data: dict[str, Any]) -> None:
                 )
 
 
+def _validate_golden_sample(problems: list[str], data: dict[str, Any]) -> None:
+    if not GOLDEN_SAMPLE.exists():
+        return
+    golden = load_payload(GOLDEN_SAMPLE)
+    golden_urgent = ((golden.get("urgentOrders") or [{}])[0] or {})
+    actual_urgent = ((data.get("urgentOrders") or [{}])[0] or {})
+    for key in ("sku", "productSku", "format_key"):
+        _assert(
+            problems,
+            actual_urgent.get(key) == golden_urgent.get(key),
+            f"golden urgentOrders[0].{key} changed: {actual_urgent.get(key)!r} != {golden_urgent.get(key)!r}",
+        )
+
+    golden_order = ((golden.get("objectives") or {}).get("oee") or {}).get("order")
+    actual_order = ((data.get("objectives") or {}).get("oee") or {}).get("order")
+    _assert(
+        problems,
+        actual_order == golden_order,
+        f"golden objectives.oee.order changed: {actual_order!r} != {golden_order!r}",
+    )
+
+
 def validate_model_outputs(data_path: Path) -> list[str]:
     data = load_payload(data_path)
     problems = validate_payload(data)
@@ -219,6 +253,7 @@ def validate_model_outputs(data_path: Path) -> list[str]:
     _validate_analogues(problems, data, production_runs)
     _validate_recommendations(problems, data)
     _validate_timelines(problems, data)
+    _validate_golden_sample(problems, data)
 
     return problems
 

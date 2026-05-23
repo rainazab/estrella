@@ -43,7 +43,7 @@ from . import data_loader, sample_data
 from .block_classifier import classify_blocks, verify_of_woid_join
 from .cf_matrix import load_cf_matrix
 from .changeover_typing import annotate_master
-from .config import BASE_DIR, LINES, RAW_DIR
+from .config import BASE_DIR, LINES, PROCESSED_DIR, RAW_DIR
 from .data_contract import CONTRACT_VERSION, summarize, validate
 from .line_rules import LINE_FORMAT_CAPABILITIES, infeasibility_reason, is_feasible, normalize_format
 from .sequence_builder import build_sequence
@@ -121,7 +121,7 @@ def build_executed_and_plan(
         plan_rows = rows[5:]
 
         def seg_from_row(r: dict, cursor: float) -> Tuple[dict, float]:
-            dur_days = _row_duration_hours(r) / 24.0
+            dur_days = max(0.01, _row_duration_hours(r) / 24.0)
             btype = r.get("block_type") or "production"
             base = {
                 "of": str(r.get("of")),
@@ -714,8 +714,8 @@ def build_recommendations(
             "breakdown": evidence_breakdown,
             "analogues": analogue["analogues"],
             "n": analogue["n"],
-            "analogueMean": (f"{analogue_mean_oee:.2f}" if analogue_mean_oee is not None else "—"),
-            "naiveMean": (f"{naive_oee:.2f}" if naive_oee is not None else "—"),
+            "analogueMean": (f"{analogue_mean_oee:.3f}" if analogue_mean_oee is not None else "—"),
+            "naiveMean": (f"{naive_oee:.3f}" if naive_oee is not None else "—"),
             "gain": _signed_pts(gain),
             "lineBaselineOee": _round_oee(line_base),
             "transitionTypeStats": transition_stats.get(transition_type) or {},
@@ -1015,6 +1015,84 @@ def build_year_compare(master_prod: pd.DataFrame) -> Dict[str, Any]:
     return out
 
 
+# ============================================================ validation report
+
+
+def _source_join_stats(master_blocks: pd.DataFrame, source: Optional[pd.DataFrame], of_candidates: List[str]) -> Dict[str, Any]:
+    """Return lightweight join diagnostics for a raw side table."""
+    if source is None or source.empty or master_blocks is None or master_blocks.empty:
+        return {"available": False, "matched": 0, "total": int(len(master_blocks) if master_blocks is not None else 0), "duplicates": 0}
+
+    of_col = data_loader._find_col(source, of_candidates)  # normalized helper; safe inside backend package
+    if not of_col:
+        return {"available": False, "matched": 0, "total": int(len(master_blocks)), "duplicates": 0}
+
+    source_ofs = source[of_col].dropna().astype(str)
+    unique_source_ofs = set(source_ofs)
+    master_ofs = set(master_blocks["of"].dropna().astype(str)) if "of" in master_blocks.columns else set()
+    return {
+        "available": True,
+        "matched": int(len(master_ofs & unique_source_ofs)),
+        "total": int(len(master_ofs)),
+        "duplicates": int(len(source_ofs) - len(unique_source_ofs)),
+    }
+
+
+def write_validation_report(
+    *,
+    master_blocks: pd.DataFrame,
+    block_summary: Dict[str, Any],
+    transitions: pd.DataFrame,
+    join: Dict[str, Any],
+    output_path: Path,
+) -> Path:
+    """Persist a concise ingestion/contract report for demos and judges."""
+    volumen_stats = _source_join_stats(master_blocks, data_loader.load_volumen(), ["of", "woid"])
+    cambios_stats = _source_join_stats(master_blocks, data_loader.load_cambios(), ["of", "woid"])
+    transitions_by_line = (
+        transitions.groupby("line").size().to_dict()
+        if transitions is not None and not transitions.empty and "line" in transitions.columns
+        else {}
+    )
+
+    report_lines = [
+        "LineWise Data Validation Report",
+        "",
+        f"OEE rows loaded: {join.get('oee_rows', len(master_blocks))}",
+        f"Production blocks: {block_summary.get('production', 0)}",
+        f"Cleaning blocks: {block_summary.get('clean', 0)}",
+        f"Maintenance blocks: {block_summary.get('maint', 0)}",
+        f"OEE values > 1.0 capped: {block_summary.get('oee_capped', 0)}",
+        "",
+        "WOID -> OF join:",
+        f"Tiempo rows: {join.get('tiempo_rows', 'unavailable')}",
+        f"Matched to OEE: {join.get('intersection_ofs', 'unavailable')}",
+        f"Unmatched Tiempo rows: {join.get('only_in_tiempo', 'unavailable')}",
+        "",
+        "Volumen join:",
+        f"Matched: {volumen_stats['matched']} / {volumen_stats['total']}",
+        "",
+        "Cambios join:",
+        f"Matched: {cambios_stats['matched']} / {cambios_stats['total']}",
+        f"Duplicate OFs collapsed: {cambios_stats['duplicates']}",
+        "",
+        "Transitions reconstructed:",
+    ]
+    for line in LINES:
+        report_lines.append(f"Line {line}: {int(transitions_by_line.get(line, 0))}")
+    report_lines.extend([
+        "",
+        "data.json written:",
+        str(output_path),
+        "",
+    ])
+
+    report_path = PROCESSED_DIR / "validation_report.txt"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text("\n".join(report_lines), encoding="utf-8")
+    return report_path
+
+
 # ============================================================ main
 
 
@@ -1173,7 +1251,15 @@ def main() -> None:
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with OUTPUT_PATH.open("w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2, default=str, ensure_ascii=False)
+    report_path = write_validation_report(
+        master_blocks=master_blocks,
+        block_summary=block_summary,
+        transitions=transitions,
+        join=join,
+        output_path=OUTPUT_PATH,
+    )
     print(f"\n✔ wrote {OUTPUT_PATH}  ({OUTPUT_PATH.stat().st_size/1024:.1f} KB)", flush=True)
+    print(f"✔ validation report: {report_path}", flush=True)
     print(f"  {summarize(payload)}", flush=True)
 
 

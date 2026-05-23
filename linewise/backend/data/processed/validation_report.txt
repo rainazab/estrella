@@ -1,0 +1,27 @@
+LineWise Data Validation Report
+
+OEE rows loaded: 2274
+Production blocks: 2109
+Cleaning blocks: 132
+Maintenance blocks: 32
+OEE values > 1.0 capped: 1
+
+WOID -> OF join:
+Tiempo rows: 2278
+Matched to OEE: 2274
+Unmatched Tiempo rows: 4
+
+Volumen join:
+Matched: 2273 / 2273
+
+Cambios join:
+Matched: 2137 / 2273
+Duplicate OFs collapsed: 42
+
+Transitions reconstructed:
+Line 14: 419
+Line 17: 914
+Line 19: 773
+
+data.json written:
+/Users/rainazab/Desktop/mvp/linewise/frontend/public/data.json

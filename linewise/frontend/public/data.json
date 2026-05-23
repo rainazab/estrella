@@ -248,7 +248,7 @@
       {
         "of": "PRT9900016858-M",
         "start": 0.33,
-        "w": 0.0,
+        "w": 0.01,
         "kind": "clean"
       }
     ]
@@ -336,18 +336,18 @@
       {
         "of": "PRT9900016881-M",
         "start": 0.0,
-        "w": 0.0,
+        "w": 0.01,
         "kind": "maint"
       },
       {
         "of": "PRT9900016851-M",
-        "start": 0.0,
+        "start": 0.01,
         "w": 0.16,
         "kind": "clean"
       },
       {
         "of": "PRT9900016880-M",
-        "start": 0.16,
+        "start": 0.17,
         "w": 0.12,
         "sku": "ED13LP12",
         "vol": 615,
@@ -355,7 +355,7 @@
       },
       {
         "of": "PRT9900016879-M",
-        "start": 0.28,
+        "start": 0.29,
         "w": 0.12,
         "sku": "ED13P12M",
         "vol": 615,
@@ -371,7 +371,7 @@
       },
       {
         "of": "0000710248-1",
-        "start": 0.46,
+        "start": 0.47,
         "w": 0.06,
         "sku": "FD13LP12",
         "vol": 322,
@@ -379,7 +379,7 @@
       },
       {
         "of": "PRT9900016882-M",
-        "start": 0.52,
+        "start": 0.53,
         "w": 0.04,
         "sku": "EX13LH12",
         "vol": 294,
@@ -387,7 +387,7 @@
       },
       {
         "of": "PRT9900016883-M",
-        "start": 0.56,
+        "start": 0.57,
         "w": 0.04,
         "sku": "VO13P12M",
         "vol": 724,
@@ -395,7 +395,7 @@
       },
       {
         "of": "PRT9900016884-M",
-        "start": 0.6,
+        "start": 0.61,
         "w": 0.11,
         "sku": "VO13LTNN",
         "vol": 1657,
@@ -403,7 +403,7 @@
       },
       {
         "of": "PRT9900016885-M",
-        "start": 0.71,
+        "start": 0.72,
         "w": 0.08,
         "sku": "TU13LTN",
         "vol": 1410,
@@ -600,18 +600,18 @@
           {
             "of": "PRT9900016881-M",
             "start": 0.0,
-            "w": 0.0,
+            "w": 0.01,
             "kind": "maint"
           },
           {
             "of": "PRT9900016851-M",
-            "start": 0.0,
+            "start": 0.01,
             "w": 0.16,
             "kind": "clean"
           },
           {
             "of": "PRT9900016880-M",
-            "start": 0.16,
+            "start": 0.17,
             "w": 0.12,
             "sku": "ED13LP12",
             "vol": 615,
@@ -619,7 +619,7 @@
           },
           {
             "of": "PRT9900016879-M",
-            "start": 0.28,
+            "start": 0.29,
             "w": 0.12,
             "sku": "ED13P12M",
             "vol": 615,
@@ -627,7 +627,7 @@
           },
           {
             "of": "0000710246-1",
-            "start": 0.4,
+            "start": 0.41,
             "w": 0.05,
             "sku": "EX13L12H",
             "vol": 117,
@@ -635,7 +635,7 @@
           },
           {
             "of": "0000710248-1",
-            "start": 0.45,
+            "start": 0.46,
             "w": 0.06,
             "sku": "FD13LP12",
             "vol": 322,
@@ -643,7 +643,7 @@
           },
           {
             "of": "PRT9900016882-M",
-            "start": 0.51,
+            "start": 0.52,
             "w": 0.04,
             "sku": "EX13LH12",
             "vol": 294,
@@ -651,7 +651,7 @@
           },
           {
             "of": "PRT9900016883-M",
-            "start": 0.55,
+            "start": 0.56,
             "w": 0.04,
             "sku": "VO13P12M",
             "vol": 724,
@@ -659,7 +659,7 @@
           },
           {
             "of": "PRT9900016884-M",
-            "start": 0.59,
+            "start": 0.6,
             "w": 0.11,
             "sku": "VO13LTNN",
             "vol": 1657,
@@ -667,7 +667,7 @@
           },
           {
             "of": "PRT9900016885-M",
-            "start": 0.7,
+            "start": 0.71,
             "w": 0.08,
             "sku": "TU13LTN",
             "vol": 1410,
@@ -935,8 +935,8 @@
           }
         ],
         "n": 6,
-        "analogueMean": "0.48",
-        "naiveMean": "0.48",
+        "analogueMean": "0.480",
+        "naiveMean": "0.480",
         "gain": "+0.0",
         "lineBaselineOee": 0.422,
         "transitionTypeStats": {
@@ -1053,18 +1053,18 @@
           {
             "of": "PRT9900016881-M",
             "start": 0.0,
-            "w": 0.0,
+            "w": 0.01,
             "kind": "maint"
           },
           {
             "of": "PRT9900016851-M",
-            "start": 0.0,
+            "start": 0.01,
             "w": 0.16,
             "kind": "clean"
           },
           {
             "of": "PRT9900016880-M",
-            "start": 0.16,
+            "start": 0.17,
             "w": 0.12,
             "sku": "ED13LP12",
             "vol": 615,
@@ -1075,14 +1075,14 @@
             "of": "ED13LTNN",
             "sku": "ED13LTNN",
             "vol": 594,
-            "start": 0.28,
+            "start": 0.29,
             "w": 0.14,
             "oee": 0.574,
             "kind": "ins"
           },
           {
             "of": "PRT9900016879-M",
-            "start": 0.42,
+            "start": 0.43,
             "w": 0.12,
             "sku": "ED13P12M",
             "vol": 615,
@@ -1091,7 +1091,7 @@
           },
           {
             "of": "0000710246-1",
-            "start": 0.54,
+            "start": 0.55,
             "w": 0.05,
             "sku": "EX13L12H",
             "vol": 117,
@@ -1100,7 +1100,7 @@
           },
           {
             "of": "0000710248-1",
-            "start": 0.59,
+            "start": 0.6,
             "w": 0.06,
             "sku": "FD13LP12",
             "vol": 322,
@@ -1109,7 +1109,7 @@
           },
           {
             "of": "PRT9900016882-M",
-            "start": 0.65,
+            "start": 0.66,
             "w": 0.04,
             "sku": "EX13LH12",
             "vol": 294,
@@ -1118,7 +1118,7 @@
           },
           {
             "of": "PRT9900016883-M",
-            "start": 0.69,
+            "start": 0.7,
             "w": 0.04,
             "sku": "VO13P12M",
             "vol": 724,
@@ -1127,7 +1127,7 @@
           },
           {
             "of": "PRT9900016884-M",
-            "start": 0.73,
+            "start": 0.74,
             "w": 0.11,
             "sku": "VO13LTNN",
             "vol": 1657,
@@ -1136,7 +1136,7 @@
           },
           {
             "of": "PRT9900016885-M",
-            "start": 0.84,
+            "start": 0.85,
             "w": 0.08,
             "sku": "TU13LTN",
             "vol": 1410,
@@ -1229,44 +1229,44 @@
         "17": [
           {
             "of": "PRT9900016879-M",
-            "start": 0.28,
+            "start": 0.29,
             "w": 0.12
           },
           {
             "of": "0000710246-1",
-            "start": 0.4,
+            "start": 0.41,
             "w": 0.05
           },
           {
             "of": "0000710248-1",
-            "start": 0.45,
+            "start": 0.46,
             "w": 0.06
           },
           {
             "of": "PRT9900016882-M",
-            "start": 0.51,
+            "start": 0.52,
             "w": 0.04
           },
           {
             "of": "PRT9900016883-M",
-            "start": 0.55,
+            "start": 0.56,
             "w": 0.04
           },
           {
             "of": "PRT9900016884-M",
-            "start": 0.59,
+            "start": 0.6,
             "w": 0.11
           },
           {
             "of": "PRT9900016885-M",
-            "start": 0.7,
+            "start": 0.71,
             "w": 0.08
           }
         ]
       },
       "recovery": {
         "line": "17",
-        "start": 0.42,
+        "start": 0.43,
         "w": 0.4,
         "hours": 6,
         "note": "Modelled estimate: hours for the line to return to baseline OEE after the urgent insertion. Built from changeover + transition-type tail; not a measurement."
@@ -1405,8 +1405,8 @@
           }
         ],
         "n": 6,
-        "analogueMean": "0.57",
-        "naiveMean": "0.48",
+        "analogueMean": "0.574",
+        "naiveMean": "0.480",
         "gain": "+9.4",
         "lineBaselineOee": 0.531,
         "transitionTypeStats": {
@@ -1523,18 +1523,18 @@
           {
             "of": "PRT9900016881-M",
             "start": 0.0,
-            "w": 0.0,
+            "w": 0.01,
             "kind": "maint"
           },
           {
             "of": "PRT9900016851-M",
-            "start": 0.0,
+            "start": 0.01,
             "w": 0.16,
             "kind": "clean"
           },
           {
             "of": "PRT9900016880-M",
-            "start": 0.16,
+            "start": 0.17,
             "w": 0.12,
             "sku": "ED13LP12",
             "vol": 615,
@@ -1542,7 +1542,7 @@
           },
           {
             "of": "PRT9900016879-M",
-            "start": 0.28,
+            "start": 0.29,
             "w": 0.12,
             "sku": "ED13P12M",
             "vol": 615,
@@ -1550,7 +1550,7 @@
           },
           {
             "of": "0000710246-1",
-            "start": 0.4,
+            "start": 0.41,
             "w": 0.05,
             "sku": "EX13L12H",
             "vol": 117,
@@ -1558,7 +1558,7 @@
           },
           {
             "of": "0000710248-1",
-            "start": 0.45,
+            "start": 0.46,
             "w": 0.06,
             "sku": "FD13LP12",
             "vol": 322,
@@ -1566,7 +1566,7 @@
           },
           {
             "of": "PRT9900016882-M",
-            "start": 0.51,
+            "start": 0.52,
             "w": 0.04,
             "sku": "EX13LH12",
             "vol": 294,
@@ -1574,7 +1574,7 @@
           },
           {
             "of": "PRT9900016883-M",
-            "start": 0.55,
+            "start": 0.56,
             "w": 0.04,
             "sku": "VO13P12M",
             "vol": 724,
@@ -1582,7 +1582,7 @@
           },
           {
             "of": "PRT9900016884-M",
-            "start": 0.59,
+            "start": 0.6,
             "w": 0.11,
             "sku": "VO13LTNN",
             "vol": 1657,
@@ -1590,7 +1590,7 @@
           },
           {
             "of": "PRT9900016885-M",
-            "start": 0.7,
+            "start": 0.71,
             "w": 0.08,
             "sku": "TU13LTN",
             "vol": 1410,
@@ -1887,8 +1887,8 @@
           }
         ],
         "n": 6,
-        "analogueMean": "0.56",
-        "naiveMean": "0.48",
+        "analogueMean": "0.563",
+        "naiveMean": "0.480",
         "gain": "+8.3",
         "lineBaselineOee": 0.481,
         "transitionTypeStats": {
@@ -1957,7 +1957,7 @@
   },
   "metadata": {
     "contract_version": "1.0",
-    "exported_at": "2026-05-23T17:31:18.663376+00:00",
+    "exported_at": "2026-05-23T17:39:20.562550+00:00",
     "using_fallback_data": false,
     "master_rows": 2273,
     "production_runs": 2109,
@@ -2395,7 +2395,7 @@
           "current_of": "PRT9900016879-M",
           "previous_sku": "ED13LP12",
           "current_sku": "ED13P12M",
-          "marker_start": 0.28,
+          "marker_start": 0.29,
           "marker_w": 0.12,
           "transition_type": "product",
           "principal_label": null,
@@ -2417,7 +2417,7 @@
           "current_of": "0000710246-1",
           "previous_sku": "ED13P12M",
           "current_sku": "EX13L12H",
-          "marker_start": 0.4,
+          "marker_start": 0.41,
           "marker_w": 0.05,
           "transition_type": "product",
           "principal_label": null,
@@ -2461,7 +2461,7 @@
           "current_of": "PRT9900016882-M",
           "previous_sku": "FD13LP12",
           "current_sku": "EX13LH12",
-          "marker_start": 0.52,
+          "marker_start": 0.53,
           "marker_w": 0.04,
           "transition_type": "brand",
           "principal_label": null,
@@ -2483,7 +2483,7 @@
           "current_of": "PRT9900016884-M",
           "previous_sku": "VO13P12M",
           "current_sku": "VO13LTNN",
-          "marker_start": 0.6,
+          "marker_start": 0.61,
           "marker_w": 0.11,
           "transition_type": "product",
           "principal_label": null,
@@ -2505,7 +2505,7 @@
           "current_of": "PRT9900016885-M",
           "previous_sku": "VO13LTNN",
           "current_sku": "TU13LTN",
-          "marker_start": 0.71,
+          "marker_start": 0.72,
           "marker_w": 0.08,
           "transition_type": "brand",
           "principal_label": null,

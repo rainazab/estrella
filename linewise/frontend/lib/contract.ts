@@ -16,7 +16,9 @@ export type Seg = {
   of: string;
   start: number; // day-offset (executed: 0..N old→new; plan: 0..N today→ahead)
   w: number; // width in days
-  oee: number; // 0..1
+  sku?: string | null;
+  vol?: number;
+  oee?: number; // 0..1; absent for clean/maint blocks
   kind?: "anchor" | "ins" | "shift" | "planned" | string;
 };
 
@@ -58,9 +60,13 @@ export type UrgentOrder = {
 export type LineBaseline = {
   avg_oee: number | null;
   avg_changeover_minutes: number | null;
-  avg_overrun_minutes: number | null;
-  throughput_hl_per_hour: number;
-  historical_orders: number;
+  avg_limpieza_minutes: number | null;
+  avg_pnp_minutes: number | null;
+  production_orders: number;
+  supports_formats: string[];
+  avg_overrun_minutes?: number | null;
+  throughput_hl_per_hour?: number;
+  historical_orders?: number;
 };
 
 // Year → Month → Line → avg OEE
@@ -77,23 +83,31 @@ export type EvidenceBreakdown = {
 
 export type EvidenceAnalogue = {
   of: string;
+  previous_of?: string;
   date: string;
   line: string;
   type: string;
-  oee: string;
+  principal?: string | null;
+  actual_changeover_minutes?: number | null;
+  oee: number;
 };
 
 export type Evidence = {
   reason: string;
   headline?: string | null;
   riskNote?: string | null;
-  bullets: string[];
+  bullets?: string[];
   breakdown: EvidenceBreakdown[];
   analogues: EvidenceAnalogue[];
   n: number;
   analogueMean: string;
   naiveMean: string;
   gain: string;
+  scope?: string;
+  lineBaselineOee?: number | null;
+  transitionTypeStats?: any;
+  transitionComponents?: string[];
+  cfTheoreticalMinutes?: number | null;
   limitations: string[];
 };
 
@@ -126,8 +140,8 @@ export type Recommendation = {
   cleaningImpact?: any | null;
   businessImpact?: any | null;
   historicalBenchmark?: any | null;
-  reasoning: string[];
-  topFactors: string[];
+  reasoning?: string[];
+  topFactors?: string[];
   evidence: Evidence;
 };
 
@@ -156,6 +170,7 @@ export type LineWiseData = {
     exported_at?: string;
     using_fallback_data?: boolean;
     master_rows?: number;
+    transitions?: number;
     transitions_analyzed?: number;
     cf_matrix_loaded?: boolean;
     primary_urgent_of?: string;
@@ -215,9 +230,9 @@ export const FALLBACK_DATA: LineWiseData = {
     },
   ],
   lineBaseline: {
-    "14": { avg_oee: 0.54, avg_changeover_minutes: 10, avg_overrun_minutes: 3, throughput_hl_per_hour: 220, historical_orders: 0 },
-    "17": { avg_oee: 0.55, avg_changeover_minutes: 14, avg_overrun_minutes: 4, throughput_hl_per_hour: 180, historical_orders: 0 },
-    "19": { avg_oee: 0.52, avg_changeover_minutes: 17, avg_overrun_minutes: 5, throughput_hl_per_hour: 240, historical_orders: 0 },
+    "14": { avg_oee: 0.54, avg_changeover_minutes: 10, avg_limpieza_minutes: 0, avg_pnp_minutes: 0, production_orders: 0, supports_formats: ["1/2", "1/3"] },
+    "17": { avg_oee: 0.55, avg_changeover_minutes: 14, avg_limpieza_minutes: 0, avg_pnp_minutes: 0, production_orders: 0, supports_formats: ["1/3"] },
+    "19": { avg_oee: 0.52, avg_changeover_minutes: 17, avg_limpieza_minutes: 0, avg_pnp_minutes: 0, production_orders: 0, supports_formats: ["1/2", "1/3", "2/5"] },
   },
   lineCentre: { "14": "CF Prat", "17": "CF Prat", "19": "CF Prat" },
   yearCompare: {},
@@ -259,6 +274,7 @@ export async function loadData(): Promise<LineWiseData> {
       objectives: json.objectives ?? {},
       metadata: json.metadata,
       infeasibleByLine: json.infeasibleByLine,
+      planReview: json.planReview,
     };
   } catch (e) {
     // eslint-disable-next-line no-console

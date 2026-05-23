@@ -1,43 +1,33 @@
 # LineWise
 
-> **One urgent canning-line order. Three real options. The cockpit shows you
-> the historical evidence behind each one and the cost of getting it wrong.**
+> **A production-planning cockpit for Damm's El Prat canning lines 14, 17 and 19.**
+> Blue Yonder creates a theoretical plan. LineWise checks whether that plan is
+> likely to execute well — by comparing every transition against what
+> *actually* happened on those lines in 2025.
 
-LineWise is a planner cockpit for Damm's canning lines 14, 17 and 19. It is
-not a live simulation server — the demo is the **backend → `data.json` →
-frontend** pipeline:
+LineWise is not a dashboard. It is a single Gantt-style planning screen with
+three modes:
 
-```
-Excel files
-   ↓        data_loader.build_master_dataset()
-master table  (one row per line-time block, keyed by OF)
-   ↓        block_classifier.classify_blocks()
-master + block_type (production / clean / maint / other), OEE capped at 1.0
-   ↓        changeover_typing.annotate_master()
-master + transition_type + principal_label
-   ↓        sequence_builder.build_sequence()
-line_blocks (incl. clean/maint) + production-only transition table
-   ↓        diagnostics + analogue search + recommendation
-LineWiseData payload  →  frontend/public/data.json
-   ↓        loadData()
-cockpit UI
-```
+| Mode | Question it answers |
+|---|---|
+| **Plan Review** *(default)* | Where is the future plan about to repeat a 2025 mistake? |
+| **Rush Order** | An urgent OF came in — where can we insert it with the least operational damage? |
+| **Evidence** | Why should I trust any of this? Which 2025 orders back this recommendation? |
 
-The frontend boots from `/data.json` with **no runtime backend dependency**.
-The legacy FastAPI endpoints still work for the secondary diagnostic /
-plan-review / learning pages but the cockpit (`/`) does not need them.
+The cockpit reads the entire UI payload from **one static file**:
+`frontend/public/data.json`. No backend dependency at runtime.
 
 ---
 
-## Run it
+## Run
 
 ```bash
-# 1. Build the data snapshot (Excel → data.json)
+# 1. Build the snapshot from the Excel sources
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python -m app.export_data_json
-# writes ../frontend/public/data.json
+# → writes ../frontend/public/data.json (~67 KB)
 
 # 2. Boot the cockpit
 cd ../frontend
@@ -46,11 +36,31 @@ npm run dev
 # http://localhost:3000
 ```
 
-The full demo never touches the backend after step 1.
+Once `data.json` exists, the cockpit needs nothing else.
 
 ---
 
-## Acceptance run (the contract handoff)
+## Architecture in one diagram
+
+```
+Excel files
+   ↓        data_loader.build_master_dataset()
+master table  (one row per line-time block, keyed by OF)
+   ↓        block_classifier.classify_blocks()
+master + block_type ∈ {production, clean, maint, other}, OEE capped at 1.0
+   ↓        changeover_typing.annotate_master()
+master + transition_type + principal_label
+   ↓        sequence_builder.build_sequence()
+line_blocks (incl. clean/maint) + production-only transition table
+   ↓        diagnostics + analogues + recommendations + plan-review overlay
+LineWiseData payload  →  frontend/public/data.json
+   ↓        lib/contract.loadData()
+Cockpit UI (modes: Plan Review / Rush Order / Evidence)
+```
+
+---
+
+## Acceptance run
 
 ```
 → Step 1: verifying OF/WOID join
@@ -60,76 +70,192 @@ The full demo never touches the backend after step 1.
    blocks: total=2273 · production=2109 · clean=132 · maint=32 · other=0 · oee_capped=1
 → Step 4+5: building sequence + transition table (production-only)
    transitions: 2106
-→ Step 6: loading CF matrix     (CF loaded: True)
-→ Step 7: line baseline + transition-type stats
 → Step 9: building recommendations
    recommendations: ['14', '17', '19'] · infeasible: none
+→ plan review risk overlay
+   plan_health=80.0 · risky=12 · cleaning_heavy=2
 → Step 12: validating contract
    ✔ contract OK
 
-✔ wrote frontend/public/data.json  (57.1 KB)
+✔ wrote frontend/public/data.json  (66.3 KB)
   urgentOrders=2 · recommendations=3 · analogues=[L14:n=6, L17:n=6, L19:n=6]
   prod=2109 · clean=132 · maint=32 · oee_capped=1 · tx=2106
 ```
 
 ---
 
-## Data assumptions (and what we *don't* assume)
+## Backend validation
+
+Run the backend confidence check whenever `data.json` is regenerated:
+
+```bash
+cd backend
+./check.sh
+```
+
+It rebuilds `frontend/public/data.json`, validates the frontend contract, and
+then checks model/data invariants:
+
+```text
+✅ data.json contract valid
+✅ OEE baselines valid
+✅ cleaning rows excluded from OEE stats
+✅ analogues are real OFs
+✅ line eligibility rules enforced
+✅ timeline segments valid
+✅ recommendations valid
+```
+
+Each export also writes a judge-friendly ingestion report to
+`backend/data/processed/validation_report.txt`.
+
+Backend validation performed:
+- Verified WOID -> OF join between Tiempo and OEE.
+- Classified line-time blocks into production / cleaning / maintenance.
+- Excluded cleaning and maintenance from OEE baselines.
+- Capped OEE values > 1.0 as registration artifacts.
+- Reconstructed executed sequence by sorting production runs by line and Fecha Fin.
+- Typed changeovers using Cambios decomposition.
+- Used real 2025 OFs as analogues.
+- Enforced line-format rules for lines 14, 17, and 19.
+- Generated frontend data contract as `data.json`.
+
+---
+
+## The cockpit
+
+### Top of the screen
+
+- **TopBar** — brand + "grounded in N executed blocks · lines 14/17/19 · 2025"
+- **Title + sub** — *Execution Intelligence for Production Planning*
+- **Mode toggle** — Plan Review / Rush Order / Evidence
+
+### Hero strip (always visible)
+
+Four headline cards whose content adapts to the mode:
+
+| Plan Review | Rush Order | Evidence |
+|---|---|---|
+| Plan Health 0–100 | OEE vs Historical Benchmark | Master rows |
+| Risky transitions count | Capacity Protected | Transitions analysed |
+| Best line (history) | Recovery hours (modelled) | OEE values capped |
+| Worst line (history) | Decision badge | Months of evidence |
+
+### Main grid — Gantt + Details
+
+The **timeline** is the centerpiece. Three swimlanes, one per line:
+
+```
+14 (CF Prat · 1/2 · 1/3)   [past hatched] | today | [planned segments]
+17 (CF Prat · 1/3)         [past hatched] | today | [planned segments]
+19 (CF Prat · 1/2 · 1/3 · 2/5)            | today | [planned segments]
+```
+
+Each line shows a **format chip** under its label so the operational
+constraints are visible at all times.
+
+Block kinds:
+- **production** — coloured by OEE band (good / mid / weak)
+- **clean** — hatched blue, italic role label
+- **maint** — hatched grey
+- **ins** — bright green with `NEW` flag (rush-order insertion)
+- **shift** — dashed border with `MOVED` flag
+- **ghost** — empty dashed outline showing where a shifted order was originally
+
+On every timeline, a **today divider** (vertical brand-coloured line)
+separates the immutable past from the planning future.
+
+### Right-side details panel
+
+The right column is **always visible**. Its content is driven by the active
+selection:
+
+- **No selection** — mode default (line baselines, urgent inbox, monthly OEE chart)
+- **Click a risk marker (Plan Review)** — full historical evidence behind that risky transition: damage points vs line baseline, transition type stats, cleaning/changeover burden
+- **Click a production block** — that OF's stats vs its line baseline
+- **Click a clean/maint block** — explains why it doesn't enter OEE statistics
+- **Drop the urgent OF on a line (Rush Order)** — the recommendation: predicted OEE vs benchmark, real 2025 analogues table, what moves, modelled recovery hours
+
+### Bottom strip (Rush Order only)
+
+Three **scenario cards** — one per candidate line — letting the planner
+compare every option at a glance. The strongest is starred. Click any card
+to switch the proposed plan + details panel.
+
+---
+
+## Hard line-format rules (enforced everywhere)
+
+| Line | Supports |
+|---|---|
+| 14 | 1/2 (50cl) · 1/3 (33cl) |
+| 17 | 1/3 (33cl) **only** |
+| 19 | 1/2 · 1/3 · 2/5 (44cl) |
+
+In Rush Order mode, dragging the urgent OF onto an ineligible line:
+- the line's track is hatched red
+- the drop hint reads e.g. *"Line 17 only produces 1/3 — Cannot run Medio · 50cl cans."*
+- the drop is blocked
+
+Eligible lines show a green drop hint and accept the drop.
+
+---
+
+## Data assumptions (and what we don't assume)
 
 | Assumption | Why |
 |---|---|
-| **Per-OF / per-line-time-block granularity.** Each row of the master table is one line-time block keyed by `OF`. *Not* every row is a production order. | Some OFs (`PRT99…M`) are cleaning windows or maintenance blocks, not production. |
-| **`block_type` classifies every row** as `production` / `clean` / `maint` / `other` (`block_classifier.py`). Cleaning + maintenance blocks render on the timeline but **never enter OEE baselines, analogue means, or transition statistics**. | Mixing them was a bug — it dragged baselines toward 0. |
-| **`OEE > 1.0` is capped** at 1.0 and the original value preserved in `oee_raw`. `metadata.oee_capped` counts how many rows were clipped. | One row in the source has `OEE = 1.573` — a data-entry artefact. |
-| **WOID → OF rename** is safe: 100% of `OEE.OF` is present in `Tiempo.WOID`, only 4 extra in Tiempo. The pipeline renames Tiempo's `WOID` to `OF` internally. | Verified at the top of every export run. |
-| **Executed sequence is immutable.** History is the spine of every analogue lookup. The simulator never re-shuffles past blocks. | A planner can only trust forward-looking placements. |
-| **Recovery hours are a *modelled estimate*.** Every recommendation's `recovery.note` calls this out: "Modelled estimate: hours for the line to return to baseline OEE after the urgent insertion." | We don't have a measured "back to baseline" signal in the data. |
-| **No euro / cost figures.** Damm hasn't given LineWise cost data. We report OEE points, HL, capacity hours, orders moved — that's it. | Inventing money numbers is dishonest. |
-| **No OpenAI dependency on the export path.** Explanations are deterministic and built from the same facts the contract carries. | The demo must work offline. |
+| **Per-OF / per-line-time-block granularity.** Each row of the master table is one line-time block keyed by `OF`. *Not* every row is a production order. | Some OFs (`PRT99…M`) are cleaning windows or maintenance blocks. |
+| **`block_type` classifies every row** (`block_classifier.py`). Cleaning + maintenance blocks render on the timeline but **never enter OEE baselines, analogue means, or transition statistics**. | Mixing them was a bug — it dragged baselines toward 0. |
+| **`OEE > 1.0` is capped** at 1.0; the original value is preserved in `oee_raw`. `metadata.oee_capped` counts how many were clipped. | One row has `OEE = 1.573` — a data-entry artefact. |
+| **WOID → OF rename** is safe: 100% of `OEE.OF` is present in `Tiempo.WOID`. Verified at the top of every export. |  |
+| **Executed sequence is immutable.** History is the spine of every analogue lookup. | A planner can only trust forward-looking placements. |
+| **Recovery hours are a *modelled estimate*.** Every `recommendation.recovery.note` calls it out. | We don't have a measured "back to baseline" signal. |
+| **No euro / cost figures.** | Damm hasn't given us cost data. |
+| **No OpenAI dependency on the export path.** Explanations are deterministic. | The demo must work offline. |
 | **All analogues are real 2025 OFs** with real recorded OEE. No fakes. | Validated by `data_contract.py`. |
 
 ---
 
-## Architecture
+## Repo layout
 
 ```
 backend/
-  main.py                        Legacy FastAPI app (secondary pages only)
+  main.py                          Legacy FastAPI app (secondary pages only)
   app/
     config.py
-    data_loader.py               Excel ingest, column normalization, joins
-    block_classifier.py     ⭐   block_type + OEE cap + OF/WOID join verifier
-    changeover_typing.py    ⭐   Cambios decomposition → transition_type
-    sequence_builder.py     ⭐   per-line block sequence + production-only transitions
-    cf_matrix.py                 Tabla CF Prat parser + documented fallback
-    line_rules.py                Hard format rules (14: 1/2,1/3 · 17: 1/3 · 19: all)
-    transition_memory.py         (legacy — only used by FastAPI endpoints now)
-    diagnostics.py               Transition-type ranking (legacy endpoint)
-    optimizer.py                 (legacy — only used by FastAPI endpoints now)
-    model.py                     GradientBoostingRegressor (unused on export path)
-    business_impact.py           (legacy — euro figures removed from export)
-    data_contract.py        ⭐   data.json validator + summary printer
-    export_data_json.py     ⭐   THE handoff — Excel → contract → /data.json
-  data/raw/                      Place data.zip contents here
-  data/processed/                learning_log.json lives here
+    data_loader.py                 Excel ingest, column normalization, joins
+    block_classifier.py            block_type + OEE cap + OF/WOID verifier
+    changeover_typing.py           Cambios decomposition → transition_type
+    sequence_builder.py            per-line blocks + production-only transitions
+    cf_matrix.py                   Tabla CF Prat parser + documented fallback
+    line_rules.py                  Hard format rules (14: 1/2,1/3 · 17: 1/3 · 19: all)
+    data_contract.py               data.json validator + summary printer
+    export_data_json.py            ⭐ THE handoff — Excel → contract → /data.json
+    transition_memory.py, diagnostics.py, optimizer.py, model.py, business_impact.py
+                                   (legacy — used only by FastAPI endpoints)
+  data/raw/                        Place data.zip contents here
+  data/processed/
 
 frontend/
-  public/data.json               The contract handoff. Regenerated by the export script.
+  public/data.json                 The contract handoff (regenerated by exporter)
   app/
-    globals.css                  Cream / dark-green / copper paper theme
-    layout.tsx                   TopBar + secondary nav
-    page.tsx                     Cockpit (queue → calculating → recs)
-    diagnostics/, plan-review/, learning/, about-model/   Secondary pages
+    globals.css                    Cream / dark-green / copper paper theme
+    layout.tsx                     TopBar + cockpit shell
+    page.tsx                       ⭐ Unified cockpit (3 modes)
+    diagnostics/, plan-review/, learning/, about-model/   Legacy drilldowns
   lib/
-    contract.ts                  LineWiseData types + loadData() + FALLBACK_DATA
+    contract.ts                    LineWiseData + PlanReview types + loadData()
   components/
-    TopBar, QueuePanel, CalculatingPanel, CalculatingStage
-    RecsPanel, RecCard, RecoveryPanel, ImpactSummary, InfeasiblePanel
-    Timeline, ZoomControl, Legend
+    TopBar
+    ModeToggle              ⭐    Plan Review / Rush Order / Evidence
+    HeroStrip               ⭐    Four mode-aware headline cards
+    Timeline                       Gantt with risk markers + eligibility hints
+    DetailsPanel            ⭐    Right column, content driven by selection
+    UrgentOrderTray         ⭐    Drag source for rush orders
+    ScenarioStrip           ⭐    Bottom comparison cards (Rush Order)
+    Legend, ZoomControl
 ```
-
-⭐ = added or substantially rewritten as part of the contract-freeze
-migration.
 
 ---
 
@@ -139,117 +265,47 @@ The cockpit consumes exactly this object from `/data.json`:
 
 ```jsonc
 {
-  "urgentOrders": [ { of, status, sku, productSku, units, hl, due, volume_hl, format_key } ],
-  "lineBaseline": {
-    "14": { avg_oee, avg_changeover_minutes, avg_limpieza_minutes,
-            avg_pnp_minutes, production_orders, supports_formats }
-  },
-  "lineCentre":   { "14": "CF Prat", "17": "CF Prat", "19": "CF Prat" },
-  "yearCompare":  { "2025": { "01": { "14": 0.55, "17": 0.59, ... } } },
-  "executedHistory": {
-    "14": [
-      { of, sku, vol, start, w, oee },         // production
-      { of, kind: "clean", start, w },          // cleaning window
-      { of, kind: "maint", start, w }           // maintenance
-    ]
-  },
-  "basePlan":    { /* same shape, segments live to the right of "today" */ },
-  "recommendations": {
-    "14": {
-      line, position, oeeDelta, oeeGood, deadline, ordersMoved,
-      naiveBand:  { line, start, w } | null,
-      plan:       { "14": [ Seg ], "17": [ Seg ], "19": [ Seg ] },
-      ghosts:     { "14": [ { of, start, w } ] },
-      recovery:   { line, start, w, hours, note },
-      moves:      [ { of, line, shift, why } ],
-      decision:   "ACCEPT" | "ACCEPT_WITH_MOVE" | "ESCALATE",
-      predictedOee, naivePredictedOee,
-      transitionType,
-      evidence: {
-        reason, scope, breakdown,
-        analogues:    [ { of, line, date, type, oee, actual_changeover_minutes } ],
-        n, analogueMean, naiveMean, gain,
-        transitionTypeStats, transitionComponents,
-        cfTheoreticalMinutes, lineBaselineOee, limitations
-      }
-    }
-  },
-  "objectives": {
-    "oee":  { label, icon, order: [ "17", "14", "19" ], notes: { "14": "..." } },
-    "time": { ... },
-    "dis":  { ... }
-  },
+  "urgentOrders":      [ UrgentOrder ],
+  "lineBaseline":      { "14": LineBaseline, "17": …, "19": … },
+  "lineCentre":        { "14": "CF Prat", … },
+  "yearCompare":       { "2025": { "01": { "14": 0.55, … } } },
+  "executedHistory":   { "14": [ Seg ], … },
+  "basePlan":          { "14": [ Seg ], … },
+  "recommendations":   { "14": Recommendation, … },
+  "objectives":        { "oee": Objective, "time": …, "dis": … },
+
   /* additive — not strictly part of the contract */
-  "metadata": { contract_version, exported_at, master_rows, production_runs,
-                clean_blocks, maint_blocks, oee_capped, transitions, ... },
-  "infeasibleByLine": { "17": "Line 17 cannot run Medio · 50cl cans — ..." }
+  "planReview": {
+    "plan_health_score": 80.0,
+    "total_risky": 12, "total_cleaning_heavy": 2,
+    "risky_by_line": { "14": [ RiskItem ], … }
+  },
+  "infeasibleByLine":  { "17": "Line 17 cannot run Medio · 50cl cans — ..." },
+  "metadata":          { contract_version, exported_at, master_rows, … }
 }
 ```
 
 `data_contract.py::validate()` enforces the required keys and rejects any
-recommendation that lacks `evidence.{analogues, n, analogueMean, naiveMean, gain}`.
+recommendation missing `evidence.{reason, breakdown, analogues, n,
+analogueMean, naiveMean, gain}`.
 
-When `/data.json` is missing the frontend falls back to `FALLBACK_DATA` in
-`lib/contract.ts` so the queue view still boots.
-
----
-
-## Cockpit demo flow
-
-1. **Queue view** — two urgent orders show in the left panel. Click the
-   active one.
-2. **Calculating view** — short scanning animation (purely UI; no API call).
-3. **Recs view (the cockpit)** — the left panel shows:
-   - Selected-order summary
-   - Objective pills: **OEE / Time / Disruption** — re-rank the three cards
-   - Three rec cards (one per feasible line, infeasible lines surface in
-     the "Not feasible" panel)
-   - Each rec card opens an inline evidence drawer with:
-     - The deterministic reasoning paragraph (no LLM)
-     - A bar-chart breakdown of CF theoretical vs. analogue OEE vs. line baseline
-     - The top 6 real historical analogues (table of real OFs, dates, types, OEE)
-     - Analogue mean / naive mean / predicted gain stat row
-     - "What this estimate cannot see" caveat
-   - Recovery panel — lines ranked by fastest hours-to-baseline
-4. **Stage** — the right panel shows the proposed plan timeline:
-   - **Impact summary** card at the top (the headline insight)
-   - Toggle to overlay the **naive slot**
-   - Drag-token to test your own slot (manual placement)
-   - Timeline: executed history (left of today, hatched), today divider,
-     proposed plan (right of today) with NEW / MOVED segments, ghosts,
-     cleaning + maintenance blocks rendered in a distinct visual style,
-     and a "back to baseline" mark at the end of the recovery zone
-   - Day / Week / Month zoom
-5. **Secondary pages** (kept around as live FastAPI views, accessible via
-   the small top-bar nav):
-   - `/diagnostics` — transition-type ranking + drilldown + order evidence
-   - `/plan-review` — plan-health score, value at risk *omitted*, risky transitions
-   - `/learning` — accept / override / actuals loop
-   - `/about-model` — pipeline explainer
+If `/data.json` is missing, the cockpit falls back to `FALLBACK_DATA`
+embedded in `lib/contract.ts`.
 
 ---
 
-## Re-running the export
+## Demo story to tell
 
-Whenever the Excel sources change:
+1. **Open LineWise.** The future plan is on a clean Gantt.
+2. **Plan Review mode (default).** Yellow / amber / red ⚠ markers sit on top of risky transitions. Hero strip shows Plan Health 80/100, 12 risky transitions, best line Line 17 (0.53), worst line Line 14 (0.42).
+3. **Click a red ⚠ marker.** The details panel shows: *"This transition type historically loses 8.5 OEE pts vs the line baseline."* + the CF theoretical vs actual changeover times + n cases.
+4. **Switch to Rush Order mode.** The urgent OF appears in the tray. Three line tracks are highlighted.
+5. **Drag the OF onto Line 17.** It accepts. The hero strip flips to *OEE vs Benchmark*. The timeline shows the insertion with NEW + MOVED segments, ghosts, recovery zone, and a back-to-baseline mark. The details panel shows real 2025 analogues (e.g. `PRT9900016759-M @ 29 Nov 2025 → 0.53 OEE`).
+6. **Try dragging the 50cl OF onto Line 17.** The drop hint goes red: *"Line 17 only produces 1/3 — Cannot run Medio · 50cl cans."* The drop is blocked.
+7. **Bottom strip** compares all three candidate lines side-by-side. Click any to switch the proposed plan.
+8. **Switch to Evidence mode.** Monthly OEE per line for 2025, click any block to see its line baseline.
 
-```bash
-cd backend && source .venv/bin/activate
-python -m app.export_data_json
-```
-
-The script:
-1. Verifies the OF/WOID join and prints coverage.
-2. Loads + classifies blocks (caps OEE > 1.0, counts caps).
-3. Builds the production-only transition table via `sequence_builder`.
-4. Loads the CF matrix (with documented fallback) and computes per-line
-   baselines + transition-type stats.
-5. Picks one urgent order from real product metadata.
-6. For each feasible line: finds **real** analogues (line+transition →
-   transition-only → line-only backoff), computes the recommendation, and
-   writes a deterministic explanation paragraph.
-7. Validates the payload through `data_contract.py`.
-8. Writes `frontend/public/data.json` and prints the summary line.
+End-state: planner sees that LineWise's recommendation is not abstractly "good" — it is good because **38 / 6 / however-many real 2025 orders** ran the same transition and averaged a higher OEE than the naive slot. Volume is still produced; the cockpit shows which line + slot makes it with the least hidden execution cost.
 
 ---
 
@@ -260,5 +316,5 @@ The script:
 - Recovery hours are a modelled estimate, not a measurement.
 - No cost / euro metrics — there is no cost data.
 - Single-urgent-order insertion only. No multi-week re-optimization.
-- The fallback dataset (when Excel parsing fails) is synthetic and tagged
-  in `metadata.using_fallback_data`.
+- Drag-drop accepts only feasibility checks today — it does not yet enforce
+  deadline / earliest-start constraints.
