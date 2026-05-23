@@ -1,0 +1,2622 @@
+{
+  "urgentOrders": [
+    {
+      "of": "ED13LTNN",
+      "status": "urgent",
+      "sku": "BEER MOLEN 4,8ºNA 33CL L B24SH P KR6BNML5",
+      "productSku": "3BVMLLB0",
+      "units": 18000,
+      "hl": 594,
+      "due": "28 May",
+      "volume_hl": 594,
+      "format_key": "1/3"
+    },
+    {
+      "of": "ED12LTW",
+      "status": "queued",
+      "sku": "ESTRELLA DAMM 1/2 LATA KR00127",
+      "productSku": "ED12LTW",
+      "units": 6000,
+      "hl": 198,
+      "due": "31 May",
+      "volume_hl": 198,
+      "format_key": "1/2"
+    }
+  ],
+  "lineBaseline": {
+    "14": {
+      "avg_oee": 0.422,
+      "avg_changeover_minutes": 10.1,
+      "avg_limpieza_minutes": 6.7,
+      "avg_pnp_minutes": 344.5,
+      "production_orders": 420,
+      "supports_formats": [
+        "1/2",
+        "1/3"
+      ]
+    },
+    "17": {
+      "avg_oee": 0.531,
+      "avg_changeover_minutes": 14.4,
+      "avg_limpieza_minutes": 9.0,
+      "avg_pnp_minutes": 133.3,
+      "production_orders": 915,
+      "supports_formats": [
+        "1/3"
+      ]
+    },
+    "19": {
+      "avg_oee": 0.481,
+      "avg_changeover_minutes": 16.7,
+      "avg_limpieza_minutes": 9.6,
+      "avg_pnp_minutes": 132.0,
+      "production_orders": 774,
+      "supports_formats": [
+        "1/2",
+        "1/3",
+        "2/5"
+      ]
+    }
+  },
+  "lineCentre": {
+    "14": "CF Prat",
+    "17": "CF Prat",
+    "19": "CF Prat"
+  },
+  "yearCompare": {
+    "2025": {
+      "01": {
+        "14": 0.38,
+        "17": 0.522,
+        "19": 0.502
+      },
+      "02": {
+        "14": 0.45,
+        "17": 0.57,
+        "19": 0.499
+      },
+      "03": {
+        "14": 0.391,
+        "17": 0.554,
+        "19": 0.496
+      },
+      "04": {
+        "14": 0.442,
+        "17": 0.502,
+        "19": 0.516
+      },
+      "05": {
+        "14": 0.421,
+        "17": 0.528,
+        "19": 0.422
+      },
+      "06": {
+        "14": 0.447,
+        "17": 0.511,
+        "19": 0.46
+      },
+      "07": {
+        "14": 0.365,
+        "17": 0.464,
+        "19": 0.508
+      },
+      "08": {
+        "14": 0.433,
+        "17": 0.528,
+        "19": 0.476
+      },
+      "09": {
+        "14": 0.43,
+        "17": 0.558,
+        "19": 0.46
+      },
+      "10": {
+        "14": 0.481,
+        "17": 0.521,
+        "19": 0.473
+      },
+      "11": {
+        "14": 0.408,
+        "17": 0.561,
+        "19": 0.454
+      },
+      "12": {
+        "14": 0.394,
+        "17": 0.569,
+        "19": 0.47
+      }
+    }
+  },
+  "executedHistory": {
+    "14": [
+      {
+        "of": "0000704824-1",
+        "start": 0.0,
+        "w": 0.15,
+        "sku": "SK1312MN",
+        "vol": 186,
+        "oee": 0.204
+      },
+      {
+        "of": "0000704825-1",
+        "start": 0.15,
+        "w": 0.09,
+        "sku": "SK13L12",
+        "vol": 201,
+        "oee": 0.296
+      },
+      {
+        "of": "0000708383-1",
+        "start": 0.24,
+        "w": 0.16,
+        "sku": "SK13LN",
+        "vol": 662,
+        "oee": 0.353
+      },
+      {
+        "of": "0000704815-1",
+        "start": 0.4,
+        "w": 0.29,
+        "sku": "3BNEBL23",
+        "vol": 1116,
+        "oee": 0.425
+      },
+      {
+        "of": "PRT9900016836-M",
+        "start": 0.69,
+        "w": 0.05,
+        "sku": "VO13L6M1",
+        "vol": 333,
+        "oee": 0.472
+      }
+    ],
+    "17": [
+      {
+        "of": "0000709064-1",
+        "start": 0.0,
+        "w": 0.11,
+        "sku": "FDL13LN",
+        "vol": 1561,
+        "oee": 0.649
+      },
+      {
+        "of": "PRT9900016863-M",
+        "start": 0.11,
+        "w": 0.04,
+        "sku": "ED13LTW",
+        "vol": 323,
+        "oee": 0.505
+      },
+      {
+        "of": "PRT9900016861-M",
+        "start": 0.15,
+        "w": 0.03,
+        "sku": "FD13LTNN",
+        "vol": 647,
+        "oee": 0.665
+      },
+      {
+        "of": "0000709057-1",
+        "start": 0.18,
+        "w": 0.08,
+        "sku": "EC13LTNN",
+        "vol": 647,
+        "oee": 0.519
+      },
+      {
+        "of": "0000709067-1",
+        "start": 0.25,
+        "w": 0.04,
+        "sku": "TU13LTN",
+        "vol": 705,
+        "oee": 0.691
+      }
+    ],
+    "19": [
+      {
+        "of": "0000712122-1",
+        "start": 0.0,
+        "w": 0.06,
+        "sku": "TU13LP12",
+        "vol": 1163,
+        "oee": 0.631
+      },
+      {
+        "of": "0000712120-1",
+        "start": 0.06,
+        "w": 0.02,
+        "sku": "FDL13L12",
+        "vol": 293,
+        "oee": 0.516
+      },
+      {
+        "of": "0000709070-1",
+        "start": 0.08,
+        "w": 0.17,
+        "sku": "EX12LBN",
+        "vol": 864,
+        "oee": 0.329
+      },
+      {
+        "of": "0000709074-1",
+        "start": 0.25,
+        "w": 0.08,
+        "sku": "VO12LT",
+        "vol": 743,
+        "oee": 0.457
+      },
+      {
+        "of": "PRT9900016858-M",
+        "start": 0.33,
+        "w": 0.0,
+        "kind": "clean"
+      }
+    ]
+  },
+  "basePlan": {
+    "14": [
+      {
+        "of": "0000707229-1",
+        "start": 0.0,
+        "w": 0.19,
+        "sku": "VO13LTP6",
+        "vol": 457,
+        "oee": 0.287
+      },
+      {
+        "of": "0000707961-1",
+        "start": 0.19,
+        "w": 0.3,
+        "sku": "ED13LTW",
+        "vol": 2361,
+        "oee": 0.475
+      },
+      {
+        "of": "0000704823-1",
+        "start": 0.49,
+        "w": 0.23,
+        "sku": "KE13LBI",
+        "vol": 380,
+        "oee": 0.229
+      },
+      {
+        "of": "0000705390-1",
+        "start": 0.73,
+        "w": 0.05,
+        "sku": "3BNMSLB0",
+        "vol": 322,
+        "oee": 0.408
+      },
+      {
+        "of": "PRT9900016860-M",
+        "start": 0.77,
+        "w": 0.01,
+        "kind": "clean"
+      },
+      {
+        "of": "0000709050-1",
+        "start": 0.78,
+        "w": 0.68,
+        "sku": "3BNZFLB1",
+        "vol": 3726,
+        "oee": 0.455
+      },
+      {
+        "of": "PRT9900016886-M",
+        "start": 1.46,
+        "w": 0.15,
+        "sku": "VO13LTNN",
+        "vol": 321,
+        "oee": 0.283
+      },
+      {
+        "of": "0000710237-1",
+        "start": 1.62,
+        "w": 0.33,
+        "sku": "VO13LTMN",
+        "vol": 498,
+        "oee": 0.22
+      },
+      {
+        "of": "0000710227-1",
+        "start": 1.95,
+        "w": 0.28,
+        "sku": "ED13LCMM",
+        "vol": 587,
+        "oee": 0.272
+      },
+      {
+        "of": "PRT9900016848-M",
+        "start": 2.22,
+        "w": 0.25,
+        "kind": "clean"
+      }
+    ],
+    "17": [
+      {
+        "of": "PRT9900016881-M",
+        "start": 0.0,
+        "w": 0.0,
+        "kind": "maint"
+      },
+      {
+        "of": "PRT9900016851-M",
+        "start": 0.0,
+        "w": 0.16,
+        "kind": "clean"
+      },
+      {
+        "of": "PRT9900016880-M",
+        "start": 0.16,
+        "w": 0.12,
+        "sku": "ED13LP12",
+        "vol": 615,
+        "oee": 0.381
+      },
+      {
+        "of": "PRT9900016879-M",
+        "start": 0.28,
+        "w": 0.12,
+        "sku": "ED13P12M",
+        "vol": 615,
+        "oee": 0.379
+      },
+      {
+        "of": "0000710246-1",
+        "start": 0.41,
+        "w": 0.05,
+        "sku": "EX13L12H",
+        "vol": 117,
+        "oee": 0.224
+      },
+      {
+        "of": "0000710248-1",
+        "start": 0.46,
+        "w": 0.06,
+        "sku": "FD13LP12",
+        "vol": 322,
+        "oee": 0.261
+      },
+      {
+        "of": "PRT9900016882-M",
+        "start": 0.52,
+        "w": 0.04,
+        "sku": "EX13LH12",
+        "vol": 294,
+        "oee": 0.49
+      },
+      {
+        "of": "PRT9900016883-M",
+        "start": 0.56,
+        "w": 0.04,
+        "sku": "VO13P12M",
+        "vol": 724,
+        "oee": 0.624
+      },
+      {
+        "of": "PRT9900016884-M",
+        "start": 0.6,
+        "w": 0.11,
+        "sku": "VO13LTNN",
+        "vol": 1657,
+        "oee": 0.632
+      },
+      {
+        "of": "PRT9900016885-M",
+        "start": 0.71,
+        "w": 0.08,
+        "sku": "TU13LTN",
+        "vol": 1410,
+        "oee": 0.646
+      }
+    ],
+    "19": [
+      {
+        "of": "0000709071-1",
+        "start": 0.0,
+        "w": 0.05,
+        "sku": "EXB12LBI",
+        "vol": 368,
+        "oee": 0.401
+      },
+      {
+        "of": "0000709072-1",
+        "start": 0.05,
+        "w": 0.13,
+        "sku": "LC12LTW",
+        "vol": 746,
+        "oee": 0.444
+      },
+      {
+        "of": "0000709068-1",
+        "start": 0.18,
+        "w": 0.14,
+        "sku": "ED12LTW",
+        "vol": 4170,
+        "oee": 0.669
+      },
+      {
+        "of": "0000709073-1",
+        "start": 0.32,
+        "w": 0.07,
+        "sku": "VI12LTW",
+        "vol": 612,
+        "oee": 0.391
+      },
+      {
+        "of": "PRT9900016853-M",
+        "start": 0.39,
+        "w": 0.15,
+        "kind": "clean"
+      },
+      {
+        "of": "0000712669-1",
+        "start": 0.54,
+        "w": 0.06,
+        "sku": "7BNG3LB2",
+        "vol": 346,
+        "oee": 0.357
+      },
+      {
+        "of": "PRT9900016878-M",
+        "start": 0.6,
+        "w": 0.16,
+        "sku": "7BNNNLB0",
+        "vol": 1449,
+        "oee": 0.458
+      },
+      {
+        "of": "0000714071-1",
+        "start": 0.76,
+        "w": 0.11,
+        "sku": "EX1324BN",
+        "vol": 441,
+        "oee": 0.307
+      },
+      {
+        "of": "0000710262-1",
+        "start": 0.87,
+        "w": 0.22,
+        "sku": "3BNZFLB1",
+        "vol": 3413,
+        "oee": 0.582
+      },
+      {
+        "of": "0000710282-1",
+        "start": 1.1,
+        "w": 0.03,
+        "sku": "EXB13LTB",
+        "vol": 263,
+        "oee": 0.418
+      }
+    ]
+  },
+  "recommendations": {
+    "14": {
+      "line": "Line 14",
+      "position": "after 0000707229-1",
+      "oeeDelta": "+0.0",
+      "oeeGood": true,
+      "deadline": "+~1 day",
+      "ordersMoved": 7,
+      "naiveBand": null,
+      "plan": {
+        "14": [
+          {
+            "of": "0000707229-1",
+            "start": 0.0,
+            "w": 0.19,
+            "sku": "VO13LTP6",
+            "vol": 457,
+            "oee": 0.287,
+            "kind": "anchor"
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ED13LTNN",
+            "vol": 594,
+            "start": 0.19,
+            "w": 0.11,
+            "oee": 0.48,
+            "kind": "ins"
+          },
+          {
+            "of": "0000707961-1",
+            "start": 0.3,
+            "w": 0.3,
+            "sku": "ED13LTW",
+            "vol": 2361,
+            "oee": 0.475,
+            "kind": "shift"
+          },
+          {
+            "of": "0000704823-1",
+            "start": 0.6,
+            "w": 0.23,
+            "sku": "KE13LBI",
+            "vol": 380,
+            "oee": 0.229,
+            "kind": "shift"
+          },
+          {
+            "of": "0000705390-1",
+            "start": 0.83,
+            "w": 0.05,
+            "sku": "3BNMSLB0",
+            "vol": 322,
+            "oee": 0.408,
+            "kind": "shift"
+          },
+          {
+            "of": "PRT9900016860-M",
+            "start": 0.88,
+            "w": 0.01,
+            "kind": "clean"
+          },
+          {
+            "of": "0000709050-1",
+            "start": 0.89,
+            "w": 0.68,
+            "sku": "3BNZFLB1",
+            "vol": 3726,
+            "oee": 0.455,
+            "kind": "shift"
+          },
+          {
+            "of": "PRT9900016886-M",
+            "start": 1.57,
+            "w": 0.15,
+            "sku": "VO13LTNN",
+            "vol": 321,
+            "oee": 0.283,
+            "kind": "shift"
+          },
+          {
+            "of": "0000710237-1",
+            "start": 1.72,
+            "w": 0.33,
+            "sku": "VO13LTMN",
+            "vol": 498,
+            "oee": 0.22,
+            "kind": "shift"
+          },
+          {
+            "of": "0000710227-1",
+            "start": 2.05,
+            "w": 0.28,
+            "sku": "ED13LCMM",
+            "vol": 587,
+            "oee": 0.272,
+            "kind": "shift"
+          },
+          {
+            "of": "PRT9900016848-M",
+            "start": 2.33,
+            "w": 0.25,
+            "kind": "clean"
+          }
+        ],
+        "17": [
+          {
+            "of": "PRT9900016881-M",
+            "start": 0.0,
+            "w": 0.0,
+            "kind": "maint"
+          },
+          {
+            "of": "PRT9900016851-M",
+            "start": 0.0,
+            "w": 0.16,
+            "kind": "clean"
+          },
+          {
+            "of": "PRT9900016880-M",
+            "start": 0.16,
+            "w": 0.12,
+            "sku": "ED13LP12",
+            "vol": 615,
+            "oee": 0.381
+          },
+          {
+            "of": "PRT9900016879-M",
+            "start": 0.28,
+            "w": 0.12,
+            "sku": "ED13P12M",
+            "vol": 615,
+            "oee": 0.379
+          },
+          {
+            "of": "0000710246-1",
+            "start": 0.4,
+            "w": 0.05,
+            "sku": "EX13L12H",
+            "vol": 117,
+            "oee": 0.224
+          },
+          {
+            "of": "0000710248-1",
+            "start": 0.45,
+            "w": 0.06,
+            "sku": "FD13LP12",
+            "vol": 322,
+            "oee": 0.261
+          },
+          {
+            "of": "PRT9900016882-M",
+            "start": 0.51,
+            "w": 0.04,
+            "sku": "EX13LH12",
+            "vol": 294,
+            "oee": 0.49
+          },
+          {
+            "of": "PRT9900016883-M",
+            "start": 0.55,
+            "w": 0.04,
+            "sku": "VO13P12M",
+            "vol": 724,
+            "oee": 0.624
+          },
+          {
+            "of": "PRT9900016884-M",
+            "start": 0.59,
+            "w": 0.11,
+            "sku": "VO13LTNN",
+            "vol": 1657,
+            "oee": 0.632
+          },
+          {
+            "of": "PRT9900016885-M",
+            "start": 0.7,
+            "w": 0.08,
+            "sku": "TU13LTN",
+            "vol": 1410,
+            "oee": 0.646
+          }
+        ],
+        "19": [
+          {
+            "of": "0000709071-1",
+            "start": 0.0,
+            "w": 0.05,
+            "sku": "EXB12LBI",
+            "vol": 368,
+            "oee": 0.401
+          },
+          {
+            "of": "0000709072-1",
+            "start": 0.05,
+            "w": 0.13,
+            "sku": "LC12LTW",
+            "vol": 746,
+            "oee": 0.444
+          },
+          {
+            "of": "0000709068-1",
+            "start": 0.18,
+            "w": 0.14,
+            "sku": "ED12LTW",
+            "vol": 4170,
+            "oee": 0.669
+          },
+          {
+            "of": "0000709073-1",
+            "start": 0.32,
+            "w": 0.07,
+            "sku": "VI12LTW",
+            "vol": 612,
+            "oee": 0.391
+          },
+          {
+            "of": "PRT9900016853-M",
+            "start": 0.39,
+            "w": 0.15,
+            "kind": "clean"
+          },
+          {
+            "of": "0000712669-1",
+            "start": 0.54,
+            "w": 0.06,
+            "sku": "7BNG3LB2",
+            "vol": 346,
+            "oee": 0.357
+          },
+          {
+            "of": "PRT9900016878-M",
+            "start": 0.6,
+            "w": 0.16,
+            "sku": "7BNNNLB0",
+            "vol": 1449,
+            "oee": 0.458
+          },
+          {
+            "of": "0000714071-1",
+            "start": 0.76,
+            "w": 0.11,
+            "sku": "EX1324BN",
+            "vol": 441,
+            "oee": 0.307
+          },
+          {
+            "of": "0000710262-1",
+            "start": 0.87,
+            "w": 0.22,
+            "sku": "3BNZFLB1",
+            "vol": 3413,
+            "oee": 0.582
+          },
+          {
+            "of": "0000710282-1",
+            "start": 1.09,
+            "w": 0.03,
+            "sku": "EXB13LTB",
+            "vol": 263,
+            "oee": 0.418
+          }
+        ]
+      },
+      "ghosts": {
+        "14": [
+          {
+            "of": "0000707961-1",
+            "start": 0.19,
+            "w": 0.3
+          },
+          {
+            "of": "0000704823-1",
+            "start": 0.49,
+            "w": 0.23
+          },
+          {
+            "of": "0000705390-1",
+            "start": 0.72,
+            "w": 0.05
+          },
+          {
+            "of": "0000709050-1",
+            "start": 0.78,
+            "w": 0.68
+          },
+          {
+            "of": "PRT9900016886-M",
+            "start": 1.46,
+            "w": 0.15
+          },
+          {
+            "of": "0000710237-1",
+            "start": 1.61,
+            "w": 0.33
+          },
+          {
+            "of": "0000710227-1",
+            "start": 1.94,
+            "w": 0.28
+          }
+        ]
+      },
+      "recovery": {
+        "line": "14",
+        "start": 0.3,
+        "w": 0.4,
+        "hours": 6,
+        "note": "Modelled estimate: hours for the line to return to baseline OEE after the urgent insertion. Built from changeover + transition-type tail; not a measurement."
+      },
+      "moves": [
+        {
+          "of": "0000707961-1",
+          "line": 14,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "0000704823-1",
+          "line": 14,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "0000705390-1",
+          "line": 14,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "0000709050-1",
+          "line": 14,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "PRT9900016886-M",
+          "line": 14,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "0000710237-1",
+          "line": 14,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "0000710227-1",
+          "line": 14,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        }
+      ],
+      "decision": "ACCEPT",
+      "predictedOee": 0.48,
+      "naivePredictedOee": 0.48,
+      "transitionType": "same-sku",
+      "evidence": {
+        "reason": "On Line 14 after 0000707229-1, the urgent order matches a <b>same-sku</b> changeover. History across 6 line+transition cases shows an average OEE of <b>0.48</b>. That is <b>+0.0</b> OEE points above the naive slot.",
+        "scope": "line+transition",
+        "breakdown": [
+          {
+            "name": "CF theoretical",
+            "pct": 1,
+            "band": "lo",
+            "val": "8 min"
+          },
+          {
+            "name": "Analogue OEE",
+            "pct": 48,
+            "band": "hi",
+            "val": "0.48"
+          },
+          {
+            "name": "Line baseline OEE",
+            "pct": 42,
+            "band": "hi",
+            "val": "0.42"
+          }
+        ],
+        "analogues": [
+          {
+            "of": "PRT9900016193-M",
+            "previous_of": "0000623055-1",
+            "line": "14",
+            "date": "24 Jul 2025",
+            "type": "same-sku",
+            "principal": NaN,
+            "actual_changeover_minutes": 0.0,
+            "oee": 0.465
+          },
+          {
+            "of": "0000529456-1",
+            "previous_of": "PRT9900015374-M",
+            "line": "14",
+            "date": "23 Jan 2025",
+            "type": "same-sku",
+            "principal": NaN,
+            "actual_changeover_minutes": 0.0,
+            "oee": 0.516
+          },
+          {
+            "of": "0000616549-1",
+            "previous_of": "0000621570-1",
+            "line": "14",
+            "date": "14 Jul 2025",
+            "type": "same-sku",
+            "principal": "Referencia",
+            "actual_changeover_minutes": 47.8,
+            "oee": 0.281
+          },
+          {
+            "of": "PRT9900016234-M",
+            "previous_of": "0000630442-1",
+            "line": "14",
+            "date": "27 Jul 2025",
+            "type": "same-sku",
+            "principal": "Referencia",
+            "actual_changeover_minutes": 0.0,
+            "oee": 0.517
+          },
+          {
+            "of": "0000630542-1",
+            "previous_of": "PRT9900016234-M",
+            "line": "14",
+            "date": "28 Jul 2025",
+            "type": "same-sku",
+            "principal": "Referencia",
+            "actual_changeover_minutes": 0.0,
+            "oee": 0.477
+          },
+          {
+            "of": "0000626534-1",
+            "previous_of": "0000630542-1",
+            "line": "14",
+            "date": "29 Jul 2025",
+            "type": "same-sku",
+            "principal": "Referencia",
+            "actual_changeover_minutes": 0.0,
+            "oee": 0.423
+          }
+        ],
+        "n": 6,
+        "analogueMean": "0.48",
+        "naiveMean": "0.48",
+        "gain": "+0.0",
+        "lineBaselineOee": 0.422,
+        "transitionTypeStats": {
+          "cases": 157,
+          "mean_oee": 0.537,
+          "mean_oee_damage_pts": 6.12,
+          "mean_actual_changeover_minutes": 8.8,
+          "mean_limpieza_minutes": 6.8,
+          "mean_pnp_minutes": 228.9,
+          "worst_line": 14,
+          "worst_line_avg_oee": 0.48
+        },
+        "transitionComponents": [],
+        "cfTheoreticalMinutes": 8.8,
+        "limitations": [
+          "Crew experience and shift staffing are not in the data.",
+          "Downstream micro-stoppages may not be fully captured in PNP.",
+          "Recovery hours are a modelled estimate, not a measurement."
+        ]
+      }
+    },
+    "17": {
+      "line": "Line 17",
+      "position": "after PRT9900016880-M",
+      "oeeDelta": "+9.4",
+      "oeeGood": true,
+      "deadline": "+~1 day",
+      "ordersMoved": 7,
+      "naiveBand": {
+        "line": "14",
+        "start": 0.19,
+        "w": 0.14
+      },
+      "plan": {
+        "14": [
+          {
+            "of": "0000707229-1",
+            "start": 0.0,
+            "w": 0.19,
+            "sku": "VO13LTP6",
+            "vol": 457,
+            "oee": 0.287
+          },
+          {
+            "of": "0000707961-1",
+            "start": 0.19,
+            "w": 0.3,
+            "sku": "ED13LTW",
+            "vol": 2361,
+            "oee": 0.475
+          },
+          {
+            "of": "0000704823-1",
+            "start": 0.49,
+            "w": 0.23,
+            "sku": "KE13LBI",
+            "vol": 380,
+            "oee": 0.229
+          },
+          {
+            "of": "0000705390-1",
+            "start": 0.72,
+            "w": 0.05,
+            "sku": "3BNMSLB0",
+            "vol": 322,
+            "oee": 0.408
+          },
+          {
+            "of": "PRT9900016860-M",
+            "start": 0.77,
+            "w": 0.01,
+            "kind": "clean"
+          },
+          {
+            "of": "0000709050-1",
+            "start": 0.78,
+            "w": 0.68,
+            "sku": "3BNZFLB1",
+            "vol": 3726,
+            "oee": 0.455
+          },
+          {
+            "of": "PRT9900016886-M",
+            "start": 1.46,
+            "w": 0.15,
+            "sku": "VO13LTNN",
+            "vol": 321,
+            "oee": 0.283
+          },
+          {
+            "of": "0000710237-1",
+            "start": 1.61,
+            "w": 0.33,
+            "sku": "VO13LTMN",
+            "vol": 498,
+            "oee": 0.22
+          },
+          {
+            "of": "0000710227-1",
+            "start": 1.94,
+            "w": 0.28,
+            "sku": "ED13LCMM",
+            "vol": 587,
+            "oee": 0.272
+          },
+          {
+            "of": "PRT9900016848-M",
+            "start": 2.22,
+            "w": 0.25,
+            "kind": "clean"
+          }
+        ],
+        "17": [
+          {
+            "of": "PRT9900016881-M",
+            "start": 0.0,
+            "w": 0.0,
+            "kind": "maint"
+          },
+          {
+            "of": "PRT9900016851-M",
+            "start": 0.0,
+            "w": 0.16,
+            "kind": "clean"
+          },
+          {
+            "of": "PRT9900016880-M",
+            "start": 0.16,
+            "w": 0.12,
+            "sku": "ED13LP12",
+            "vol": 615,
+            "oee": 0.381,
+            "kind": "anchor"
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ED13LTNN",
+            "vol": 594,
+            "start": 0.28,
+            "w": 0.14,
+            "oee": 0.574,
+            "kind": "ins"
+          },
+          {
+            "of": "PRT9900016879-M",
+            "start": 0.42,
+            "w": 0.12,
+            "sku": "ED13P12M",
+            "vol": 615,
+            "oee": 0.379,
+            "kind": "shift"
+          },
+          {
+            "of": "0000710246-1",
+            "start": 0.54,
+            "w": 0.05,
+            "sku": "EX13L12H",
+            "vol": 117,
+            "oee": 0.224,
+            "kind": "shift"
+          },
+          {
+            "of": "0000710248-1",
+            "start": 0.59,
+            "w": 0.06,
+            "sku": "FD13LP12",
+            "vol": 322,
+            "oee": 0.261,
+            "kind": "shift"
+          },
+          {
+            "of": "PRT9900016882-M",
+            "start": 0.65,
+            "w": 0.04,
+            "sku": "EX13LH12",
+            "vol": 294,
+            "oee": 0.49,
+            "kind": "shift"
+          },
+          {
+            "of": "PRT9900016883-M",
+            "start": 0.69,
+            "w": 0.04,
+            "sku": "VO13P12M",
+            "vol": 724,
+            "oee": 0.624,
+            "kind": "shift"
+          },
+          {
+            "of": "PRT9900016884-M",
+            "start": 0.73,
+            "w": 0.11,
+            "sku": "VO13LTNN",
+            "vol": 1657,
+            "oee": 0.632,
+            "kind": "shift"
+          },
+          {
+            "of": "PRT9900016885-M",
+            "start": 0.84,
+            "w": 0.08,
+            "sku": "TU13LTN",
+            "vol": 1410,
+            "oee": 0.646,
+            "kind": "shift"
+          }
+        ],
+        "19": [
+          {
+            "of": "0000709071-1",
+            "start": 0.0,
+            "w": 0.05,
+            "sku": "EXB12LBI",
+            "vol": 368,
+            "oee": 0.401
+          },
+          {
+            "of": "0000709072-1",
+            "start": 0.05,
+            "w": 0.13,
+            "sku": "LC12LTW",
+            "vol": 746,
+            "oee": 0.444
+          },
+          {
+            "of": "0000709068-1",
+            "start": 0.18,
+            "w": 0.14,
+            "sku": "ED12LTW",
+            "vol": 4170,
+            "oee": 0.669
+          },
+          {
+            "of": "0000709073-1",
+            "start": 0.32,
+            "w": 0.07,
+            "sku": "VI12LTW",
+            "vol": 612,
+            "oee": 0.391
+          },
+          {
+            "of": "PRT9900016853-M",
+            "start": 0.39,
+            "w": 0.15,
+            "kind": "clean"
+          },
+          {
+            "of": "0000712669-1",
+            "start": 0.54,
+            "w": 0.06,
+            "sku": "7BNG3LB2",
+            "vol": 346,
+            "oee": 0.357
+          },
+          {
+            "of": "PRT9900016878-M",
+            "start": 0.6,
+            "w": 0.16,
+            "sku": "7BNNNLB0",
+            "vol": 1449,
+            "oee": 0.458
+          },
+          {
+            "of": "0000714071-1",
+            "start": 0.76,
+            "w": 0.11,
+            "sku": "EX1324BN",
+            "vol": 441,
+            "oee": 0.307
+          },
+          {
+            "of": "0000710262-1",
+            "start": 0.87,
+            "w": 0.22,
+            "sku": "3BNZFLB1",
+            "vol": 3413,
+            "oee": 0.582
+          },
+          {
+            "of": "0000710282-1",
+            "start": 1.09,
+            "w": 0.03,
+            "sku": "EXB13LTB",
+            "vol": 263,
+            "oee": 0.418
+          }
+        ]
+      },
+      "ghosts": {
+        "17": [
+          {
+            "of": "PRT9900016879-M",
+            "start": 0.28,
+            "w": 0.12
+          },
+          {
+            "of": "0000710246-1",
+            "start": 0.4,
+            "w": 0.05
+          },
+          {
+            "of": "0000710248-1",
+            "start": 0.45,
+            "w": 0.06
+          },
+          {
+            "of": "PRT9900016882-M",
+            "start": 0.51,
+            "w": 0.04
+          },
+          {
+            "of": "PRT9900016883-M",
+            "start": 0.55,
+            "w": 0.04
+          },
+          {
+            "of": "PRT9900016884-M",
+            "start": 0.59,
+            "w": 0.11
+          },
+          {
+            "of": "PRT9900016885-M",
+            "start": 0.7,
+            "w": 0.08
+          }
+        ]
+      },
+      "recovery": {
+        "line": "17",
+        "start": 0.42,
+        "w": 0.4,
+        "hours": 6,
+        "note": "Modelled estimate: hours for the line to return to baseline OEE after the urgent insertion. Built from changeover + transition-type tail; not a measurement."
+      },
+      "moves": [
+        {
+          "of": "PRT9900016879-M",
+          "line": 17,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "0000710246-1",
+          "line": 17,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "0000710248-1",
+          "line": 17,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "PRT9900016882-M",
+          "line": 17,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "PRT9900016883-M",
+          "line": 17,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "PRT9900016884-M",
+          "line": 17,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "PRT9900016885-M",
+          "line": 17,
+          "shift": "+3h",
+          "why": "pushed back to make room for the insertion"
+        }
+      ],
+      "decision": "ACCEPT",
+      "predictedOee": 0.574,
+      "naivePredictedOee": 0.48,
+      "transitionType": "same-sku",
+      "evidence": {
+        "reason": "On Line 17 after PRT9900016880-M, the urgent order matches a <b>same-sku</b> changeover. History across 6 line+transition cases shows an average OEE of <b>0.57</b>. That is <b>+9.4</b> OEE points above the naive slot.",
+        "scope": "line+transition",
+        "breakdown": [
+          {
+            "name": "CF theoretical",
+            "pct": 1,
+            "band": "lo",
+            "val": "8 min"
+          },
+          {
+            "name": "Analogue OEE",
+            "pct": 57,
+            "band": "lo",
+            "val": "0.57"
+          },
+          {
+            "name": "Line baseline OEE",
+            "pct": 53,
+            "band": "hi",
+            "val": "0.53"
+          }
+        ],
+        "analogues": [
+          {
+            "of": "PRT9900016759-M",
+            "previous_of": "PRT9900016758-M",
+            "line": "17",
+            "date": "29 Nov 2025",
+            "type": "same-sku",
+            "principal": NaN,
+            "actual_changeover_minutes": 0.0,
+            "oee": 0.534
+          },
+          {
+            "of": "0000530612-1",
+            "previous_of": "PRT9900015399-M",
+            "line": "17",
+            "date": "31 Jan 2025",
+            "type": "same-sku",
+            "principal": "Referencia",
+            "actual_changeover_minutes": 12.1,
+            "oee": 0.518
+          },
+          {
+            "of": "PRT9900016666-M",
+            "previous_of": "0000689263-1",
+            "line": "17",
+            "date": "04 Nov 2025",
+            "type": "same-sku",
+            "principal": NaN,
+            "actual_changeover_minutes": 17.1,
+            "oee": 0.134
+          },
+          {
+            "of": "0000637885-1",
+            "previous_of": "0000650284-1",
+            "line": "17",
+            "date": "01 Sep 2025",
+            "type": "same-sku",
+            "principal": "Referencia",
+            "actual_changeover_minutes": 0.0,
+            "oee": 0.618
+          },
+          {
+            "of": "PRT9900016453-M",
+            "previous_of": "0000655832-1",
+            "line": "17",
+            "date": "08 Sep 2025",
+            "type": "same-sku",
+            "principal": "Referencia",
+            "actual_changeover_minutes": 0.0,
+            "oee": 0.644
+          },
+          {
+            "of": "PRT9900016474-M",
+            "previous_of": "0000655825-1",
+            "line": "17",
+            "date": "13 Sep 2025",
+            "type": "same-sku",
+            "principal": NaN,
+            "actual_changeover_minutes": 0.0,
+            "oee": 0.766
+          }
+        ],
+        "n": 6,
+        "analogueMean": "0.57",
+        "naiveMean": "0.48",
+        "gain": "+9.4",
+        "lineBaselineOee": 0.531,
+        "transitionTypeStats": {
+          "cases": 157,
+          "mean_oee": 0.537,
+          "mean_oee_damage_pts": 6.12,
+          "mean_actual_changeover_minutes": 8.8,
+          "mean_limpieza_minutes": 6.8,
+          "mean_pnp_minutes": 228.9,
+          "worst_line": 14,
+          "worst_line_avg_oee": 0.48
+        },
+        "transitionComponents": [],
+        "cfTheoreticalMinutes": 8.8,
+        "limitations": [
+          "Crew experience and shift staffing are not in the data.",
+          "Downstream micro-stoppages may not be fully captured in PNP.",
+          "Recovery hours are a modelled estimate, not a measurement."
+        ]
+      }
+    },
+    "19": {
+      "line": "Line 19",
+      "position": "after 0000709071-1",
+      "oeeDelta": "+8.3",
+      "oeeGood": true,
+      "deadline": "+~1 day",
+      "ordersMoved": 8,
+      "naiveBand": {
+        "line": "14",
+        "start": 0.19,
+        "w": 0.1
+      },
+      "plan": {
+        "14": [
+          {
+            "of": "0000707229-1",
+            "start": 0.0,
+            "w": 0.19,
+            "sku": "VO13LTP6",
+            "vol": 457,
+            "oee": 0.287
+          },
+          {
+            "of": "0000707961-1",
+            "start": 0.19,
+            "w": 0.3,
+            "sku": "ED13LTW",
+            "vol": 2361,
+            "oee": 0.475
+          },
+          {
+            "of": "0000704823-1",
+            "start": 0.49,
+            "w": 0.23,
+            "sku": "KE13LBI",
+            "vol": 380,
+            "oee": 0.229
+          },
+          {
+            "of": "0000705390-1",
+            "start": 0.72,
+            "w": 0.05,
+            "sku": "3BNMSLB0",
+            "vol": 322,
+            "oee": 0.408
+          },
+          {
+            "of": "PRT9900016860-M",
+            "start": 0.77,
+            "w": 0.01,
+            "kind": "clean"
+          },
+          {
+            "of": "0000709050-1",
+            "start": 0.78,
+            "w": 0.68,
+            "sku": "3BNZFLB1",
+            "vol": 3726,
+            "oee": 0.455
+          },
+          {
+            "of": "PRT9900016886-M",
+            "start": 1.46,
+            "w": 0.15,
+            "sku": "VO13LTNN",
+            "vol": 321,
+            "oee": 0.283
+          },
+          {
+            "of": "0000710237-1",
+            "start": 1.61,
+            "w": 0.33,
+            "sku": "VO13LTMN",
+            "vol": 498,
+            "oee": 0.22
+          },
+          {
+            "of": "0000710227-1",
+            "start": 1.94,
+            "w": 0.28,
+            "sku": "ED13LCMM",
+            "vol": 587,
+            "oee": 0.272
+          },
+          {
+            "of": "PRT9900016848-M",
+            "start": 2.22,
+            "w": 0.25,
+            "kind": "clean"
+          }
+        ],
+        "17": [
+          {
+            "of": "PRT9900016881-M",
+            "start": 0.0,
+            "w": 0.0,
+            "kind": "maint"
+          },
+          {
+            "of": "PRT9900016851-M",
+            "start": 0.0,
+            "w": 0.16,
+            "kind": "clean"
+          },
+          {
+            "of": "PRT9900016880-M",
+            "start": 0.16,
+            "w": 0.12,
+            "sku": "ED13LP12",
+            "vol": 615,
+            "oee": 0.381
+          },
+          {
+            "of": "PRT9900016879-M",
+            "start": 0.28,
+            "w": 0.12,
+            "sku": "ED13P12M",
+            "vol": 615,
+            "oee": 0.379
+          },
+          {
+            "of": "0000710246-1",
+            "start": 0.4,
+            "w": 0.05,
+            "sku": "EX13L12H",
+            "vol": 117,
+            "oee": 0.224
+          },
+          {
+            "of": "0000710248-1",
+            "start": 0.45,
+            "w": 0.06,
+            "sku": "FD13LP12",
+            "vol": 322,
+            "oee": 0.261
+          },
+          {
+            "of": "PRT9900016882-M",
+            "start": 0.51,
+            "w": 0.04,
+            "sku": "EX13LH12",
+            "vol": 294,
+            "oee": 0.49
+          },
+          {
+            "of": "PRT9900016883-M",
+            "start": 0.55,
+            "w": 0.04,
+            "sku": "VO13P12M",
+            "vol": 724,
+            "oee": 0.624
+          },
+          {
+            "of": "PRT9900016884-M",
+            "start": 0.59,
+            "w": 0.11,
+            "sku": "VO13LTNN",
+            "vol": 1657,
+            "oee": 0.632
+          },
+          {
+            "of": "PRT9900016885-M",
+            "start": 0.7,
+            "w": 0.08,
+            "sku": "TU13LTN",
+            "vol": 1410,
+            "oee": 0.646
+          }
+        ],
+        "19": [
+          {
+            "of": "0000709071-1",
+            "start": 0.0,
+            "w": 0.05,
+            "sku": "EXB12LBI",
+            "vol": 368,
+            "oee": 0.401,
+            "kind": "anchor"
+          },
+          {
+            "of": "ED13LTNN",
+            "sku": "ED13LTNN",
+            "vol": 594,
+            "start": 0.05,
+            "w": 0.1,
+            "oee": 0.563,
+            "kind": "ins"
+          },
+          {
+            "of": "0000709072-1",
+            "start": 0.15,
+            "w": 0.13,
+            "sku": "LC12LTW",
+            "vol": 746,
+            "oee": 0.444,
+            "kind": "shift"
+          },
+          {
+            "of": "0000709068-1",
+            "start": 0.28,
+            "w": 0.14,
+            "sku": "ED12LTW",
+            "vol": 4170,
+            "oee": 0.669,
+            "kind": "shift"
+          },
+          {
+            "of": "0000709073-1",
+            "start": 0.42,
+            "w": 0.07,
+            "sku": "VI12LTW",
+            "vol": 612,
+            "oee": 0.391,
+            "kind": "shift"
+          },
+          {
+            "of": "PRT9900016853-M",
+            "start": 0.49,
+            "w": 0.15,
+            "kind": "clean"
+          },
+          {
+            "of": "0000712669-1",
+            "start": 0.64,
+            "w": 0.06,
+            "sku": "7BNG3LB2",
+            "vol": 346,
+            "oee": 0.357,
+            "kind": "shift"
+          },
+          {
+            "of": "PRT9900016878-M",
+            "start": 0.7,
+            "w": 0.16,
+            "sku": "7BNNNLB0",
+            "vol": 1449,
+            "oee": 0.458,
+            "kind": "shift"
+          },
+          {
+            "of": "0000714071-1",
+            "start": 0.86,
+            "w": 0.11,
+            "sku": "EX1324BN",
+            "vol": 441,
+            "oee": 0.307,
+            "kind": "shift"
+          },
+          {
+            "of": "0000710262-1",
+            "start": 0.97,
+            "w": 0.22,
+            "sku": "3BNZFLB1",
+            "vol": 3413,
+            "oee": 0.582,
+            "kind": "shift"
+          },
+          {
+            "of": "0000710282-1",
+            "start": 1.19,
+            "w": 0.03,
+            "sku": "EXB13LTB",
+            "vol": 263,
+            "oee": 0.418,
+            "kind": "shift"
+          }
+        ]
+      },
+      "ghosts": {
+        "19": [
+          {
+            "of": "0000709072-1",
+            "start": 0.05,
+            "w": 0.13
+          },
+          {
+            "of": "0000709068-1",
+            "start": 0.18,
+            "w": 0.14
+          },
+          {
+            "of": "0000709073-1",
+            "start": 0.32,
+            "w": 0.07
+          },
+          {
+            "of": "0000712669-1",
+            "start": 0.54,
+            "w": 0.06
+          },
+          {
+            "of": "PRT9900016878-M",
+            "start": 0.6,
+            "w": 0.16
+          },
+          {
+            "of": "0000714071-1",
+            "start": 0.76,
+            "w": 0.11
+          },
+          {
+            "of": "0000710262-1",
+            "start": 0.87,
+            "w": 0.22
+          },
+          {
+            "of": "0000710282-1",
+            "start": 1.09,
+            "w": 0.03
+          }
+        ]
+      },
+      "recovery": {
+        "line": "19",
+        "start": 0.15,
+        "w": 0.4,
+        "hours": 6,
+        "note": "Modelled estimate: hours for the line to return to baseline OEE after the urgent insertion. Built from changeover + transition-type tail; not a measurement."
+      },
+      "moves": [
+        {
+          "of": "0000709072-1",
+          "line": 19,
+          "shift": "+2h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "0000709068-1",
+          "line": 19,
+          "shift": "+2h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "0000709073-1",
+          "line": 19,
+          "shift": "+2h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "0000712669-1",
+          "line": 19,
+          "shift": "+2h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "PRT9900016878-M",
+          "line": 19,
+          "shift": "+2h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "0000714071-1",
+          "line": 19,
+          "shift": "+2h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "0000710262-1",
+          "line": 19,
+          "shift": "+2h",
+          "why": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "0000710282-1",
+          "line": 19,
+          "shift": "+2h",
+          "why": "pushed back to make room for the insertion"
+        }
+      ],
+      "decision": "ACCEPT",
+      "predictedOee": 0.563,
+      "naivePredictedOee": 0.48,
+      "transitionType": "same-sku",
+      "evidence": {
+        "reason": "On Line 19 after 0000709071-1, the urgent order matches a <b>same-sku</b> changeover. History across 6 line+transition cases shows an average OEE of <b>0.56</b>. That is <b>+8.3</b> OEE points above the naive slot.",
+        "scope": "line+transition",
+        "breakdown": [
+          {
+            "name": "CF theoretical",
+            "pct": 1,
+            "band": "lo",
+            "val": "8 min"
+          },
+          {
+            "name": "Analogue OEE",
+            "pct": 56,
+            "band": "lo",
+            "val": "0.56"
+          },
+          {
+            "name": "Line baseline OEE",
+            "pct": 48,
+            "band": "hi",
+            "val": "0.48"
+          }
+        ],
+        "analogues": [
+          {
+            "of": "0000519488-1",
+            "previous_of": "0000519487-1",
+            "line": "19",
+            "date": "09 Jan 2025",
+            "type": "same-sku",
+            "principal": "Referencia",
+            "actual_changeover_minutes": 10.4,
+            "oee": 0.55
+          },
+          {
+            "of": "0000560444-1",
+            "previous_of": "0000560435-1",
+            "line": "19",
+            "date": "02 Apr 2025",
+            "type": "same-sku",
+            "principal": "Referencia",
+            "actual_changeover_minutes": 9.5,
+            "oee": 0.804
+          },
+          {
+            "of": "PRT9900016066-M",
+            "previous_of": "0000616593-1",
+            "line": "19",
+            "date": "17 Jul 2025",
+            "type": "same-sku",
+            "principal": NaN,
+            "actual_changeover_minutes": 0.0,
+            "oee": 0.519
+          },
+          {
+            "of": "0000580974-1",
+            "previous_of": "0000578943-1",
+            "line": "19",
+            "date": "12 May 2025",
+            "type": "same-sku",
+            "principal": "Referencia",
+            "actual_changeover_minutes": 19.5,
+            "oee": 0.751
+          },
+          {
+            "of": "0000574790-1",
+            "previous_of": "0000574788-1",
+            "line": "19",
+            "date": "08 May 2025",
+            "type": "same-sku",
+            "principal": "Referencia",
+            "actual_changeover_minutes": 8.3,
+            "oee": 0.769
+          },
+          {
+            "of": "0000630849-1",
+            "previous_of": "0000643333-1",
+            "line": "19",
+            "date": "11 Aug 2025",
+            "type": "same-sku",
+            "principal": "Referencia",
+            "actual_changeover_minutes": 18.4,
+            "oee": 0.256
+          }
+        ],
+        "n": 6,
+        "analogueMean": "0.56",
+        "naiveMean": "0.48",
+        "gain": "+8.3",
+        "lineBaselineOee": 0.481,
+        "transitionTypeStats": {
+          "cases": 157,
+          "mean_oee": 0.537,
+          "mean_oee_damage_pts": 6.12,
+          "mean_actual_changeover_minutes": 8.8,
+          "mean_limpieza_minutes": 6.8,
+          "mean_pnp_minutes": 228.9,
+          "worst_line": 14,
+          "worst_line_avg_oee": 0.48
+        },
+        "transitionComponents": [],
+        "cfTheoreticalMinutes": 8.8,
+        "limitations": [
+          "Crew experience and shift staffing are not in the data.",
+          "Downstream micro-stoppages may not be fully captured in PNP.",
+          "Recovery hours are a modelled estimate, not a measurement."
+        ]
+      }
+    }
+  },
+  "objectives": {
+    "oee": {
+      "label": "OEE",
+      "icon": "◉",
+      "order": [
+        "17",
+        "19",
+        "14"
+      ],
+      "notes": {
+        "14": "Predicted OEE +0.0 vs naive.",
+        "17": "Predicted OEE +9.4 vs naive.",
+        "19": "Predicted OEE +8.3 vs naive."
+      }
+    },
+    "time": {
+      "label": "Time",
+      "icon": "◷",
+      "order": [
+        "14",
+        "17",
+        "19"
+      ],
+      "notes": {
+        "14": "Shifts 7 order(s) on Line 14.",
+        "17": "Shifts 7 order(s) on Line 17.",
+        "19": "Shifts 8 order(s) on Line 19."
+      }
+    },
+    "dis": {
+      "label": "Disruption",
+      "icon": "⇄",
+      "order": [
+        "14",
+        "17",
+        "19"
+      ],
+      "notes": {
+        "14": "Shifts 7 order(s) on Line 14.",
+        "17": "Shifts 7 order(s) on Line 17.",
+        "19": "Shifts 8 order(s) on Line 19."
+      }
+    }
+  },
+  "metadata": {
+    "contract_version": "1.0",
+    "exported_at": "2026-05-23T17:31:18.663376+00:00",
+    "using_fallback_data": false,
+    "master_rows": 2273,
+    "production_runs": 2109,
+    "clean_blocks": 132,
+    "maint_blocks": 32,
+    "oee_capped": 1,
+    "transitions": 2106,
+    "cf_matrix_loaded": true,
+    "primary_urgent_of": "ED13LTNN",
+    "join_check": {
+      "ok": true,
+      "oee_rows": 2274,
+      "tiempo_rows": 2278,
+      "intersection_ofs": 2274,
+      "only_in_oee": 0,
+      "only_in_tiempo": 4,
+      "coverage_share": 1.0,
+      "should_rename_woid_to_of": true
+    },
+    "transition_type_stats": {
+      "brand": {
+        "cases": 71,
+        "mean_oee": 0.474,
+        "mean_oee_damage_pts": -1.13,
+        "mean_actual_changeover_minutes": 18.1,
+        "mean_limpieza_minutes": 1.4,
+        "mean_pnp_minutes": 79.0,
+        "worst_line": 19,
+        "worst_line_avg_oee": 0.434
+      },
+      "brand+cap": {
+        "cases": 6,
+        "mean_oee": 0.544,
+        "mean_oee_damage_pts": 9.29,
+        "mean_actual_changeover_minutes": 5.1,
+        "mean_limpieza_minutes": 0.0,
+        "mean_pnp_minutes": 408.4,
+        "worst_line": 14,
+        "worst_line_avg_oee": 0.429
+      },
+      "brand+cap+palet": {
+        "cases": 1,
+        "mean_oee": 0.519,
+        "mean_oee_damage_pts": 9.73,
+        "mean_actual_changeover_minutes": 0.0,
+        "mean_limpieza_minutes": 10.0,
+        "mean_pnp_minutes": 1061.7,
+        "worst_line": 14,
+        "worst_line_avg_oee": 0.519
+      },
+      "brand+palet": {
+        "cases": 1,
+        "mean_oee": 0.475,
+        "mean_oee_damage_pts": -0.63,
+        "mean_actual_changeover_minutes": 0.0,
+        "mean_limpieza_minutes": 261.5,
+        "mean_pnp_minutes": 514.8,
+        "worst_line": 19,
+        "worst_line_avg_oee": 0.475
+      },
+      "brand+product": {
+        "cases": 587,
+        "mean_oee": 0.514,
+        "mean_oee_damage_pts": 1.82,
+        "mean_actual_changeover_minutes": 18.9,
+        "mean_limpieza_minutes": 14.5,
+        "mean_pnp_minutes": 134.9,
+        "worst_line": 14,
+        "worst_line_avg_oee": 0.469
+      },
+      "brand+product+cap": {
+        "cases": 31,
+        "mean_oee": 0.482,
+        "mean_oee_damage_pts": -1.56,
+        "mean_actual_changeover_minutes": 12.8,
+        "mean_limpieza_minutes": 15.3,
+        "mean_pnp_minutes": 131.2,
+        "worst_line": 14,
+        "worst_line_avg_oee": 0.379
+      },
+      "brand+product+palet": {
+        "cases": 96,
+        "mean_oee": 0.481,
+        "mean_oee_damage_pts": -0.46,
+        "mean_actual_changeover_minutes": 16.8,
+        "mean_limpieza_minutes": 6.5,
+        "mean_pnp_minutes": 124.6,
+        "worst_line": 14,
+        "worst_line_avg_oee": 0.432
+      },
+      "brand+product+primary_pack": {
+        "cases": 58,
+        "mean_oee": 0.449,
+        "mean_oee_damage_pts": -5.3,
+        "mean_actual_changeover_minutes": 15.9,
+        "mean_limpieza_minutes": 8.4,
+        "mean_pnp_minutes": 165.5,
+        "worst_line": 14,
+        "worst_line_avg_oee": 0.34
+      },
+      "brand+product+secondary_pack": {
+        "cases": 2,
+        "mean_oee": 0.536,
+        "mean_oee_damage_pts": 0.54,
+        "mean_actual_changeover_minutes": 0.0,
+        "mean_limpieza_minutes": 0.0,
+        "mean_pnp_minutes": 76.1,
+        "worst_line": 17,
+        "worst_line_avg_oee": 0.536
+      },
+      "brand+product+volume": {
+        "cases": 4,
+        "mean_oee": 0.361,
+        "mean_oee_damage_pts": -8.97,
+        "mean_actual_changeover_minutes": 13.3,
+        "mean_limpieza_minutes": 1.2,
+        "mean_pnp_minutes": 382.9,
+        "worst_line": 19,
+        "worst_line_avg_oee": 0.361
+      },
+      "brand+secondary_pack": {
+        "cases": 1,
+        "mean_oee": 0.545,
+        "mean_oee_damage_pts": 12.27,
+        "mean_actual_changeover_minutes": 0.0,
+        "mean_limpieza_minutes": 0.0,
+        "mean_pnp_minutes": 388.8,
+        "worst_line": 14,
+        "worst_line_avg_oee": 0.545
+      },
+      "brand+secondary_pack+palet": {
+        "cases": 1,
+        "mean_oee": 0.308,
+        "mean_oee_damage_pts": -22.31,
+        "mean_actual_changeover_minutes": 24.1,
+        "mean_limpieza_minutes": 0.0,
+        "mean_pnp_minutes": 143.3,
+        "worst_line": 17,
+        "worst_line_avg_oee": 0.308
+      },
+      "cap": {
+        "cases": 4,
+        "mean_oee": 0.616,
+        "mean_oee_damage_pts": 13.51,
+        "mean_actual_changeover_minutes": 6.8,
+        "mean_limpieza_minutes": 11.0,
+        "mean_pnp_minutes": 48.9,
+        "worst_line": 19,
+        "worst_line_avg_oee": 0.616
+      },
+      "cap+palet": {
+        "cases": 1,
+        "mean_oee": 0.333,
+        "mean_oee_damage_pts": -19.82,
+        "mean_actual_changeover_minutes": 19.0,
+        "mean_limpieza_minutes": 0.0,
+        "mean_pnp_minutes": 117.6,
+        "worst_line": 17,
+        "worst_line_avg_oee": 0.333
+      },
+      "cap+primary_pack": {
+        "cases": 5,
+        "mean_oee": 0.377,
+        "mean_oee_damage_pts": -10.41,
+        "mean_actual_changeover_minutes": 6.8,
+        "mean_limpieza_minutes": 0.0,
+        "mean_pnp_minutes": 97.4,
+        "worst_line": 19,
+        "worst_line_avg_oee": 0.377
+      },
+      "cap+secondary_pack+palet": {
+        "cases": 2,
+        "mean_oee": 0.508,
+        "mean_oee_damage_pts": 5.61,
+        "mean_actual_changeover_minutes": 0.0,
+        "mean_limpieza_minutes": 8.2,
+        "mean_pnp_minutes": 864.8,
+        "worst_line": 14,
+        "worst_line_avg_oee": 0.405
+      },
+      "multi": {
+        "cases": 520,
+        "mean_oee": 0.419,
+        "mean_oee_damage_pts": -6.02,
+        "mean_actual_changeover_minutes": 18.4,
+        "mean_limpieza_minutes": 9.6,
+        "mean_pnp_minutes": 241.1,
+        "worst_line": 14,
+        "worst_line_avg_oee": 0.364
+      },
+      "palet": {
+        "cases": 203,
+        "mean_oee": 0.551,
+        "mean_oee_damage_pts": 7.49,
+        "mean_actual_changeover_minutes": 2.7,
+        "mean_limpieza_minutes": 3.0,
+        "mean_pnp_minutes": 149.5,
+        "worst_line": 14,
+        "worst_line_avg_oee": 0.446
+      },
+      "primary_pack": {
+        "cases": 29,
+        "mean_oee": 0.411,
+        "mean_oee_damage_pts": -3.94,
+        "mean_actual_changeover_minutes": 10.5,
+        "mean_limpieza_minutes": 1.1,
+        "mean_pnp_minutes": 107.8,
+        "worst_line": 19,
+        "worst_line_avg_oee": 0.41
+      },
+      "primary_pack+palet": {
+        "cases": 9,
+        "mean_oee": 0.424,
+        "mean_oee_damage_pts": -2.9,
+        "mean_actual_changeover_minutes": 27.8,
+        "mean_limpieza_minutes": 1.0,
+        "mean_pnp_minutes": 82.8,
+        "worst_line": 14,
+        "worst_line_avg_oee": 0.419
+      },
+      "primary_pack+secondary_pack": {
+        "cases": 127,
+        "mean_oee": 0.567,
+        "mean_oee_damage_pts": 4.56,
+        "mean_actual_changeover_minutes": 6.3,
+        "mean_limpieza_minutes": 6.3,
+        "mean_pnp_minutes": 147.7,
+        "worst_line": 14,
+        "worst_line_avg_oee": 0.454
+      },
+      "primary_pack+secondary_pack+palet": {
+        "cases": 99,
+        "mean_oee": 0.555,
+        "mean_oee_damage_pts": 2.66,
+        "mean_actual_changeover_minutes": 4.1,
+        "mean_limpieza_minutes": 2.6,
+        "mean_pnp_minutes": 136.0,
+        "worst_line": 19,
+        "worst_line_avg_oee": 0.502
+      },
+      "product": {
+        "cases": 15,
+        "mean_oee": 0.405,
+        "mean_oee_damage_pts": -8.5,
+        "mean_actual_changeover_minutes": 25.5,
+        "mean_limpieza_minutes": 0.0,
+        "mean_pnp_minutes": 73.5,
+        "worst_line": 14,
+        "worst_line_avg_oee": 0.322
+      },
+      "product+cap": {
+        "cases": 5,
+        "mean_oee": 0.411,
+        "mean_oee_damage_pts": -14.89,
+        "mean_actual_changeover_minutes": 24.9,
+        "mean_limpieza_minutes": 0.0,
+        "mean_pnp_minutes": 44.4,
+        "worst_line": 17,
+        "worst_line_avg_oee": 0.268
+      },
+      "product+cap+palet": {
+        "cases": 1,
+        "mean_oee": 0.273,
+        "mean_oee_damage_pts": -20.8,
+        "mean_actual_changeover_minutes": 22.5,
+        "mean_limpieza_minutes": 0.0,
+        "mean_pnp_minutes": 111.2,
+        "worst_line": 19,
+        "worst_line_avg_oee": 0.273
+      },
+      "product+cap+primary_pack": {
+        "cases": 2,
+        "mean_oee": 0.545,
+        "mean_oee_damage_pts": 6.38,
+        "mean_actual_changeover_minutes": 13.9,
+        "mean_limpieza_minutes": 0.1,
+        "mean_pnp_minutes": 98.4,
+        "worst_line": 19,
+        "worst_line_avg_oee": 0.545
+      },
+      "product+palet": {
+        "cases": 3,
+        "mean_oee": 0.381,
+        "mean_oee_damage_pts": -16.4,
+        "mean_actual_changeover_minutes": 18.3,
+        "mean_limpieza_minutes": 0.0,
+        "mean_pnp_minutes": 43.2,
+        "worst_line": 17,
+        "worst_line_avg_oee": 0.224
+      },
+      "product+primary_pack": {
+        "cases": 5,
+        "mean_oee": 0.342,
+        "mean_oee_damage_pts": -13.91,
+        "mean_actual_changeover_minutes": 26.7,
+        "mean_limpieza_minutes": 0.0,
+        "mean_pnp_minutes": 79.3,
+        "worst_line": 19,
+        "worst_line_avg_oee": 0.342
+      },
+      "product+primary_pack+secondary_pack": {
+        "cases": 1,
+        "mean_oee": 0.681,
+        "mean_oee_damage_pts": 15.03,
+        "mean_actual_changeover_minutes": 29.4,
+        "mean_limpieza_minutes": 0.0,
+        "mean_pnp_minutes": 47.6,
+        "worst_line": 17,
+        "worst_line_avg_oee": 0.681
+      },
+      "product+secondary_pack+palet": {
+        "cases": 8,
+        "mean_oee": 0.519,
+        "mean_oee_damage_pts": 2.96,
+        "mean_actual_changeover_minutes": 7.8,
+        "mean_limpieza_minutes": 2.8,
+        "mean_pnp_minutes": 317.4,
+        "worst_line": 14,
+        "worst_line_avg_oee": 0.405
+      },
+      "product+volume+primary_pack": {
+        "cases": 1,
+        "mean_oee": 0.51,
+        "mean_oee_damage_pts": 2.92,
+        "mean_actual_changeover_minutes": 8.2,
+        "mean_limpieza_minutes": 7.9,
+        "mean_pnp_minutes": 103.3,
+        "worst_line": 19,
+        "worst_line_avg_oee": 0.51
+      },
+      "same-sku": {
+        "cases": 157,
+        "mean_oee": 0.537,
+        "mean_oee_damage_pts": 6.12,
+        "mean_actual_changeover_minutes": 8.8,
+        "mean_limpieza_minutes": 6.8,
+        "mean_pnp_minutes": 228.9,
+        "worst_line": 14,
+        "worst_line_avg_oee": 0.48
+      },
+      "secondary_pack+palet": {
+        "cases": 47,
+        "mean_oee": 0.473,
+        "mean_oee_damage_pts": 2.98,
+        "mean_actual_changeover_minutes": 5.2,
+        "mean_limpieza_minutes": 2.9,
+        "mean_pnp_minutes": 338.2,
+        "worst_line": 14,
+        "worst_line_avg_oee": 0.459
+      },
+      "volume": {
+        "cases": 1,
+        "mean_oee": 0.263,
+        "mean_oee_damage_pts": -21.81,
+        "mean_actual_changeover_minutes": 55.7,
+        "mean_limpieza_minutes": 0.0,
+        "mean_pnp_minutes": 91.2,
+        "worst_line": 19,
+        "worst_line_avg_oee": 0.263
+      },
+      "volume+primary_pack": {
+        "cases": 1,
+        "mean_oee": 0.263,
+        "mean_oee_damage_pts": -21.76,
+        "mean_actual_changeover_minutes": 121.2,
+        "mean_limpieza_minutes": 12.5,
+        "mean_pnp_minutes": 95.6,
+        "worst_line": 19,
+        "worst_line_avg_oee": 0.263
+      },
+      "volume+secondary_pack+palet": {
+        "cases": 1,
+        "mean_oee": 0.133,
+        "mean_oee_damage_pts": -28.87,
+        "mean_actual_changeover_minutes": 226.0,
+        "mean_limpieza_minutes": 0.0,
+        "mean_pnp_minutes": 309.3,
+        "worst_line": 14,
+        "worst_line_avg_oee": 0.133
+      }
+    }
+  },
+  "infeasibleByLine": {},
+  "planReview": {
+    "risky_by_line": {
+      "14": [
+        {
+          "previous_of": "PRT9900016886-M",
+          "current_of": "0000710237-1",
+          "previous_sku": "VO13LTNN",
+          "current_sku": "VO13LTMN",
+          "marker_start": 1.61,
+          "marker_w": 0.33,
+          "transition_type": "product",
+          "principal_label": null,
+          "cf_theoretical_minutes": 0.0,
+          "line_transition_benchmark_oee": 0.405,
+          "line_baseline_oee": 0.422,
+          "oee_damage_pts": -8.5,
+          "mean_actual_changeover_minutes": 25.5,
+          "mean_limpieza_minutes": 0.0,
+          "mean_pnp_minutes": 73.5,
+          "risk_level": "med",
+          "risk_reasons": [
+            "This transition type historically loses 8.5 OEE pts vs the line baseline."
+          ],
+          "cases": 15
+        },
+        {
+          "previous_of": "0000710237-1",
+          "current_of": "0000710227-1",
+          "previous_sku": "VO13LTMN",
+          "current_sku": "ED13LCMM",
+          "marker_start": 1.95,
+          "marker_w": 0.28,
+          "transition_type": "brand",
+          "principal_label": null,
+          "cf_theoretical_minutes": 0.0,
+          "line_transition_benchmark_oee": 0.474,
+          "line_baseline_oee": 0.422,
+          "oee_damage_pts": -1.1,
+          "mean_actual_changeover_minutes": 18.1,
+          "mean_limpieza_minutes": 1.4,
+          "mean_pnp_minutes": 79.0,
+          "risk_level": "low",
+          "risk_reasons": [
+            "Slight OEE damage on average (-1.1 pts)."
+          ],
+          "cases": 71
+        }
+      ],
+      "17": [
+        {
+          "previous_of": "PRT9900016880-M",
+          "current_of": "PRT9900016879-M",
+          "previous_sku": "ED13LP12",
+          "current_sku": "ED13P12M",
+          "marker_start": 0.28,
+          "marker_w": 0.12,
+          "transition_type": "product",
+          "principal_label": null,
+          "cf_theoretical_minutes": 0.0,
+          "line_transition_benchmark_oee": 0.405,
+          "line_baseline_oee": 0.531,
+          "oee_damage_pts": -8.5,
+          "mean_actual_changeover_minutes": 25.5,
+          "mean_limpieza_minutes": 0.0,
+          "mean_pnp_minutes": 73.5,
+          "risk_level": "med",
+          "risk_reasons": [
+            "This transition type historically loses 8.5 OEE pts vs the line baseline."
+          ],
+          "cases": 15
+        },
+        {
+          "previous_of": "PRT9900016879-M",
+          "current_of": "0000710246-1",
+          "previous_sku": "ED13P12M",
+          "current_sku": "EX13L12H",
+          "marker_start": 0.4,
+          "marker_w": 0.05,
+          "transition_type": "product",
+          "principal_label": null,
+          "cf_theoretical_minutes": 0.0,
+          "line_transition_benchmark_oee": 0.405,
+          "line_baseline_oee": 0.531,
+          "oee_damage_pts": -8.5,
+          "mean_actual_changeover_minutes": 25.5,
+          "mean_limpieza_minutes": 0.0,
+          "mean_pnp_minutes": 73.5,
+          "risk_level": "med",
+          "risk_reasons": [
+            "This transition type historically loses 8.5 OEE pts vs the line baseline."
+          ],
+          "cases": 15
+        },
+        {
+          "previous_of": "0000710246-1",
+          "current_of": "0000710248-1",
+          "previous_sku": "EX13L12H",
+          "current_sku": "FD13LP12",
+          "marker_start": 0.46,
+          "marker_w": 0.06,
+          "transition_type": "brand",
+          "principal_label": null,
+          "cf_theoretical_minutes": 0.0,
+          "line_transition_benchmark_oee": 0.474,
+          "line_baseline_oee": 0.531,
+          "oee_damage_pts": -1.1,
+          "mean_actual_changeover_minutes": 18.1,
+          "mean_limpieza_minutes": 1.4,
+          "mean_pnp_minutes": 79.0,
+          "risk_level": "low",
+          "risk_reasons": [
+            "Slight OEE damage on average (-1.1 pts)."
+          ],
+          "cases": 71
+        },
+        {
+          "previous_of": "0000710248-1",
+          "current_of": "PRT9900016882-M",
+          "previous_sku": "FD13LP12",
+          "current_sku": "EX13LH12",
+          "marker_start": 0.52,
+          "marker_w": 0.04,
+          "transition_type": "brand",
+          "principal_label": null,
+          "cf_theoretical_minutes": 0.0,
+          "line_transition_benchmark_oee": 0.474,
+          "line_baseline_oee": 0.531,
+          "oee_damage_pts": -1.1,
+          "mean_actual_changeover_minutes": 18.1,
+          "mean_limpieza_minutes": 1.4,
+          "mean_pnp_minutes": 79.0,
+          "risk_level": "low",
+          "risk_reasons": [
+            "Slight OEE damage on average (-1.1 pts)."
+          ],
+          "cases": 71
+        },
+        {
+          "previous_of": "PRT9900016883-M",
+          "current_of": "PRT9900016884-M",
+          "previous_sku": "VO13P12M",
+          "current_sku": "VO13LTNN",
+          "marker_start": 0.6,
+          "marker_w": 0.11,
+          "transition_type": "product",
+          "principal_label": null,
+          "cf_theoretical_minutes": 0.0,
+          "line_transition_benchmark_oee": 0.405,
+          "line_baseline_oee": 0.531,
+          "oee_damage_pts": -8.5,
+          "mean_actual_changeover_minutes": 25.5,
+          "mean_limpieza_minutes": 0.0,
+          "mean_pnp_minutes": 73.5,
+          "risk_level": "med",
+          "risk_reasons": [
+            "This transition type historically loses 8.5 OEE pts vs the line baseline."
+          ],
+          "cases": 15
+        },
+        {
+          "previous_of": "PRT9900016884-M",
+          "current_of": "PRT9900016885-M",
+          "previous_sku": "VO13LTNN",
+          "current_sku": "TU13LTN",
+          "marker_start": 0.71,
+          "marker_w": 0.08,
+          "transition_type": "brand",
+          "principal_label": null,
+          "cf_theoretical_minutes": 0.0,
+          "line_transition_benchmark_oee": 0.474,
+          "line_baseline_oee": 0.531,
+          "oee_damage_pts": -1.1,
+          "mean_actual_changeover_minutes": 18.1,
+          "mean_limpieza_minutes": 1.4,
+          "mean_pnp_minutes": 79.0,
+          "risk_level": "low",
+          "risk_reasons": [
+            "Slight OEE damage on average (-1.1 pts)."
+          ],
+          "cases": 71
+        }
+      ],
+      "19": [
+        {
+          "previous_of": "0000709073-1",
+          "current_of": "0000712669-1",
+          "previous_sku": "VI12LTW",
+          "current_sku": "7BNG3LB2",
+          "marker_start": 0.39,
+          "marker_w": 0.06,
+          "transition_type": "volume+brand+product",
+          "principal_label": null,
+          "cf_theoretical_minutes": 360.0,
+          "line_transition_benchmark_oee": null,
+          "line_baseline_oee": 0.481,
+          "oee_damage_pts": null,
+          "mean_actual_changeover_minutes": 0.0,
+          "mean_limpieza_minutes": 0.0,
+          "mean_pnp_minutes": 0.0,
+          "risk_level": "low",
+          "risk_reasons": [
+            "Cross-format changeover — CF baseline is 360 min."
+          ],
+          "cases": 0
+        },
+        {
+          "previous_of": "0000712669-1",
+          "current_of": "PRT9900016878-M",
+          "previous_sku": "7BNG3LB2",
+          "current_sku": "7BNNNLB0",
+          "marker_start": 0.6,
+          "marker_w": 0.16,
+          "transition_type": "brand",
+          "principal_label": null,
+          "cf_theoretical_minutes": 0.0,
+          "line_transition_benchmark_oee": 0.474,
+          "line_baseline_oee": 0.481,
+          "oee_damage_pts": -1.1,
+          "mean_actual_changeover_minutes": 18.1,
+          "mean_limpieza_minutes": 1.4,
+          "mean_pnp_minutes": 79.0,
+          "risk_level": "low",
+          "risk_reasons": [
+            "Slight OEE damage on average (-1.1 pts)."
+          ],
+          "cases": 71
+        },
+        {
+          "previous_of": "PRT9900016878-M",
+          "current_of": "0000714071-1",
+          "previous_sku": "7BNNNLB0",
+          "current_sku": "EX1324BN",
+          "marker_start": 0.76,
+          "marker_w": 0.11,
+          "transition_type": "volume+brand+product",
+          "principal_label": null,
+          "cf_theoretical_minutes": 360.0,
+          "line_transition_benchmark_oee": null,
+          "line_baseline_oee": 0.481,
+          "oee_damage_pts": null,
+          "mean_actual_changeover_minutes": 0.0,
+          "mean_limpieza_minutes": 0.0,
+          "mean_pnp_minutes": 0.0,
+          "risk_level": "low",
+          "risk_reasons": [
+            "Cross-format changeover — CF baseline is 360 min."
+          ],
+          "cases": 0
+        },
+        {
+          "previous_of": "0000714071-1",
+          "current_of": "0000710262-1",
+          "previous_sku": "EX1324BN",
+          "current_sku": "3BNZFLB1",
+          "marker_start": 0.87,
+          "marker_w": 0.22,
+          "transition_type": "brand",
+          "principal_label": null,
+          "cf_theoretical_minutes": 0.0,
+          "line_transition_benchmark_oee": 0.474,
+          "line_baseline_oee": 0.481,
+          "oee_damage_pts": -1.1,
+          "mean_actual_changeover_minutes": 18.1,
+          "mean_limpieza_minutes": 1.4,
+          "mean_pnp_minutes": 79.0,
+          "risk_level": "low",
+          "risk_reasons": [
+            "Slight OEE damage on average (-1.1 pts)."
+          ],
+          "cases": 71
+        }
+      ]
+    },
+    "plan_health_score": 80.0,
+    "total_risky": 12,
+    "total_cleaning_heavy": 2,
+    "summary": "12 risky transitions across the plan · 2 cleaning-heavy"
+  }
+}
