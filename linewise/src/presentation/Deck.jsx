@@ -34,7 +34,8 @@ function Deck() {
     <ApproachSlide key="approach" />,
     <ImpactSlide key="impact" />,
     <FutureSlide key="future" />,
-    <CloseSlide key="close" />,
+    <FocusSlide key="focus" />,
+    <ThankYouSlide key="thank-you" />,
   ]
   const [slide, setSlide] = useState(() => {
     const requested = Number(new URLSearchParams(location.search).get('slide'))
@@ -103,9 +104,17 @@ function TitleSlide() {
         <p className="title-subtitle">When the plan changes, decide with evidence.</p>
       </div>
 
+      <aside className="team-dinner-badge" aria-label="Team Chicken Dinner">
+        <img src="/deck/chicken-dinner.svg" alt="" aria-hidden="true" />
+        <div>
+          <span>Team name</span>
+          <strong>Chicken Dinner</strong>
+        </div>
+      </aside>
+
       <footer className="slide-footer">
         <span>Damm x Engineering HUB Hackathon</span>
-        <span>Team Stride</span>
+        <span>Team Chicken Dinner</span>
       </footer>
     </section>
   )
@@ -510,14 +519,14 @@ function FutureSlide() {
   ]
 
   return (
-    <section className="slide future-slide" aria-label="Slide 10: Beyond the demo">
+    <section className="slide future-slide" aria-label="Slide 10: Additional features">
       <div className="slide-kicker">
         <span>09</span>
-        <b>Beyond The Demo</b>
+        <b>Additional Features</b>
       </div>
 
       <div className="future-title">
-        <p className="challenge-label">What we proved today</p>
+        <p className="challenge-label">Beyond the demo</p>
         <h2>One urgent decision is the wedge.</h2>
         <p>Once the factory has a memory, the same loop can run every day, across more orders, with richer signals.</p>
       </div>
@@ -535,24 +544,66 @@ function FutureSlide() {
   )
 }
 
-function CloseSlide() {
+function FocusSlide() {
+  const focusAreas = [
+    ['Autonomous daily planning', 'A morning agent that reviews yesterday’s execution, flags weak sequences, and proposes today’s best planning actions.'],
+    ['Network-wide replanning', 'Move from one urgent insertion to many orders, more constraints, and coordinated decisions across lines and shifts.'],
+    ['Decision learning loop', 'Capture planner overrides, accepted recommendations, and real OEE outcomes so Stride improves every week.'],
+  ]
+
   return (
-    <section className="slide close-slide" aria-label="Slide 11: Close">
-      <div className="close-content">
-        <p className="challenge-label">Current scope</p>
-        <h2>When the plan breaks, decide with what the factory has already learned.</h2>
-        <div className="scope-row">
-          <span>Lines 14 / 17 / 19</span>
-          <span>single urgent-order insertion</span>
-          <span>order-level model</span>
-          <span>Blue Yonder enrichment</span>
-        </div>
+    <section className="slide focus-slide" aria-label="Slide 11: Three next focus areas">
+      <div className="slide-kicker">
+        <span>10</span>
+        <b>Where We Would Focus Next</b>
       </div>
-      <div className="next-panel" aria-hidden="true">
-        <b>Next</b>
-        <span>multi-order optimization</span>
-        <span>richer constraints</span>
-        <span>planning workflow integration</span>
+
+      <div className="focus-title">
+        <p className="challenge-label">Three next bets</p>
+        <h2>Turn the prototype into an operating habit.</h2>
+      </div>
+
+      <div className="focus-grid" aria-hidden="true">
+        {focusAreas.map(([title, detail], index) => (
+          <div className="focus-card" key={title}>
+            <span>{String(index + 1).padStart(2, '0')}</span>
+            <b>{title}</b>
+            <small>{detail}</small>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function ThankYouSlide() {
+  return (
+    <section className="slide thank-you-slide" aria-label="Slide 12: Thank you">
+      <div className="brand-row thank-you-brand" aria-label="Hackathon partners">
+        <img src="/brand/logo-damm.png" alt="Damm" className="brand-logo damm-logo" />
+        <span className="partner-mark">x</span>
+        <img src="/brand/logo-ehub.png" alt="E-Hub" className="brand-logo ehub-logo" />
+      </div>
+
+      <div className="thank-you-content">
+        <p className="challenge-label">Team Stride</p>
+        <h2>Thank you.</h2>
+        <p>When the plan changes, decide with evidence.</p>
+      </div>
+
+      <div className="thank-you-system" aria-hidden="true">
+        <div className="line-track line-track-a">
+          <span className="order-block block-red" />
+          <span className="order-block block-gold" />
+          <span className="order-block block-green" />
+          <span className="line-node" />
+        </div>
+        <div className="line-track line-track-b">
+          <span className="order-block block-green" />
+          <span className="order-block block-red" />
+          <span className="order-block block-ink" />
+          <span className="line-node" />
+        </div>
       </div>
     </section>
   )
