@@ -30,10 +30,18 @@ export default function TopBar({
   return (
     <header className="topbar">
       <div className="topbar-brand">
-        <svg viewBox="0 0 40 40" width="32" height="32" aria-hidden="true">
-          <rect x="2" y="2" width="36" height="36" rx="9" fill="#1b3a2e" />
-          <path d="M11 28 L11 12 L15 12 L15 24 L24 24 L24 28 Z" fill="#d97a3f" />
-          <circle cx="29" cy="14" r="3" fill="#d97a3f" />
+        <img
+          src="/brand/logo-damm.png"
+          alt="Damm"
+          className="topbar-damm-mark"
+          width="64"
+          height="28"
+        />
+        <span className="topbar-brand-sep" aria-hidden="true" />
+        <svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true">
+          <rect x="2" y="2" width="36" height="36" rx="9" fill="var(--brand)" />
+          <path d="M11 28 L11 12 L15 12 L15 24 L24 24 L24 28 Z" fill="var(--ink-on-brand-strong)" />
+          <circle cx="29" cy="14" r="3" fill="var(--accent)" />
         </svg>
         <div className="topbar-brand-text">
           <div className="topbar-brand-name">LineWise</div>
