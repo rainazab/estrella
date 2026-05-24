@@ -10,6 +10,35 @@ import type {
   PlanReviewTransition,
 } from "../../lib/types";
 
+/* PlanReviewInsertion — paired insert + shifted-run group, one per
+   urgent insertion the planner accepted. Sourced from
+   /plan.recommendations[line].plan (kind: "ins" | "shift" segments)
+   merged with .moves[] (shift hours + reason) and .lineBaseline.
+
+   Backend contract spec lives in API_CONTRACT.md §PlanReview. Adding
+   the type inline here until lib/types is materialised — keep this
+   block authoritative; the lib/types extraction must mirror it. */
+export type PlanReviewInsertion = {
+  line: string;                 // "14"
+  line_avg_oee: number;         // 30-day rolling baseline, 0..1
+  inserted: PlanReviewRun;
+  shifted: PlanReviewShiftedRun[];
+};
+export type PlanReviewRun = {
+  of: string;                   // order code, e.g. "ED13LTNN"
+  sku_code: string;             // material code shown big in the card
+  sku_name: string | null;      // long description
+  format: string;               // "33cl"
+  units: number;                // unit count
+  duration_minutes: number;
+  oee: number;                  // 0..1
+  oee_delta_vs_line_avg: number;
+};
+export type PlanReviewShiftedRun = PlanReviewRun & {
+  shift_hours: number;          // positive = pushed later
+  reason: string;               // "pushed back to make room for ED13LTNN"
+};
+
 function pct(v: number | null | undefined, d = 0): string {
   if (v == null || isNaN(v)) return "—";
   return `${(v * 100).toFixed(d)}%`;
@@ -89,6 +118,10 @@ export default function PlanReviewPage() {
             />
           </div>
 
+          {data.insertion_moves && data.insertion_moves.length > 0 ? (
+            <InsertionShiftPanel insertions={data.insertion_moves} />
+          ) : null}
+
           {data.recommended_swaps.length > 0 ? (
             <SwapsPanel swaps={data.recommended_swaps} />
           ) : null}
@@ -125,6 +158,217 @@ export default function PlanReviewPage() {
       ) : null}
     </main>
   );
+}
+
+function InsertionShiftPanel({
+  insertions,
+}: {
+  insertions: PlanReviewInsertion[];
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="card p-5"
+    >
+      <div className="text-xs uppercase tracking-[0.2em] text-damm-muted mb-3">
+        Insertion &amp; shifted <span className="text-damm-accent">(rec mode)</span>
+      </div>
+      <div className="space-y-5">
+        {insertions.map((m, i) => (
+          <InsertionShiftRow key={i} move={m} />
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+function InsertionShiftRow({ move }: { move: PlanReviewInsertion }) {
+  return (
+    <div className="flex flex-wrap gap-3 items-stretch">
+      <InsertCard
+        sku={move.inserted.sku_code}
+        skuLong={move.inserted.sku_name}
+        format={move.inserted.format}
+        units={move.inserted.units}
+        durationMinutes={move.inserted.duration_minutes}
+        oee={move.inserted.oee}
+        oeeDelta={move.inserted.oee_delta_vs_line_avg}
+        lineAvg={move.line_avg_oee}
+      />
+      {move.shifted.map((s, i) => (
+        <ShiftCard
+          key={i}
+          sku={s.sku_code}
+          skuLong={s.sku_name}
+          format={s.format}
+          units={s.units}
+          durationMinutes={s.duration_minutes}
+          oee={s.oee}
+          oeeDelta={s.oee_delta_vs_line_avg}
+          shiftHours={s.shift_hours}
+          lineAvg={move.line_avg_oee}
+        />
+      ))}
+    </div>
+  );
+}
+
+function InsertCard(props: {
+  sku: string;
+  skuLong?: string | null;
+  format: string;
+  units: number;
+  durationMinutes: number;
+  oee: number;
+  oeeDelta: number;
+  lineAvg: number;
+}) {
+  return (
+    <CardFrame variant="ins" headerLabel="Urgent insert" headerDot>
+      <CardBody {...props} />
+    </CardFrame>
+  );
+}
+
+function ShiftCard(props: {
+  sku: string;
+  skuLong?: string | null;
+  format: string;
+  units: number;
+  durationMinutes: number;
+  oee: number;
+  oeeDelta: number;
+  shiftHours: number;
+  lineAvg: number;
+}) {
+  return (
+    <CardFrame
+      variant="shift"
+      headerLabel={`Shifted +${props.shiftHours}h to make room`}
+    >
+      <CardBody {...props} />
+    </CardFrame>
+  );
+}
+
+function CardFrame({
+  variant,
+  headerLabel,
+  headerDot = false,
+  children,
+}: {
+  variant: "ins" | "shift";
+  headerLabel: string;
+  headerDot?: boolean;
+  children: React.ReactNode;
+}) {
+  const headerCls =
+    variant === "ins"
+      ? "bg-damm-accent/90 text-white"
+      : "bg-white/10 text-damm-ink/90";
+  const frameCls =
+    variant === "ins"
+      ? "border-damm-accent/60 bg-damm-accent/[0.06]"
+      : "border-white/10 bg-white/[0.03]";
+  return (
+    <div
+      className={clsx(
+        "w-[260px] rounded-2xl overflow-hidden border flex flex-col",
+        frameCls,
+      )}
+    >
+      <div
+        className={clsx(
+          "px-3 py-2 text-[11px] uppercase tracking-[0.18em] font-semibold flex items-center gap-2",
+          headerCls,
+        )}
+      >
+        {headerDot && (
+          <span className="w-2 h-2 rounded-full bg-white" aria-hidden="true" />
+        )}
+        {headerLabel}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function CardBody({
+  sku,
+  skuLong,
+  format,
+  units,
+  durationMinutes,
+  oee,
+  oeeDelta,
+  lineAvg,
+}: {
+  sku: string;
+  skuLong?: string | null;
+  format: string;
+  units: number;
+  durationMinutes: number;
+  oee: number;
+  oeeDelta: number;
+  lineAvg: number;
+}) {
+  return (
+    <div className="px-4 py-3 flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-mono text-white font-semibold tracking-wide">
+          {sku}
+        </span>
+        <span className="text-[11px] px-2 py-0.5 rounded-md bg-white/10 text-damm-ink/80 font-mono">
+          {format}
+        </span>
+      </div>
+      {skuLong ? (
+        <div className="text-xs text-damm-muted truncate" title={skuLong}>
+          {skuLong}
+        </div>
+      ) : null}
+      <div className="h-px bg-white/10 my-1" />
+      <div className="flex items-baseline justify-between text-sm">
+        <span>
+          <span className="font-semibold text-white">{fmtUnits(units)}</span>
+          <span className="text-damm-muted"> un</span>
+          <span className="text-damm-muted"> · {fmtDur(durationMinutes)}</span>
+        </span>
+        <span className="font-mono">
+          <span className="text-[10px] text-damm-muted mr-1">OEE</span>
+          <span className="text-white font-semibold">{oee.toFixed(2)}</span>
+        </span>
+      </div>
+      <div
+        className={clsx(
+          "text-[11px] flex items-center gap-1",
+          oeeDelta > 0.005
+            ? "text-damm-good"
+            : oeeDelta < -0.005
+              ? "text-damm-bad"
+              : "text-damm-muted",
+        )}
+      >
+        <span>± {Math.abs(oeeDelta).toFixed(2)}</span>
+        <span className="text-damm-muted">
+          at line avg {lineAvg.toFixed(2)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function fmtUnits(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`;
+  return String(n);
+}
+
+function fmtDur(min: number): string {
+  if (min < 60) return `${min}m`;
+  const h = Math.floor(min / 60);
+  const m = Math.round(min - h * 60);
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }
 
 function SwapsPanel({ swaps }: { swaps: PlanReviewSwap[] }) {

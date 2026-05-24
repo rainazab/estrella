@@ -46,6 +46,36 @@ Three spots hardcode "now" for stable screenshots:
 
 **Backend action:** ensure `timelineMeta.now` (ISO 8601) is present on every `/plan` response and `generatedAt` on every `/signals` response (already in contract). FE will switch to those in a follow-up — your job is just to make the fields authoritative.
 
+## Gap 7 — Plan-review insertion / shift surface
+The `/plan-review` page ([frontend/app/plan-review/page.tsx](frontend/app/plan-review/page.tsx)) renders a new **InsertionShiftPanel** ("URGENT INSERT" + paired "SHIFTED +Xh TO MAKE ROOM" cards) when the response carries `insertion_moves[]`. The legacy Vite planner already gets this data — the rec stage reads `seg.kind === "ins" | "shift"` from `Recommendation.plan` and `Recommendation.moves[]` from `/plan` (see [src/components/Timeline.jsx:503](src/components/Timeline.jsx) and the contract at [API_CONTRACT.md §Recommendation](API_CONTRACT.md)). The Stride plan-review endpoint just needs to surface the same information in the flatter shape the page consumes.
+
+- **FE source today:** the panel is gated on `data.insertion_moves`. Until the field ships, the panel is hidden — no errors, no fallback fixture.
+- **Contract:** add to `PlanReviewResponse`:
+  ```ts
+  insertion_moves: Array<{
+    line: string;                 // "14"
+    line_avg_oee: number;         // 30-day rolling baseline (0..1)
+    inserted: {
+      of: string;                 // "ED13LTNN"
+      sku_code: string;           // "ED13LTNN"  (shown big in the card)
+      sku_name: string | null;    // "Estrella Damm · lata 33cl"
+      format: string;             // "33cl"
+      units: number;
+      duration_minutes: number;
+      oee: number;                // 0..1
+      oee_delta_vs_line_avg: number;
+    };
+    shifted: Array<{
+      // same fields as `inserted`, plus:
+      shift_hours: number;        // positive = pushed later
+      reason: string;             // "pushed back to make room for ED13LTNN"
+    }>;
+  }>;
+  ```
+- **Derivation (no new model work needed):** for each `Recommendation` accepted into the plan, group `plan[line]` segments where `kind === "ins"` with the consecutive `kind === "shift"` segments on the same line; join each shifted run with the matching entry in `moves[]` (key on `of` + `line`) for `shift_hours` and `reason`; carry `line_avg_oee` from `lineBaseline[line]`; compute `oee_delta_vs_line_avg = oee - line_avg_oee` per run.
+- **Acceptance:** when a rec is accepted for an urgent insertion, `/plan-review` returns at least one entry in `insertion_moves` with the inserted run plus every downstream shifted run on the same lane. FE keeps the field optional during rollout so the panel hides cleanly when empty.
+- **Type spec mirror:** see the inline `PlanReviewInsertion` definition at the top of [frontend/app/plan-review/page.tsx](frontend/app/plan-review/page.tsx) — keep it in sync with this section until `lib/types.ts` is materialised.
+
 ## Out of scope
 - Vertical metadata at [linewise/src/lib/calaVerticals.js](src/lib/calaVerticals.js) and `FALLBACK_LINE_RULES` at [linewise/src/lib/lineRules.js](src/lib/lineRules.js) — these are UI-side presentation/fallback config, not server data. Leave alone.
 - `?demo=...` URL flags in [src/App.jsx:41-72](src/App.jsx) — deck/screenshot helpers.
