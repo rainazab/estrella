@@ -94,9 +94,16 @@ def _clean_band(seg: Dict[str, Any]) -> Dict[str, Any]:
             out.pop("lockReason", None)
         return out
     out = _pick(seg, _BAND_PROD_FIELDS)
-    # If oee was synthesised in basePlan (e.g. Planificado), keep a sensible
-    # baseline so the frontend's [0,1] check passes.
-    if "oee" in out and out["oee"] is None:
+    # Every production band needs an OEE so the frontend's delta vs
+    # baseline math doesn't produce NaN. Cover three cases:
+    #   - field absent entirely (_pick dropped it)
+    #   - field present but None
+    #   - field present but a non-numeric string / NaN
+    raw_oee = out.get("oee")
+    valid_oee = False
+    if isinstance(raw_oee, (int, float)) and raw_oee == raw_oee:  # NaN-safe
+        valid_oee = True
+    if not valid_oee:
         out["oee"] = 0.55
     # Only emit due if it parses as a non-empty string (ISO8601 expected).
     if out.get("due") in (None, ""):
@@ -112,7 +119,11 @@ def _clean_recband(seg: Dict[str, Any]) -> Dict[str, Any]:
     kind = out.get("kind")
     if kind not in ("ins", "shift"):
         out.pop("kind", None)
-    if "oee" in out and out["oee"] is None:
+    # Same OEE-defaulting as production bands — covers absent / None /
+    # NaN so the frontend never computes `oee - baseline` and gets NaN.
+    raw_oee = out.get("oee")
+    valid_oee = isinstance(raw_oee, (int, float)) and raw_oee == raw_oee
+    if not valid_oee:
         out["oee"] = 0.55
     return out
 

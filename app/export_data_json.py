@@ -2181,6 +2181,42 @@ def main(argv: Optional[List[str]] = None) -> int:
         flush=True,
     )
 
+    # Each Recommendation.plan[lane] holds only the original Planificado
+    # week (~7d) plus any insertions/shifts the recommender introduced.
+    # The PlanLab timeline renders rec.plan as-is, so it visually cuts
+    # off after the first week. Extend each lane with the projected
+    # forward production runs that live in the (just-extended)
+    # basePlan beyond the rec's own horizon, so the recommendation view
+    # spans the same horizon as the default planner view.
+    for _line_key, _rec in recommendations.items():
+        _plan = _rec.get("plan") or {}
+        if not isinstance(_plan, dict):
+            continue
+        for _lane_key in list(_plan.keys()):
+            _lane = _plan.get(_lane_key) or []
+            if not isinstance(_lane, list):
+                continue
+            _prod_in_lane = [
+                s for s in _lane
+                if isinstance(s, dict) and not s.get("kind")
+            ]
+            _rec_end = max(
+                (float(s.get("start") or 0.0) + float(s.get("w") or 0.0))
+                for s in _prod_in_lane
+            ) if _prod_in_lane else 0.0
+            _base_lane = base_plan.get(str(_lane_key)) or base_plan.get(_lane_key) or []
+            _extras = [
+                s for s in _base_lane
+                if isinstance(s, dict)
+                and not s.get("kind")
+                and float(s.get("start") or 0.0) >= _rec_end
+            ]
+            _plan[_lane_key] = sorted(
+                _lane + _extras,
+                key=lambda s: float(s.get("start") or 0.0),
+            )
+        _rec["plan"] = _plan
+
     payload: Dict[str, Any] = {
         "urgentOrders": urgents,
         "lineBaseline": line_baseline,
