@@ -31,8 +31,8 @@ _EVIDENCE_FIELDS = (
 
 _OBJECTIVE_FIELDS = ("label", "icon", "order", "notes")
 
-_BAND_PROD_FIELDS = ("of", "sku", "vol", "start", "w", "oee", "due")
-_BAND_NONPROD_FIELDS = ("kind", "start", "w", "locked", "lockReason")
+_BAND_PROD_FIELDS = ("of", "sku", "vol", "start", "w", "oee", "due", "inferredWidth")
+_BAND_NONPROD_FIELDS = ("kind", "start", "w", "locked", "lockReason", "cadence", "shiftPattern", "day")
 
 _RECBAND_FIELDS = ("of", "sku", "vol", "start", "w", "oee", "kind", "due")
 
@@ -101,6 +101,9 @@ def _clean_band(seg: Dict[str, Any]) -> Dict[str, Any]:
     # Only emit due if it parses as a non-empty string (ISO8601 expected).
     if out.get("due") in (None, ""):
         out.pop("due", None)
+    # Only emit inferredWidth when true — false is the common case.
+    if not out.get("inferredWidth"):
+        out.pop("inferredWidth", None)
     return out
 
 

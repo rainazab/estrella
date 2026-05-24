@@ -210,11 +210,19 @@ def load_forward_plan(
         for i, row in sub.iterrows():
             start_dt = starts[i]
             next_dt = starts[i + 1] if i + 1 < len(starts) else None
+            inferred_width = False
             if next_dt is not None and next_dt > start_dt:
                 dur_hours = (next_dt - start_dt).total_seconds() / 3600.0
             else:
-                dur_hours = 8.0  # last segment fallback
-            dur_hours = max(1.0, min(dur_hours, 24.0))
+                # No next row to bracket against. We don't know the true
+                # length — surface that fact rather than silently picking
+                # 8h. Frontend can render an `inferredWidth` band as a
+                # dashed/dimmed tail so the planner sees the estimate.
+                dur_hours = 8.0
+                inferred_width = True
+            # Only floor — never cap. A run that genuinely spans 36h is
+            # 36h on the timeline.
+            dur_hours = max(1.0, dur_hours)
             start_hours = (start_dt - first_start).total_seconds() / 3600.0
             material = row.get(material_col)
             material_str = str(material) if pd.notna(material) else None
@@ -242,6 +250,7 @@ def load_forward_plan(
                 "planned_unit": "cases",
                 "planned_shift": str(row.get("definicion_de_turno")) if "definicion_de_turno" in row.index and pd.notna(row.get("definicion_de_turno")) else None,
                 "planned_start_iso": start_dt.isoformat() if hasattr(start_dt, "isoformat") else None,
+                "inferredWidth": inferred_width,
             }
             mean_oee = _line_sku_oee(master, int(line), material_str)
             if mean_oee is not None:

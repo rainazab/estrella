@@ -44,7 +44,7 @@ import pandas as pd
 
 from . import config, data_loader, sample_data
 from .block_classifier import classify_blocks, verify_of_woid_join
-from .cf_matrix import load_cf_matrix, load_operational_contract
+from .cf_matrix import load_cf_matrix, load_operational_contract, project_service_blocks
 from .changeover_typing import annotate_master
 from .config import LINES
 from .data_contract import CONTRACT_VERSION, summarize, validate
@@ -1937,6 +1937,36 @@ def main(argv: Optional[List[str]] = None) -> int:
     exported_at = datetime.now(timezone.utc)
     timeline = build_timeline_metadata(base_plan, exported_at=exported_at)
     operational = load_operational_contract(timeline.get("anchorDate"))
+
+    # Project every Tabla CF cadence row across the forward window and
+    # interleave the resulting service blocks into basePlan. The
+    # contract (v2.3+) says clean/maint blocks live in basePlan for the
+    # move-flow collision check; weeklyStops keeps the per-line summary
+    # markers separately. Horizon mirrors the longest UI view (quarter
+    # = daysAhead 90).
+    horizon_days = max(
+        90,
+        int(((timeline.get("views") or {}).get("quarter") or {}).get("daysAhead") or 90),
+    )
+    anchor_dt = datetime.fromisoformat(timeline["anchorDate"]).date()
+    projected_blocks = project_service_blocks(
+        operational.get("cleaningSchedule") or {},
+        anchor=anchor_dt,
+        horizon_days=horizon_days,
+    )
+    for line, blocks in projected_blocks.items():
+        lane = list(base_plan.get(line) or [])
+        # Keep the blocks alongside production runs sorted by start so
+        # the move flow can reason about gaps; the frontend already
+        # discriminates production vs service by the `kind` field.
+        merged = sorted(lane + list(blocks), key=lambda s: float(s.get("start") or 0.0))
+        base_plan[line] = merged
+    print(
+        f"   service-block projection: "
+        f"{sum(len(b) for b in projected_blocks.values())} blocks across {len(projected_blocks)} lines "
+        f"({horizon_days}-day horizon)",
+        flush=True,
+    )
 
     payload: Dict[str, Any] = {
         "urgentOrders": urgents,

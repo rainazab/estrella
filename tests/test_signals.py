@@ -106,7 +106,10 @@ class TestParser:
 
 
 class TestRefresh:
-    def test_no_api_key_returns_seed(self, tmp_path: Path):
+    def test_no_api_key_returns_seed(self, tmp_path: Path, monkeypatch):
+        # Clear any real CALA_API_KEY from the dev environment so the
+        # api_key=None branch is actually exercised.
+        monkeypatch.delenv("CALA_API_KEY", raising=False)
         seed = tmp_path / "signals.json"
         seed.write_text(json.dumps({
             "signals": [{"id": "sig-1"}], "citations": {}, "source": "seed",

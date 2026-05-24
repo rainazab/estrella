@@ -117,6 +117,156 @@ def _weekly_offset_hours(anchor: date, day_code: str) -> Optional[float]:
     return float(delta_days * 24)
 
 
+def _first_matching_weekday(anchor: date, weekday: int) -> date:
+    """Earliest date >= anchor whose weekday matches `weekday` (0=Mon)."""
+    delta = (weekday - anchor.weekday()) % 7
+    return anchor + timedelta(days=delta)
+
+
+def _first_matching_weekday_in_month(year: int, month: int, weekday: int, *, on_or_after: date) -> Optional[date]:
+    """First date in the given calendar month whose weekday matches,
+    restricted to dates >= `on_or_after`. None if no such date exists."""
+    from calendar import monthrange
+    days_in_month = monthrange(year, month)[1]
+    for day in range(1, days_in_month + 1):
+        d = date(year, month, day)
+        if d.weekday() == weekday and d >= on_or_after:
+            return d
+    return None
+
+
+def _project_row_instances(row: Dict[str, Any], anchor: date, horizon_days: int) -> List[date]:
+    """Expand one Tabla CF row into the concrete dates its cadence fires
+    on within [anchor, anchor+horizon_days]. Recognised cadences:
+    semanal (weekly), quincenal (fortnightly), mensual (monthly first
+    matching weekday). Unknown cadences fall back to a single occurrence."""
+    weekday = DAY_CODE_TO_WEEKDAY.get(str(row.get("day") or "").upper())
+    if weekday is None:
+        return []
+    cadence = str(row.get("cadence") or "").lower()
+    horizon_end = anchor + timedelta(days=horizon_days)
+
+    if cadence == "semanal":
+        step = timedelta(days=7)
+        first = _first_matching_weekday(anchor, weekday)
+    elif cadence == "quincenal":
+        step = timedelta(days=14)
+        first = _first_matching_weekday(anchor, weekday)
+    elif cadence == "mensual":
+        # One occurrence per month — the first matching weekday in each
+        # calendar month within the horizon.
+        occurrences: List[date] = []
+        cursor = anchor
+        while cursor <= horizon_end:
+            first_in_month = _first_matching_weekday_in_month(
+                cursor.year, cursor.month, weekday, on_or_after=anchor,
+            )
+            if first_in_month is not None and anchor <= first_in_month <= horizon_end:
+                if not occurrences or first_in_month != occurrences[-1]:
+                    occurrences.append(first_in_month)
+            # advance to next month
+            if cursor.month == 12:
+                cursor = date(cursor.year + 1, 1, 1)
+            else:
+                cursor = date(cursor.year, cursor.month + 1, 1)
+        return occurrences
+    else:
+        # Unknown cadence — emit one occurrence so the marker still shows
+        # rather than silently dropping it.
+        return [_first_matching_weekday(anchor, weekday)]
+
+    occurrences: List[date] = []
+    cursor = first
+    while cursor <= horizon_end:
+        occurrences.append(cursor)
+        cursor = cursor + step
+    return occurrences
+
+
+# Order of preference when a line has multiple rows for the same
+# (kind, cadence) under different shift patterns. The line only runs
+# one pattern at a time, so we keep the most operationally typical one
+# (matching the prior _preferred_weekly_marker behaviour: 3 turnos for
+# the everyday baseline, 5 turnos for the maintenance shift). Anything
+# unknown sorts last.
+_SHIFT_PATTERN_PRIORITY = {
+    "3 turnos": 0,
+    "5 turnos": 1,
+    "2 turnos": 2,
+    "1 turno": 3,
+}
+
+
+def _dedupe_by_cadence(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Pick one row per (kind, cadence) pair. The line runs a single
+    shift pattern at a time, so emitting every shift-pattern variant of
+    the same cadence stacks duplicate cards on the timeline."""
+    by_key: Dict[tuple, Dict[str, Any]] = {}
+    for row in rows:
+        key = (row.get("kind"), str(row.get("cadence") or "").lower())
+        pri = _SHIFT_PATTERN_PRIORITY.get(str(row.get("shiftPattern") or ""), 99)
+        existing = by_key.get(key)
+        if existing is None or pri < _SHIFT_PATTERN_PRIORITY.get(
+            str(existing.get("shiftPattern") or ""), 99,
+        ):
+            by_key[key] = row
+    return list(by_key.values())
+
+
+def project_service_blocks(
+    cadence_rows: Dict[str, List[Dict[str, Any]]],
+    anchor: date,
+    horizon_days: int = 90,
+) -> Dict[str, List[Dict[str, Any]]]:
+    """Project every row in the Tabla CF cadence list into concrete
+    forward service blocks across the planning horizon.
+
+    Returns `{ lineKey: [block, ...] }` where each block is the same shape
+    a `Stop` would carry on the frontend: `{kind, start, w, durationHours,
+    day, cadence, shiftPattern, locked, lockReason, source, id}`. Sorted
+    by start ascending.
+
+    Cadence-instance ids embed the ISO date so collisions are impossible
+    across re-runs of the exporter: `L17-clean-semanal-2026-05-25`.
+
+    The frontend reads these from `basePlan[line]` (where they get
+    interleaved with production runs) and / or from `weeklyStops`. The
+    exporter is responsible for injecting them into both."""
+    out: Dict[str, List[Dict[str, Any]]] = {}
+    for line, rows in (cadence_rows or {}).items():
+        deduped = _dedupe_by_cadence(list(rows or []))
+        events: List[Dict[str, Any]] = []
+        for row in deduped:
+            for occurrence in _project_row_instances(row, anchor, horizon_days):
+                start_hours = (occurrence - anchor).total_seconds() / 3600.0
+                cadence = str(row.get("cadence") or "").lower()
+                kind = row.get("kind") or "clean"
+                events.append({
+                    "id": f"L{line}-{kind}-{cadence}-{occurrence.isoformat()}",
+                    "line": str(line),
+                    "kind": kind,
+                    "label": (
+                        "Weekly cleaning" if kind == "clean" and cadence == "semanal"
+                        else "Fortnightly cleaning" if kind == "clean" and cadence == "quincenal"
+                        else "Monthly cleaning" if kind == "clean" and cadence == "mensual"
+                        else "Fortnightly maintenance" if kind == "maint" and cadence == "quincenal"
+                        else row.get("label") or ("Cleaning" if kind == "clean" else "Maintenance")
+                    ),
+                    "start": round(max(0.0, start_hours), 2),
+                    "w": float(row.get("durationHours") or 8.0),
+                    "durationHours": float(row.get("durationHours") or 8.0),
+                    "day": row.get("day"),
+                    "cadence": cadence,
+                    "shiftPattern": row.get("shiftPattern"),
+                    "locked": True,
+                    "lockReason": f"{cadence.title()} {kind} ({row.get('shiftPattern')}) from Tabla CF Prat 2026",
+                    "source": row.get("source") or "Tabla CF Prat 2026 · Tiempos adicionales",
+                })
+        events.sort(key=lambda e: (e["start"], 0 if e["kind"] == "clean" else 1))
+        out[str(line)] = events
+    return out
+
+
 def _anchor_date(value: Optional[str | date | datetime]) -> date:
     if isinstance(value, datetime):
         return value.date()
