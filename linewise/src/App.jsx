@@ -24,7 +24,10 @@ import ReplanBanner from './components/ReplanBanner.jsx';
 import LogToast from './components/LogToast.jsx';
 import SettingsDrawer from './components/SettingsDrawer.jsx';
 import YearCompare from './components/YearCompare.jsx';
+import WorldSignals from './components/WorldSignals.jsx';
+import SignalAlert from './components/SignalAlert.jsx';
 import { useSettings } from './hooks/useSettings.js';
+import { useSignals } from './hooks/useSignals.js';
 import { computeStoppageReplan } from './lib/stoppagePlan.js';
 import { deriveFormat } from './components/TimelineCard.jsx';
 
@@ -82,7 +85,23 @@ function Workspace({ data }) {
   const [toast, setToast] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settings, setSettings] = useSettings();
+  const { data: signalsData, refresh: refreshSignalsApi } = useSignals();
+  const [dismissedSignals, setDismissedSignals] = useState(() => SignalAlert.loadDismissed());
+  const worldSignalsRef = useRef(null);
   const lastSyncRef = useRef(Date.now());
+
+  function dismissSignal(id) {
+    setDismissedSignals((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      SignalAlert.persistDismissed(next);
+      return next;
+    });
+  }
+
+  function reviewSignal() {
+    worldSignalsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 
   /* surface the urgent-orders inbox once on boot */
   useEffect(() => {
@@ -352,6 +371,12 @@ function Workspace({ data }) {
                     onReplan={startReplan}
                     onDismissReplan={() => setReplanPrompt(null)}
                     onResumeLine={resumeLine}
+                    signalsData={signalsData}
+                    onRefreshSignals={refreshSignalsApi}
+                    dismissedSignals={dismissedSignals}
+                    onDismissSignal={dismissSignal}
+                    onReviewSignal={reviewSignal}
+                    worldSignalsRef={worldSignalsRef}
                   />
                 )}
                 {view === 'calculating' && <CalculatingStage />}
@@ -528,12 +553,24 @@ function PanelCalculating({ order }) {
 function DefaultStage({
   data, timelineProps, zoom, onZoom,
   stoppages = [], issues = [], replanPrompt = null, onReplan, onDismissReplan, onResumeLine,
+  signalsData = null, onRefreshSignals = null,
+  dismissedSignals = new Set(), onDismissSignal = () => {}, onReviewSignal = () => {},
+  worldSignalsRef = null,
 }) {
   const stoppedLines = stoppages.map((s) => s.line);
   return (
     <>
+      <SignalAlert
+        data={signalsData}
+        dismissed={dismissedSignals}
+        onDismiss={onDismissSignal}
+        onReview={onReviewSignal}
+      />
       <KPIStrip data={data} stoppedLines={stoppedLines} />
       <YearCompare data={data} />
+      <div ref={worldSignalsRef}>
+        <WorldSignals data={signalsData} onRefresh={onRefreshSignals} />
+      </div>
       <ReplanBanner
         prompt={replanPrompt}
         onReplan={onReplan}

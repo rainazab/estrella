@@ -37,6 +37,26 @@ function fakeApi() {
           res.end(JSON.stringify({ error: 'plan.json read failed', detail: String(err) }));
         }
       });
+
+      server.middlewares.use('/api/signals', (_req, res) => {
+        const file = path.join(DATA_DIR, 'signals.json');
+        try {
+          const raw = fs.readFileSync(file, 'utf-8');
+          const parsed = JSON.parse(raw);
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Cache-Control', 'no-store');
+          res.end(JSON.stringify(parsed));
+        } catch (err) {
+          /* Don't 500 — the panel can render empty so the rest of the UI
+             keeps working when no seed has been generated yet. */
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Cache-Control', 'no-store');
+          res.end(JSON.stringify({
+            signals: [], citations: {}, source: 'seed',
+            stale: true, generatedAt: 0, error: String(err),
+          }));
+        }
+      });
     },
   };
 }

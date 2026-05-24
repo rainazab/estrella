@@ -42,6 +42,14 @@ export function fetchHealth() {
   return getJSON('/health');
 }
 
+export function fetchSignals() {
+  return getJSON('/signals');
+}
+
+export function refreshSignals() {
+  return postJSON('/signals/refresh');
+}
+
 /* ---------- writes (contract v2.3) ----------
    Each function returns the server's view of the affected state. The App
    treats any rejection as "the backend isn't available right now" and
