@@ -1,6 +1,6 @@
-# LineWise Frontend
+# Stride Frontend
 
-React + Vite frontend for the LineWise planner demo.
+React + Vite frontend for the Stride planner demo.
 
 ## Prerequisites
 

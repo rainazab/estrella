@@ -1,4 +1,4 @@
-LineWise Data Validation Report
+Stride Data Validation Report
 
 OEE rows loaded: 2274
 Production blocks: 2109

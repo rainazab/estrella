@@ -68,11 +68,11 @@ export default function LearningPage() {
           Learning loop
         </div>
         <h1 className="text-3xl md:text-4xl font-semibold text-white mt-1">
-          How LineWise learns from past decisions
+          How Stride learns from past decisions
         </h1>
         <p className="mt-2 text-damm-muted max-w-2xl">
           Every recommendation is logged. When the planner accepts or overrides
-          it, and later when actual OEE is observed, LineWise records the
+          it, and later when actual OEE is observed, Stride records the
           prediction error and the most common miss cause — so future
           recommendations can be tuned with concrete evidence.
         </p>

@@ -1,4 +1,4 @@
-# LineWise — Frontend / Backend API Contract
+# Stride — Frontend / Backend API Contract
 
 `CONTRACT_VERSION` is **2.4**. v2.4 adds (a) an expanded `Order.status`
 taxonomy, (b) the shipped `GET /signals` + `POST /signals/refresh`

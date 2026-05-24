@@ -337,7 +337,7 @@ export default function PlanLab({
                     )}
                     <div className="pl-card-top">
                       <span className="pl-card-name">{opt.title}</span>
-                      {opt.id === recommendedId && <span className="pl-card-star" title="LineWise recommends">★</span>}
+                      {opt.id === recommendedId && <span className="pl-card-star" title="Stride recommends">★</span>}
                     </div>
                     <span className="pl-card-desc">{opt.description}</span>
                     <div className="pl-card-kpis" role="group" aria-label={`${opt.title} key metrics`}>
@@ -391,7 +391,7 @@ export default function PlanLab({
                     : mode === 'manual' && !manualEntry
                     ? <>Place <code className="pl-h-code">{order.of}</code> yourself</>
                     : manualEntry ? manualEntry.label : active.title}
-                  {mode === 'auto' && !manualEntry && active.id === recommendedId && <span className="pl-star" title="LineWise recommends">★</span>}
+                  {mode === 'auto' && !manualEntry && active.id === recommendedId && <span className="pl-star" title="Stride recommends">★</span>}
                 </h2>
                 {isMoveReview && moveReview ? (
                   <span className="pl-impact-sub">{moveReview.slotText}</span>
@@ -430,7 +430,7 @@ export default function PlanLab({
               <div className="pl-manual-body">
                 <div className="pl-manual-prompt">
                   <b>Place the order on a line below.</b>
-                  <span>LineWise will compute the impact for whichever slot you choose.</span>
+                  <span>Stride will compute the impact for whichever slot you choose.</span>
                 </div>
                 <button
                   type="button"
@@ -832,7 +832,7 @@ function downloadReport(reportUrl) {
   if (!reportUrl || typeof document === 'undefined') return;
   const link = document.createElement('a');
   link.href = reportUrl;
-  link.download = 'LineWise-planning-report.pdf';
+  link.download = 'Stride-planning-report.pdf';
   document.body.appendChild(link);
   link.click();
   link.remove();
@@ -846,7 +846,7 @@ function ChoiceSummary({ active, rec, manualEntry, mode, recommended, recoveryHo
     <section className={`pl-choice-summary tone-${manualEntry ? 'mid' : active.tone}`} aria-label="Chosen optimisation">
       <div className="pl-choice-head">
         <span>Chosen optimisation</span>
-        {recommended && <b>LineWise pick</b>}
+        {recommended && <b>Stride pick</b>}
       </div>
       <div className="pl-choice-title">
         {title}
