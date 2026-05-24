@@ -1,5 +1,11 @@
 # LineWise — Frontend / Backend API Contract
 
+`CONTRACT_VERSION` is **2.4**. v2.4 adds (a) an expanded `Order.status`
+taxonomy, (b) optional `signals` for external Cala-style watch items
+surfaced on the homepage / Plan Lab provenance, and (c) the planned
+audit-log, shift-handoff and plan-draft/apply write endpoints that
+currently mutate `localStorage` only.
+
 This is the shape the frontend currently consumes. Today it is served by
 the Vite dev middleware in `vite.config.js` out of `data/plan.json`. The
 frontend reads it through `src/api/client.js`, which prefixes every path
@@ -69,27 +75,39 @@ Top-level keys (all required unless noted):
 | `recommendations` | `{ [lineId]: Recommendation }` | One rec card per line option |
 | `objectives` | `Objectives` | Ranked options by OEE / Time / Disruption |
 | `manualSlots` | `{ [slotKey]: ManualSlot }` | UI hint cards for hand-placed slots |
-| `lineFormats` *(planned)* | `{ [lineId]: string[] }` | Can formats each line supports — see `LineFormats` below |
-| `issues` *(planned)* | `Issue[]` | Active line-issue log surfaced on lane badges — see `Issue` below |
-| `stoppages` *(planned)* | `Stoppage[]` | Currently active line stoppages — see `Stoppage` below |
+| `lineFormats` | `{ [lineId]: string[] }` | Can formats each line supports — see `LineFormats` below |
+| `issues` | `Issue[]` | Active line-issue log surfaced on lane badges — see `Issue` below |
+| `stoppages` | `Stoppage[]` | Currently active line stoppages — see `Stoppage` below |
+| `signals` *(planned, optional)* | `Signal[]` | External Cala-style watch items rendered as "Cala priorities" on the homepage news strip, in the morning briefing, and in the Plan Lab provenance card. See `Signal` below. Mocked client-side today in `src/lib/cala-mock.js`. Frontend treats missing as `[]`. |
 
-> **Status of "planned" fields**: `issues` and `stoppages` are currently
-> held in frontend state only (no API round-trip). The contract entries
-> below describe the shape we want when the backend takes ownership of
-> persistence. Until then the frontend treats them as empty arrays if
-> absent.
+> **Status of "planned" field `signals`**: today the frontend imports a
+> hardcoded list from `src/lib/cala-mock.js`. The contract entry below
+> describes the shape we want when the backend takes ownership. Until
+> then the frontend treats it as an empty array if absent — the
+> homepage falls back to the "Recent changes" rail.
 
 ### `Order`
 ```ts
 {
   of: string;            // e.g. "ED13LTNN"
-  status: "urgent" | "queued";
+  status:
+    | "urgent"           // unscheduled, needs planner action (drives KPI badge)
+    | "queued"           // in the inbox queue, not yet on the timeline
+    | "scheduled"        // committed on the timeline, not yet executed
+    | "planned"          // synthesised by the FE for a moved/draft preview
+    | "done";            // executed and closed out
   sku: string;           // human label, e.g. "Estrella Damm · lata 33cl"
   units: number;         // physical units
   hl: number;            // hectolitres
   due: string;           // free-text date label, e.g. "21 May"
 }
 ```
+
+> The `urgent` / `queued` enum was the v2.3 contract. v2.4 widens the
+> taxonomy because the Inbox and KPI strip now distinguish between
+> "scheduled" (on the timeline) and "done" (closed shift). `planned` is
+> emitted only by the frontend's optimistic preview path; backends do
+> not need to return it.
 
 ### `YearCompare`
 ```ts
@@ -375,6 +393,117 @@ Resume clears the entry server-side (see `POST /stoppages/{id}/resume`
 below). Any plan changes already committed via a replan stay in place
 — resuming a line does **not** revert the schedule.
 
+### `Signal` (new in v2.4 — planned, optional)
+
+External "world signal" surfaced on the homepage news strip
+([`src/App.jsx`](src/App.jsx) `HomepageNewsStrip`), in the Inbox morning
+briefing, and inside the Plan Lab provenance card. Today the frontend
+loads these from the static mock at [`src/lib/cala-mock.js`](src/lib/cala-mock.js);
+when the backend takes ownership, return them on `/plan` (or via a
+dedicated `GET /signals`) using this shape:
+
+```ts
+{
+  id: string;                              // stable signal id ("sig-barley-futures")
+  vertical:
+    | "agriculture"                        // crops, malt, hops, barley
+    | "finance"                            // FX, commodity premia, spot prices
+    | "regulatory"                         // excise filing, deposit labels, water restrictions
+    | "weather";                           // wind, heat, rain that affects shifts/dispatch
+  headline: string;                        // short human sentence ("EU malting barley futures jumped")
+  value: string;                           // headline metric, free text ("EUR 238/t", "1.079")
+  delta: string;                           // signed change since last reading ("+12%", "-0.7%")
+  severity: "high" | "medium" | "low";     // drives sort order & card tone
+  sourceName: string;                      // attribution label ("Euronext MATIF", "ECB")
+  sourceUrl: string;                       // outbound link — opened from the modal in a new tab
+  fetchedAt: string;                       // ISO8601 timestamp of the last fetch
+  affects: {
+    lines: string[];                       // line keys impacted ("14", "17", "19")
+    ofs: string[];                         // order codes impacted
+    materials: string[];                   // free-tag materials ("barley", "cans", "carbonation")
+  };
+  fact?: string;                           // optional, longer-form explanation used in the
+                                           // ProvenanceModal body. Defaults to `headline`.
+  lineage?: string[];                      // optional provenance breadcrumb rendered as
+                                           // chevron-separated chips in the modal.
+}
+```
+
+The frontend ranks by `severity`, then by `fetchedAt` desc; only signals
+whose `affects.ofs` or `affects.lines` intersect the current plan are
+shown. The mock today emits twelve signals; expect 0–30 in production.
+
+### `ChangeLedgerEntry` (new in v2.4 — planned, optional)
+
+The frontend already keeps an append-only audit log of planner actions
+in `localStorage` via [`useChangeLedger`](src/hooks/useChangeLedger.js).
+This drives the homepage "Recent changes" rail (when no signals are
+present), the Inbox briefing "what changed since last handoff" line,
+and the Close-Shift modal's `Changes made` list. When persistence moves
+server-side, expose `GET /changes?sessionId=…` returning entries in
+this shape and have writes POST to `/changes` (or piggy-back on the
+existing mutating endpoints; see *Write endpoints* below):
+
+```ts
+{
+  id: string;                              // server-assigned ("chg-<ts>-<n>")
+  sessionId: string;                       // browser-session uuid
+  ts: number;                              // epoch ms when appended
+  type:
+    | "urgent_order_selected"
+    | "queued_order_selected"
+    | "manual_move_confirmed"
+    | "stoppage_logged"
+    | "stoppage_replan_committed"
+    | "issue_logged"
+    | "draft_plan_saved"
+    | "plan_applied";
+  summary: string;                         // short human line shown on the rail
+  // The remaining fields depend on `type` — see the discriminated union
+  // below. All optional from the type-system's perspective.
+  rationale?: string;                      // "manual" | "line-change" | …
+  runId?: string;                          // OF moved
+  fromLine?: string; toLine?: string;
+  line?: string;
+  stoppageId?: string;
+  issueId?: string;
+  reason?: string;
+  duration?: string;
+  shiftedCount?: number;
+  shiftedHours?: number;
+  category?: string;                       // issue category
+  severity?: string;                       // issue severity
+  note?: string;                           // issue note
+  title?: string;                          // draft / applied plan title
+  metrics?: Array<{ label: string; value: string; tone?: string }>;
+  ripple?: MovePreview["ripple"];
+}
+```
+
+The frontend currently keeps `plan` / `priorPlan` snapshots out of the
+ledger (see `compactChange` in `useChangeLedger.js`) — the backend
+should do the same to keep entries small.
+
+### `ShiftHandoff` (new in v2.4 — planned, optional)
+
+Payload emitted by [`ShiftCloseModal`](src/components/ShiftCloseModal.jsx)
+when the planner clicks **Send**. Today persisted to `localStorage`
+under `linewise.lastHandoff.v1`. The Inbox briefing reads the latest
+handoff to compute "changes since last handoff" and "open risks".
+Server-side: `POST /shifts/handoff` to write, `GET /shifts/handoff/latest`
+to read.
+
+```ts
+{
+  id: string;                              // "handoff-<ts>"
+  sentAt: number;                          // epoch ms
+  notes: string;                           // free-text summary (auto-filled, planner-editable)
+  changes: ChangeLedgerEntry[];            // typically the last six entries at send time
+  openRisks: string[];                     // short bullet phrases (max 4) — derived from active
+                                           // stoppages, critical issues, and move collisions
+}
+```
+
 ---
 
 ## Open questions for backend
@@ -538,6 +667,61 @@ service blocks today. If the backend has per-run due dates (see the
 optional `Band.due` field), prefer flagging concrete delivery misses
 instead and return both — `MoveImpactPanel` will render whichever is
 non-empty.
+
+### `POST /plan/drafts` and `POST /plan/apply` (new in v2.4 — planned)
+
+The Plan Lab footer exposes two terminal actions: **Save draft** and
+**Apply plan**. Today both are frontend-only (see `onSaveDraft` /
+`onApplyPlan` in [`PlanLab.jsx`](src/preview/PlanLab.jsx)), with the
+ledger entry standing in for persistence. When the backend takes
+ownership:
+
+**Request body (same shape for both)**
+```ts
+{
+  title: string;                           // e.g. "Manual placement for AM05LTST"
+  mode: "rec" | "manual";
+  order: Order | null;                     // order that drove this Plan Lab session, if any
+  metrics: Array<{                         // the KPI tiles shown on the impact summary
+    label: string;                         // "OEE" | "Week OEE" | "Ripple" | "Service" | …
+    value: string;                         // free text rendered verbatim
+    tone?: "good" | "mid" | "bad" | "quiet";
+  }>;
+  plan: { [lineId]: Band[] };              // full forward plan being saved/applied
+}
+```
+
+**200 (drafts)** — `{ draft: { id: string; savedAt: number; … } }`
+**200 (apply)** — `{ plan: Plan }` (the new server-truth `Plan` payload
+so the UI re-renders against committed state).
+
+### `POST /changes` and `GET /changes` (new in v2.4 — planned)
+
+Append-only audit log; entries match `ChangeLedgerEntry` above. Today
+written client-side from `useChangeLedger`. The backend may either
+accept explicit writes here (one POST per action) or fold them into
+the existing mutating endpoints (`/plan/move`, `/plan/stoppage-replan`,
+`/issues`, `/stoppages`) and surface them via `GET /changes`. Either
+is fine — what matters is that the homepage rail and the Inbox
+briefing can read the same substrate the Close-Shift modal writes
+against.
+
+Suggested filter parameters on `GET`:
+
+| Param | Type | Default |
+|---|---|---|
+| `sessionId` | `string` | omitted → all sessions |
+| `since` | `number` (epoch ms) | omitted → no lower bound |
+| `limit` | `number` | 200 |
+
+### `POST /shifts/handoff` and `GET /shifts/handoff/latest` (new in v2.4 — planned)
+
+Persist and retrieve the most recent `ShiftHandoff` payload (see type
+above). The Inbox briefing fetches `…/latest` on boot to compute the
+"changes since last handoff" line; the Close-Shift modal POSTs the new
+handoff on Send. Returning the persisted entry on POST is fine — the
+frontend currently stashes the same payload in `localStorage` and reads
+it back on the next session.
 
 ---
 

@@ -5,8 +5,24 @@ designed for the React/Vite client; the canonical Python payload in
 `data/output/data.json` is richer and is transformed at request time by
 `app/frontend_payload.py`.
 
-`CONTRACT_VERSION` is **2.3**. Adding or removing a top-level key is a
+`CONTRACT_VERSION` is **2.4**. Adding or removing a top-level key is a
 contract change — bump the version and notify the frontend team.
+
+### What changed in 2.4
+
+- `Order.status` taxonomy widened from `urgent | queued` to
+  `urgent | queued | scheduled | planned | done`. `planned` is emitted
+  only by the frontend's optimistic preview path; the backend never
+  needs to return it.
+- Added optional top-level `signals: Signal[]` for Cala-style external
+  watch items rendered on the homepage news strip, in the morning
+  briefing, and inside the Plan Lab provenance card. Backend may return
+  it on `/plan` or expose `GET /signals`; mocked client-side today.
+- Documented the three planned write endpoint groups that currently
+  mutate `localStorage` only: `POST /changes` + `GET /changes`,
+  `POST /shifts/handoff` + `GET /shifts/handoff/latest`, and
+  `POST /plan/drafts` + `POST /plan/apply`. Until the backend takes
+  ownership, the frontend treats them as best-effort no-ops.
 
 ## Conventions
 
@@ -157,6 +173,79 @@ returns the new layout; the canonical `data.json` is *not* rewritten
 
 **200** → `{ plan: Plan; ripple: MovePreview["ripple"] }`
 
+### `POST /plan/drafts` *(new in 2.4 — planned)*
+
+Persist the current Plan Lab state as a named draft. Today frontend-only
+(`onSaveDraft` in `linewise/src/preview/PlanLab.jsx`); when the backend
+takes ownership, accept this payload and return the persisted record so
+the frontend can confirm and list drafts later.
+
+**Request body**
+```ts
+{
+  title: string;                           // "Manual placement for AM05LTST"
+  mode: "rec" | "manual";
+  order: Order | null;
+  metrics: Array<{ label: string; value: string; tone?: string }>;
+  plan: { [lineId]: Band[] };              // full forward plan being saved
+}
+```
+
+**200** → `{ draft: { id: string; savedAt: number; title: string } }`
+
+### `POST /plan/apply` *(new in 2.4 — planned)*
+
+Commit the current Plan Lab plan as the new server-truth `basePlan`.
+Same request body as `/plan/drafts`. Equivalent to a multi-band
+`/plan/move` write; returning the full recomputed `Plan` lets the UI
+re-render against committed state.
+
+**200** → `{ plan: Plan }`
+
+### `POST /changes` and `GET /changes` *(new in 2.4 — planned)*
+
+Append-only planner audit log. Today written client-side from
+`useChangeLedger`. Backends may either accept explicit POSTs here (one
+per planner action) or fold appends into the existing mutating
+endpoints (`/plan/move`, `/plan/stoppage-replan`, `/issues`,
+`/stoppages`) and surface them via `GET /changes`.
+
+**POST request body** → a `ChangeLedgerEntry` minus the server-assigned
+`id` and `ts`.
+
+**POST 200** → `{ change: ChangeLedgerEntry }`
+
+**GET query params**
+
+| Param | Type | Default |
+|---|---|---|
+| `sessionId` | `string` | omitted → all sessions |
+| `since` | `number` (epoch ms) | omitted → no lower bound |
+| `limit` | `number` | 200 |
+
+**GET 200** → `{ changes: ChangeLedgerEntry[] }`
+
+### `POST /shifts/handoff` and `GET /shifts/handoff/latest` *(new in 2.4 — planned)*
+
+Persist and retrieve the most recent `ShiftHandoff`. The Inbox briefing
+fetches `/latest` on boot to compute the "changes since last handoff"
+line; the Close-Shift modal POSTs the new handoff on Send.
+
+**POST request body** → a `ShiftHandoff` minus the server-assigned
+`id` and `sentAt`.
+
+**POST 200** → `{ handoff: ShiftHandoff }`
+
+**GET /shifts/handoff/latest 200** → `{ handoff: ShiftHandoff | null }`
+
+### `GET /signals` *(new in 2.4 — planned, optional)*
+
+Alternative to embedding `signals` on `/plan`. Same `Signal[]` shape
+documented above. The frontend uses whichever it can find — if `/plan`
+already returns `signals`, it skips a second fetch.
+
+**200** → `{ signals: Signal[] }`
+
 ## Running the server
 
 ```bash
@@ -192,12 +281,18 @@ Top-level keys (all required):
 | `manualSlots` | `{ [slotKey]: ManualSlot }` | UI hint cards for hand-placed slots |
 | `issues` | `Issue[]` | Active issue log surfaced on lane badges |
 | `stoppages` | `Stoppage[]` | Active line stoppages |
+| `signals` *(new in 2.4, optional)* | `Signal[]` | External Cala-style watch items. Mocked client-side today; emit `[]` (or omit) and the homepage falls back to the recent-changes rail. |
 
 ### `Order`
 ```ts
-{ of: string; status: "urgent"|"queued"; sku: string;
-  units: number; hl: number; due: string }
+{ of: string;
+  status: "urgent"|"queued"|"scheduled"|"planned"|"done";
+  sku: string; units: number; hl: number; due: string }
 ```
+
+`planned` is a frontend-only optimistic value used while previewing a
+moved or drafted run. The backend should return one of `urgent`,
+`queued`, `scheduled`, or `done`.
 
 ### `YearCompare`
 ```ts
@@ -389,6 +484,94 @@ line; a new entry on the same line supersedes the prior one.
 }
 ```
 
+### `Signal` (new in 2.4 — planned, optional)
+
+External world signal surfaced on the homepage news strip
+(`HomepageNewsStrip` in `linewise/src/App.jsx`), in the Inbox morning
+briefing, and inside the Plan Lab provenance card. Today the frontend
+imports a static list from `linewise/src/lib/cala-mock.js`. When the
+backend takes ownership, return them under `plan.signals` (or via a
+sibling `GET /signals`):
+
+```ts
+{
+  id: string;                              // stable signal id ("sig-barley-futures")
+  vertical: "agriculture"|"finance"|"regulatory"|"weather";
+  headline: string;                        // short human sentence
+  value: string;                           // headline metric, free text ("EUR 238/t")
+  delta: string;                           // signed change since last reading ("+12%")
+  severity: "high"|"medium"|"low";
+  sourceName: string;                      // attribution label
+  sourceUrl: string;                       // outbound link (HTTPS)
+  fetchedAt: string;                       // ISO8601 of last fetch
+  affects: { lines: string[]; ofs: string[]; materials: string[] };
+  fact?: string;                           // long-form body for the ProvenanceModal
+  lineage?: string[];                      // provenance breadcrumb chips
+}
+```
+
+The frontend filters to signals whose `affects.lines` or `affects.ofs`
+intersect the current plan, ranks by severity then by `fetchedAt`, and
+shows the top two on the news strip. Expect 0–30 in production.
+
+### `ChangeLedgerEntry` (new in 2.4 — planned, optional)
+
+Append-only audit log of planner actions. Frontend keeps the canonical
+substrate in `localStorage` via `useChangeLedger`; the homepage rail,
+Inbox briefing, and Close-Shift modal all read it. Backend exposes
+`GET /changes` (and optionally accepts explicit `POST /changes` writes —
+see `POST /changes` below):
+
+```ts
+{
+  id: string;                              // "chg-<ts>-<n>"
+  sessionId: string;                       // browser-session uuid
+  ts: number;                              // epoch ms
+  type:
+    | "urgent_order_selected"
+    | "queued_order_selected"
+    | "manual_move_confirmed"
+    | "stoppage_logged"
+    | "stoppage_replan_committed"
+    | "issue_logged"
+    | "draft_plan_saved"
+    | "plan_applied";
+  summary: string;
+  // Discriminated payload by `type` — all optional from the schema's
+  // perspective; presence depends on the entry kind:
+  rationale?: string;
+  runId?: string; fromLine?: string; toLine?: string;
+  line?: string; stoppageId?: string; issueId?: string;
+  reason?: string; duration?: string;
+  shiftedCount?: number; shiftedHours?: number;
+  category?: string; severity?: string; note?: string;
+  title?: string;
+  metrics?: Array<{ label: string; value: string; tone?: string }>;
+  ripple?: MovePreview["ripple"];
+}
+```
+
+Do not include `plan` / `priorPlan` snapshots — the frontend strips
+those before persisting, and the rail/briefing rely on entries being
+small (≤ ~2 KB each).
+
+### `ShiftHandoff` (new in 2.4 — planned, optional)
+
+Persisted shift-handoff record written by the Close-Shift modal.
+Today stashed in `localStorage` under `linewise.lastHandoff.v1`.
+
+```ts
+{
+  id: string;                              // "handoff-<ts>"
+  sentAt: number;                          // epoch ms
+  notes: string;                           // free-text summary, planner-editable
+  changes: ChangeLedgerEntry[];            // typically last six entries at send time
+  openRisks: string[];                     // ≤ 4 short bullet phrases derived
+                                           // from active stoppages, critical issues,
+                                           // and move collisions
+}
+```
+
 ### `MovePreview`
 
 Returned by `/plan/move/preview` and `/plan/move`.
@@ -438,6 +621,7 @@ Returned by `/plan/move/preview` and `/plan/move`.
 | `manualSlots` | `manualSlots` | Trim each value to `{recKey, verdict, label, banner}` |
 | `issues` | in-process store (`POST /issues`) | Empty until written; not persisted across server restart |
 | `stoppages` | in-process store (`POST /stoppages`) | Empty until written; not persisted across server restart |
+| `signals` *(2.4)* | not yet served | Frontend imports from `linewise/src/lib/cala-mock.js` until backend emits this field |
 
 The canonical payload's additive metadata (`metadata.*`,
 `infeasibleByLine`, `planReview`, per-recommendation scoring fields) is
