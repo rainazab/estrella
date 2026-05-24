@@ -10,6 +10,7 @@ import Fab from './components/Fab.jsx';
 import Timeline from './components/Timeline.jsx';
 import RecommendationPanel from './components/RecommendationPanel.jsx';
 import PlanLab from './preview/PlanLab.jsx';
+import StoppageReviewLab from './preview/StoppageReviewLab.jsx';
 import ImpactSummary from './components/ImpactSummary.jsx';
 import LiveStatus from './components/LiveStatus.jsx';
 import DraftPlanPanel from './components/DraftPlanPanel.jsx';
@@ -95,6 +96,8 @@ function Workspace({ data }) {
   const [issues, setIssues] = useState([]);
   const [stoppages, setStoppages] = useState([]);
   const [replanPrompt, setReplanPrompt] = useState(null);
+  const [plannerStoppagePreview, setPlannerStoppagePreview] = useState(null);
+  const preStoppagePlanRef = useRef(null);
   const [toast, setToast] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [handoffOpen, setHandoffOpen] = useState(false);
@@ -337,11 +340,11 @@ function Workspace({ data }) {
   function startReplan() {
     if (!replanPrompt) return;
     /* Real replan: shift every planned segment on the stopped lane
-       forward by the stoppage duration and commit the new plan. The
-       short calculating flash mirrors the urgent-order flow so it
-       feels like the same product moment, but here we end up back
-       on the schedule (not the recs view) with a visibly updated
-       timeline. */
+       forward by the stoppage duration, commit the new plan, then
+       open the StoppageReviewLab so the planner can see every run
+       that moved (mirrors the urgent-order flow which lands on the
+       recs view, not the homepage). The pre-shift plan is stashed so
+       "Undo replan" can restore it from the review surface. */
     const prompt = replanPrompt;
     const line = prompt.line;
     setReplanPrompt(null);
@@ -353,6 +356,7 @@ function Workspace({ data }) {
         line,
         durationKey: prompt.duration,
       });
+      preStoppagePlanRef.current = effectivePlan;
       setCommittedPlan(replan.plan);
       appendChange({
         action: 'startReplan',
@@ -365,7 +369,20 @@ function Workspace({ data }) {
         shiftedCount: replan.shiftedCount,
         shiftedHours: replan.shiftedHours,
       });
-      setView('queue');
+      setPlannerStoppagePreview({
+        kind: 'stoppage',
+        line,
+        reason: prompt.reason,
+        durationKey: prompt.duration,
+        shiftedHours: replan.shiftedHours,
+        shiftedCount: replan.shiftedCount,
+        shiftedRuns: replan.shiftedRuns,
+        plan: replan.plan,
+        stoppageId: prompt.id,
+        committedAt: Date.now(),
+      });
+      setSelectedLine(line);
+      setView('recs');
       setToast({
         id: `rpl-${Date.now()}`,
         title: `L${line} replanned`,
@@ -373,6 +390,38 @@ function Workspace({ data }) {
         tone: 'neutral',
       });
     }, 2500);
+  }
+
+  function closeStoppageReview() {
+    setPlannerStoppagePreview(null);
+    preStoppagePlanRef.current = null;
+    backToQueue();
+  }
+
+  function undoStoppageReplan() {
+    const preview = plannerStoppagePreview;
+    const previousPlan = preStoppagePlanRef.current;
+    if (!preview || !previousPlan) {
+      closeStoppageReview();
+      return;
+    }
+    setCommittedPlan(previousPlan);
+    appendChange({
+      action: 'undoStoppageReplan',
+      type: 'stoppage_replan_undone',
+      summary: `L${preview.line} replan undone`,
+      line: preview.line,
+      stoppageId: preview.stoppageId,
+      shiftedCount: preview.shiftedCount,
+      shiftedHours: preview.shiftedHours,
+    });
+    setToast({
+      id: `rpl-undo-${Date.now()}`,
+      title: `L${preview.line} replan undone`,
+      detail: 'Schedule restored to its pre-stoppage state',
+      tone: 'neutral',
+    });
+    closeStoppageReview();
   }
 
   function resumeLine(line) {
@@ -425,6 +474,14 @@ function Workspace({ data }) {
 
         {view === 'recs' ? (
           <div className="shell plan-shell">
+            {plannerStoppagePreview ? (
+              <StoppageReviewLab
+                data={data}
+                preview={plannerStoppagePreview}
+                onBack={closeStoppageReview}
+                onUndo={undoStoppageReplan}
+              />
+            ) : (
             <PlanLab
               key={plannerMovePreview
                 ? `move-${plannerMovePreview.ripple.runId}-${plannerMovePreview.ripple.toLine}`
@@ -482,6 +539,7 @@ function Workspace({ data }) {
                 backToQueue();
               }}
             />
+            )}
           </div>
         ) : (
           <div className={`shell${inRecs ? ' recs' : ''}${view === 'calculating' ? ' calc-full' : ''}`}>

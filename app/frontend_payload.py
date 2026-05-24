@@ -362,6 +362,197 @@ def _clean_stoppages(value: Any) -> List[Dict[str, Any]]:
     return [s for s in (_clean_stoppage(v) for v in value) if s is not None]
 
 
+# Stoppage-replan duration → hours. Mirrors the FE map in
+# `src/lib/stoppagePlan.js#durationToHours` so the contract stays in sync.
+_STOPPAGE_DURATION_HOURS: Dict[str, float] = {
+    "15m":     0.25,
+    "30m":     0.5,
+    "1h":      1.0,
+    "2h+":     2.0,
+    "unknown": 1.0,
+}
+
+
+def stoppage_duration_to_hours(duration_key: str) -> float:
+    """Map a stoppage-modal duration key to hours.
+
+    Single source of truth shared by the FastAPI endpoint and any future
+    payload builder. Unknown keys fall back to 0.5h — same default the
+    client uses.
+    """
+    return _STOPPAGE_DURATION_HOURS.get(duration_key, 0.5)
+
+
+def build_stoppage_replan_response(
+    base_plan: Dict[str, List[Dict[str, Any]]],
+    line: str,
+    duration_key: str,
+) -> Dict[str, Any]:
+    """Apply a stoppage replan to ``base_plan`` and shape the response.
+
+    Returns the FE contract documented at
+    [linewise/API_CONTRACT.md §POST /plan/stoppage-replan]:
+
+        {
+          "plan":         <new base plan with line shifted>,
+          "shiftedCount": int,
+          "shiftedHours": float,
+          "shiftedRuns":  [StoppageShiftedRun, ...],
+        }
+
+    ``shiftedRuns`` excludes service blocks (clean/maint) — the review
+    surface focuses on production work being pushed — while
+    ``shiftedCount`` still counts the whole lane to match the legacy
+    toast copy. The caller owns persisting the new plan; this helper is
+    pure.
+    """
+    hours = stoppage_duration_to_hours(duration_key)
+    base = base_plan or {}
+    lane = list(base.get(line) or [])
+
+    shifted_lane = [
+        {**seg, "start": float(seg.get("start") or 0.0) + hours}
+        for seg in lane
+    ]
+    new_plan = {**base, line: shifted_lane}
+
+    shifted_runs: List[Dict[str, Any]] = []
+    for seg in lane:
+        if not isinstance(seg, dict):
+            continue
+        kind = seg.get("kind")
+        if kind in ("clean", "maint"):
+            continue
+        start = float(seg.get("start") or 0.0)
+        shifted_runs.append({
+            "of":           seg.get("of"),
+            "sku":          seg.get("sku"),
+            "vol":          seg.get("vol"),
+            "oee":          seg.get("oee"),
+            "fromStart":    start,
+            "toStart":      start + hours,
+            "shiftHours":   hours,
+            "durationDays": float(seg.get("w") or 0.0),
+            "kind":         kind,
+        })
+
+    return {
+        "plan":         new_plan,
+        "shiftedCount": len(lane),
+        "shiftedHours": hours,
+        "shiftedRuns":  shifted_runs,
+    }
+
+
+"""Hour-of-week of frontend TODAY (Sat May 23, 2026, 00:00) — used to
+project the week-relative `weeklyStops.start` onto hours-from-today
+when merging service blocks into basePlan. Monday 00:00 = 0, so Saturday
+00:00 = 5 * 24 = 120. Move this when the frontend's TODAY anchor moves."""
+_TODAY_HOUR_OF_WEEK = 120.0
+_WEEK_HOURS = 7 * 24
+
+
+def _project_weekly_stops_into_base_plan(
+    base_plan: Dict[str, Any],
+    weekly_stops: Dict[str, List[Dict[str, Any]]],
+) -> Dict[str, List[Dict[str, Any]]]:
+    """Merge weekly cleaning / maintenance into basePlan as hours-from-today.
+
+    `weeklyStops.start` is hour-of-week (Monday 00:00 = 0). Translate to
+    hours-from-today via `(start - today_hour_of_week) mod 7*24` so each
+    stop lands on its next future occurrence. If the same line+kind would
+    collide on the same hour (e.g. fortnightly maint sharing day L with
+    weekly clean), push the second one to the following week so both
+    remain visible without stacking.
+    """
+    merged: Dict[str, List[Dict[str, Any]]] = {
+        str(k): list(v) for k, v in (base_plan or {}).items() if isinstance(v, list)
+    }
+    seen_slots = set()
+    for line, stops in (weekly_stops or {}).items():
+        if not isinstance(stops, list):
+            continue
+        bucket = merged.setdefault(str(line), [])
+        for stop in stops:
+            if not isinstance(stop, dict) or stop.get("kind") not in ("clean", "maint"):
+                continue
+            week_offset = float(stop.get("start") or 0.0) % _WEEK_HOURS
+            from_today = (week_offset - _TODAY_HOUR_OF_WEEK) % _WEEK_HOURS
+            slot_key = (str(line), round(from_today))
+            while slot_key in seen_slots:
+                from_today += _WEEK_HOURS
+                slot_key = (str(line), round(from_today))
+            seen_slots.add(slot_key)
+            duration = float(stop.get("w") or stop.get("durationHours") or 8.0)
+            bucket.append({
+                "kind": stop["kind"],
+                "start": round(from_today, 1),
+                "w": duration,
+                "locked": bool(stop.get("locked", True)),
+            })
+        bucket.sort(key=lambda s: float(s.get("start") or 0.0))
+        merged[str(line)] = _ripple_resolve_overlaps(bucket)
+    return merged
+
+
+class TimelineOverlapError(ValueError):
+    """Two segments on the same line claim overlapping time ranges.
+
+    Raised by ``_assert_no_overlaps`` after projection/merge so the backend
+    never serves a timeline where cards would collide. If this fires, the
+    bug is upstream (projection, ripple, or canonical input) — fix the
+    cause rather than catching this.
+    """
+
+
+def _ripple_resolve_overlaps(
+    segments: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Push each segment's start forward to the previous segment's end.
+
+    Service blocks (clean/maint) are locked to their scheduled time; any
+    production run whose [start, start+w) intersects an earlier segment
+    gets shifted right by exactly the overlap, and the ripple continues
+    down the lane. Input must be sorted by start. Returns new dicts —
+    never mutates the input.
+    """
+    out: List[Dict[str, Any]] = []
+    cursor = 0.0
+    for seg in segments:
+        new_seg = dict(seg)
+        start = float(new_seg.get("start") or 0.0)
+        if start < cursor:
+            new_seg["start"] = round(cursor, 2)
+            start = cursor
+        out.append(new_seg)
+        cursor = start + float(new_seg.get("w") or 0.0)
+    return out
+
+
+def _assert_no_overlaps(
+    base_plan: Dict[str, List[Dict[str, Any]]],
+) -> None:
+    """Final safety net — fail loudly if any lane still has overlapping segments.
+
+    The frontend renders cards in flex flow (not absolute positioning), so
+    a data overlap silently shows the wrong duration. This check guarantees
+    the contract.
+    """
+    for line, segs in (base_plan or {}).items():
+        ordered = sorted(segs, key=lambda s: float(s.get("start") or 0.0))
+        prev_end = float("-inf")
+        prev_kind = None
+        for seg in ordered:
+            start = float(seg.get("start") or 0.0)
+            if start + 1e-6 < prev_end:
+                raise TimelineOverlapError(
+                    f"L{line}: segment kind={seg.get('kind') or 'prod'} of={seg.get('of')!r} "
+                    f"start={start} collides with prior kind={prev_kind} ending at {prev_end}"
+                )
+            prev_end = max(prev_end, start + float(seg.get("w") or 0.0))
+            prev_kind = seg.get("kind") or "prod"
+
+
 def _clean_weekly_stops(value: Any) -> Dict[str, List[Dict[str, Any]]]:
     out: Dict[str, List[Dict[str, Any]]] = {"14": [], "17": [], "19": []}
     if not isinstance(value, dict):
@@ -424,6 +615,12 @@ def build_frontend_payload(canonical: Dict[str, Any]) -> Dict[str, Any]:
             if isinstance(rec, dict):
                 recs_out[str(line)] = _clean_recommendation(rec)
 
+    weekly_stops = _clean_weekly_stops(canonical.get("weeklyStops"))
+    base_plan_merged = _project_weekly_stops_into_base_plan(
+        canonical.get("basePlan") or {}, weekly_stops,
+    )
+    _assert_no_overlaps(base_plan_merged)
+
     line_rules = _clean_line_rules(canonical.get("lineRules"))
     canonical_line_formats = canonical.get("lineFormats")
     if isinstance(canonical_line_formats, dict) and canonical_line_formats:
@@ -439,10 +636,10 @@ def build_frontend_payload(canonical: Dict[str, Any]) -> Dict[str, Any]:
         "lineBaseline": _flatten_line_baseline(canonical.get("lineBaseline")),
         "timeline": _clean_timeline(canonical.get("timeline")),
         "lineRules": line_rules,
-        "weeklyStops": _clean_weekly_stops(canonical.get("weeklyStops")),
+        "weeklyStops": weekly_stops,
         "yearCompare": canonical.get("yearCompare") or {"weekLabel": "—", "lines": {}},
         "executedHistory": _line_segments(canonical.get("executedHistory") or {}),
-        "basePlan": _line_segments(canonical.get("basePlan") or {}),
+        "basePlan": _line_segments(base_plan_merged),
         "lineCentre": dict(canonical.get("lineCentre") or {}),
         "recommendations": recs_out,
         "objectives": _clean_objectives(canonical.get("objectives")),

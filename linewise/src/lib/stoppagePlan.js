@@ -19,12 +19,15 @@ export function durationToHours(key) {
   }[key] ?? 0.5;
 }
 
-/* Returns the new plan plus a small summary the UI can use in the
-   confirmation toast. */
+/* Returns the new plan plus a per-run shift list the stoppage-review
+   surface uses to render every moved card. `shiftedRuns` excludes
+   service blocks (the review focuses on production work being pushed);
+   `shiftedCount`/`shiftedHours` still count the whole lane so existing
+   toast copy stays accurate. */
 export function computeStoppageReplan({ basePlan, line, durationKey }) {
   const lane = basePlan?.[line];
   if (!lane || lane.length === 0) {
-    return { plan: basePlan, shiftedCount: 0, shiftedHours: 0 };
+    return { plan: basePlan, shiftedCount: 0, shiftedHours: 0, shiftedRuns: [] };
   }
   const hours = durationToHours(durationKey);
   const shiftDays = hours / 24;
@@ -34,9 +37,24 @@ export function computeStoppageReplan({ basePlan, line, durationKey }) {
     start: (seg.start ?? 0) + shiftDays,
   }));
 
+  const shiftedRuns = lane
+    .filter((seg) => seg && seg.kind !== 'clean' && seg.kind !== 'maint')
+    .map((seg) => ({
+      of: seg.of,
+      sku: seg.sku,
+      vol: seg.vol,
+      oee: seg.oee,
+      fromStart: seg.start ?? 0,
+      toStart: (seg.start ?? 0) + shiftDays,
+      shiftHours: hours,
+      durationDays: seg.w ?? 0,
+      kind: seg.kind,
+    }));
+
   return {
     plan: { ...basePlan, [line]: shifted },
     shiftedCount: lane.length,
     shiftedHours: hours,
+    shiftedRuns,
   };
 }

@@ -2305,6 +2305,30 @@
   line-height: 1.4;
   color: var(--ink-2);
 }
+.pl-shift-card .pl-shift-of {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+.pl-shift-card .pl-shift-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 0;
+  color: var(--ink-2);
+}
+.pl-shift-card .pl-shift-delta {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.pl-shift-card .pl-shift-delta.good { color: var(--good); }
+.pl-shift-card .pl-shift-delta.bad  { color: var(--bad); }
+.pl-shift-card .pl-shift-delta.quiet { color: var(--ink-3); }
+.pl-move-rail .pl-move-map {
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+}
 .pl-move-connector {
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr);

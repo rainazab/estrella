@@ -76,6 +76,39 @@ The `/plan-review` page ([frontend/app/plan-review/page.tsx](frontend/app/plan-r
 - **Acceptance:** when a rec is accepted for an urgent insertion, `/plan-review` returns at least one entry in `insertion_moves` with the inserted run plus every downstream shifted run on the same lane. FE keeps the field optional during rollout so the panel hides cleanly when empty.
 - **Type spec mirror:** see the inline `PlanReviewInsertion` definition at the top of [frontend/app/plan-review/page.tsx](frontend/app/plan-review/page.tsx) — keep it in sync with this section until `lib/types.ts` is materialised.
 
+## Gap 8 — Stoppage replan review surface
+Clicking **Replan** on the stoppage banner now opens
+[src/preview/StoppageReviewLab.jsx](src/preview/StoppageReviewLab.jsx)
+(routed through `view='recs'` in `App.jsx`) instead of dropping back on
+the queue with a toast. The review surface lists every pushed
+production run as a "Shifted +Xh" card and shows the new lane order on
+the embedded timeline. The legacy aggregate toast still fires.
+
+- **FE source today:** the shifted run list is computed locally by
+  `computeStoppageReplan` in [src/lib/stoppagePlan.js](src/lib/stoppagePlan.js)
+  and threaded through `App.jsx`'s `plannerStoppagePreview` state. The
+  same shape is now returned by the live backend (Gap 8 backend work
+  below), so once the FE swaps `computeStoppageReplan` for the
+  `POST /plan/stoppage-replan` response, no shape change is needed.
+- **Contract:** `POST /plan/stoppage-replan` adds `shiftedRuns` to the
+  response. Full shape lives at
+  [API_CONTRACT.md §POST /plan/stoppage-replan](API_CONTRACT.md). One
+  entry per pushed production run with `of`, `sku`, `vol`, `oee`,
+  `fromStart`, `toStart`, `shiftHours`, `durationDays`, `kind`. Service
+  blocks are excluded from `shiftedRuns` but still counted in
+  `shiftedCount`.
+- **Derivation (no new model work needed):** the new helper
+  [`build_stoppage_replan_response`](../app/frontend_payload.py) is the
+  single source of truth. The endpoint at
+  [app/server.py](../app/server.py) `/plan/stoppage-replan` now
+  delegates to it.
+- **Acceptance:** posting to `/plan/stoppage-replan` returns a
+  `shiftedRuns` array with one entry per non-service segment on the
+  stopped lane, each carrying its before/after start and shift hours.
+  Existing `plan`, `shiftedCount`, `shiftedHours` fields are
+  unchanged. FE keeps the field optional during rollout so the rail
+  hides cleanly when empty.
+
 ## Out of scope
 - Vertical metadata at [linewise/src/lib/calaVerticals.js](src/lib/calaVerticals.js) and `FALLBACK_LINE_RULES` at [linewise/src/lib/lineRules.js](src/lib/lineRules.js) — these are UI-side presentation/fallback config, not server data. Leave alone.
 - `?demo=...` URL flags in [src/App.jsx:41-72](src/App.jsx) — deck/screenshot helpers.

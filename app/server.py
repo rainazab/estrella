@@ -48,17 +48,8 @@ from .frontend_payload import (
     STOPPAGE_DURATIONS,
     STOPPAGE_REASONS,
     build_frontend_payload,
+    build_stoppage_replan_response,
 )
-
-
-# ---- duration mapping shared with linewise/src/lib/stoppagePlan.js ----
-_DURATION_HOURS = {
-    "15m": 0.25,
-    "30m": 0.5,
-    "1h": 1.0,
-    "2h+": 2.0,
-    "unknown": 1.0,
-}
 
 
 def _default_data_path() -> Path:
@@ -272,15 +263,11 @@ def create_app(data_path: Optional[Path] = None, *, allow_cors: bool = True) -> 
 
         plan, etag = _current_plan_payload(request.app)
         base_plan = plan.get("basePlan") or {}
-        lane = list(base_plan.get(line) or [])
-        hours = _DURATION_HOURS[duration_key]
 
-        shifted_lane = [
-            {**seg, "start": float(seg.get("start") or 0.0) + hours}
-            for seg in lane
-        ]
-        new_base = {**base_plan, line: shifted_lane}
-        request.app.state.plan_override = new_base
+        # Single source of truth for the response shape — keeps
+        # `shiftedRuns` in sync with the FE review surface contract.
+        replan = build_stoppage_replan_response(base_plan, line, duration_key)
+        request.app.state.plan_override = replan["plan"]
 
         # Surface the audit trail: which stoppage prompted the shift.
         for s in request.app.state.stoppages:
@@ -290,9 +277,10 @@ def create_app(data_path: Optional[Path] = None, *, allow_cors: bool = True) -> 
 
         new_plan, _ = _build_plan_response(request.app)
         return {
-            "plan": new_plan,
-            "shiftedCount": len(lane),
-            "shiftedHours": hours,
+            "plan":         new_plan,
+            "shiftedCount": replan["shiftedCount"],
+            "shiftedHours": replan["shiftedHours"],
+            "shiftedRuns":  replan["shiftedRuns"],
         }
 
     @app.post("/plan/move/preview")

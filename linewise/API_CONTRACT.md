@@ -676,8 +676,30 @@ they'd be time-locked and the backend would negotiate around them.
   plan: Plan;                              // recomputed full payload
   shiftedCount: number;                    // # runs (+ service blocks) shifted
   shiftedHours: number;                    // amount each was pushed
+  shiftedRuns: StoppageShiftedRun[];       // one per production run; drives the review surface
+}
+
+// StoppageShiftedRun — production-only (service blocks excluded). Powers
+// the StoppageReviewLab card rail: every pushed run is listed individually
+// with its before/after start, OEE, and shift amount.
+{
+  of: string;                              // order code, e.g. "ED13LTNN"
+  sku: string | null;                      // material/SKU (raw, frontend formats)
+  vol: number | null;                      // run volume in HL × 1000 units (matches Recommendation.plan)
+  oee: number | null;                      // predicted OEE for the run (0..1)
+  fromStart: number;                       // start (days from anchor) BEFORE shift
+  toStart: number;                         // start (days from anchor) AFTER shift
+  shiftHours: number;                      // delta in hours (always positive)
+  durationDays: number;                    // run width (days); echoes seg.w
+  kind: "prod" | "ins" | "shift" | null;   // production kind; null when not classified
 }
 ```
+
+The review surface ([`src/preview/StoppageReviewLab.jsx`](src/preview/StoppageReviewLab.jsx))
+opens automatically after a successful replan and uses `shiftedRuns` to
+render one "Shifted +Xh" card per pushed production run. Service blocks
+are intentionally excluded from `shiftedRuns` (the rail focuses on
+production work being pushed) but still counted in `shiftedCount`.
 
 ### `POST /plan/move` and `POST /plan/move/preview`
 See open question (6) above for the move-flow endpoints. The preview
