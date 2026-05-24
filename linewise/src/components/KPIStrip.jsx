@@ -124,6 +124,7 @@ export default function KPIStrip({
           className={`opportunity-card t-${s.tone}`}
           onClick={s.onClick}
           aria-label={s.onClick ? `${s.title}. ${s.description}` : undefined}
+          title={s.onClick ? `${s.title}: re-sequence the forward queue` : undefined}
         >
           <span className="opportunity-stat">
             <span className="opportunity-label">{s.label}</span>

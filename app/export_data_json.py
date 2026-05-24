@@ -69,6 +69,24 @@ def _fnone(v) -> Optional[float]:
         return None
 
 
+def _planning_constraint_hours(order: Dict[str, Any]) -> Optional[float]:
+    """Hard date used by the time objective.
+
+    Prefer an explicit implementation-date offset when supplied by the order
+    intake; fall back to the display due date's offset for the demo payloads.
+    """
+    for key in (
+        "implementation_offset_hours",
+        "implementationOffsetHours",
+        "implementation_due_offset_hours",
+        "due_offset_hours",
+    ):
+        value = _fnone((order or {}).get(key))
+        if value is not None:
+            return value
+    return None
+
+
 def _round_oee(v) -> Optional[float]:
     f = _fnone(v)
     return round(f, 3) if f is not None else None
@@ -246,6 +264,9 @@ def build_urgent_orders(products: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     def due_in(days: int) -> str:
         return (today + timedelta(days=days)).strftime("%d %b")
 
+    def due_offset_hours(days: int) -> int:
+        return int(days * 24)
+
     def product_format_key(product: Dict[str, Any]) -> Optional[str]:
         return product.get("format_key") or normalize_format(product.get("format"))
 
@@ -266,6 +287,7 @@ def build_urgent_orders(products: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             "units": 18000,
             "hl": 594,
             "due": due_in(5),
+            "due_offset_hours": due_offset_hours(5),
             "volume_hl": 594,
             "format_key": product_format_key(one_third),
         })
@@ -278,6 +300,7 @@ def build_urgent_orders(products: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             "units": 12000,
             "hl": 396,
             "due": due_in(6),
+            "due_offset_hours": due_offset_hours(6),
             "volume_hl": 396,
             "format_key": product_format_key(second_one_third),
         })
@@ -290,6 +313,7 @@ def build_urgent_orders(products: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             "units": 6000,
             "hl": 198,
             "due": due_in(8),
+            "due_offset_hours": due_offset_hours(8),
             "volume_hl": 198,
             "format_key": product_format_key(half),
         })
@@ -694,6 +718,31 @@ def _build_proposed_plan(
     }
 
 
+def _inserted_window_hours(proposed: Dict[str, Any], line: int) -> Tuple[Optional[float], Optional[float]]:
+    """Return (start, end) for the urgent insert in a proposed plan."""
+    line_plan = (proposed.get("plan") or {}).get(str(line)) or []
+    ins = next((s for s in line_plan if isinstance(s, dict) and s.get("kind") == "ins"), None)
+    if not ins:
+        return None, None
+    try:
+        start = float(ins.get("start") or 0.0)
+        end = start + float(ins.get("w") or 0.0)
+    except (TypeError, ValueError):
+        return None, None
+    return start, end
+
+
+def _deadline_label(hours_late: Optional[float]) -> str:
+    if hours_late is None:
+        return "deadline unknown"
+    if hours_late <= 0:
+        return "on time"
+    if hours_late < 24:
+        return f"+{int(math.ceil(hours_late))}h late"
+    days = int(math.ceil(hours_late / 24.0))
+    return f"+~{days} day{'s' if days != 1 else ''} late"
+
+
 def _recovery_hours(transition_type: str, analogue_mean_oee: Optional[float], cf_baseline_min: Optional[float]) -> float:
     """Modelled estimate. Documented as such in recovery.note."""
     base = (cf_baseline_min or 60.0) / 60.0
@@ -1016,6 +1065,7 @@ def _evaluate_candidate(
         "prev_marca": prev_marca,
         "same_format": same_format,
         "proposed": proposed,
+        "urgent_due_hours": _planning_constraint_hours(urgent),
     }
 
 
@@ -1043,15 +1093,31 @@ def _candidate_scores(
     hist_min = candidate.get("historical_actual_minutes") or 0.0
     overrun_min = max(0.0, hist_min - cf_min)
     recovery_h = _recovery_hours(candidate["transition_type"], analogue_mean, cf_min)
+    _, insert_end_h = _inserted_window_hours(proposed, int(candidate["line"]))
+    due_hours = candidate.get("urgent_due_hours")
+    hours_late = (
+        max(0.0, float(insert_end_h) - float(due_hours))
+        if insert_end_h is not None and due_hours is not None
+        else None
+    )
+    deadline_penalty_pts = round((hours_late or 0.0) / 12.0, 2)
 
-    adjusted_gain = raw_gain_pts - penalty
-    disruption = orders_moved * 1.0 + ghost_count * 0.5 + recovery_h * 0.05 + penalty * 0.3
-    time_score = float(cf_min) + overrun_min + recovery_h * 60.0 + orders_moved * 30.0
+    adjusted_gain = raw_gain_pts - penalty - deadline_penalty_pts
+    disruption = (
+        orders_moved * 1.0
+        + ghost_count * 0.5
+        + recovery_h * 0.05
+        + penalty * 0.3
+        + (hours_late or 0.0) * 0.1
+    )
+    time_score = float(cf_min) + overrun_min + recovery_h * 60.0 + orders_moved * 30.0 + (hours_late or 0.0) * 120.0
 
     return {
         "predicted_oee": round(float(predicted), 4),
         "raw_oee_gain_pts": round(raw_gain_pts, 2),
         "evidence_penalty_pts": round(penalty, 2),
+        "deadline_penalty_pts": deadline_penalty_pts,
+        "deadline_hours_late": round(float(hours_late), 2) if hours_late is not None else None,
         "adjusted_oee_gain_pts": round(adjusted_gain, 2),
         "disruption_score": round(disruption, 3),
         "time_score": round(time_score, 1),
@@ -1169,6 +1235,8 @@ def build_recommendations(
         )
         recovery_start = (float(ins_seg["start"]) + float(ins_seg["w"])) if ins_seg else 0.0
         recovery_width = max(1.0, float(recovery_hours))  # hours
+        insert_start_h, insert_end_h = _inserted_window_hours(proposed, line)
+        hours_late = scores.get("deadline_hours_late")
 
         comps: List[str] = [t for t in transition_type.split("+") if t and t != "same-sku"]
         breakdown = build_changeover_breakdown(
@@ -1257,7 +1325,7 @@ def build_recommendations(
             "position": f"after {anchor['of']}",
             "oeeDelta": _signed_pts(gain),
             "oeeGood": (gain is None) or (gain >= 0),
-            "deadline": "+~1 day" if proposed["ordersMoved"] > 0 else "on time",
+            "deadline": _deadline_label(hours_late),
             "ordersMoved": proposed["ordersMoved"],
             "naiveBand": naive_band,
             "plan": proposed["plan"],
@@ -1288,6 +1356,10 @@ def build_recommendations(
             "selectedAnchorIndex": int(c["anchor_idx"]),
             "adjustedOeeGain": float(scores["adjusted_oee_gain_pts"]),
             "evidencePenaltyPts": float(scores["evidence_penalty_pts"]),
+            "deadlinePenaltyPts": float(scores["deadline_penalty_pts"]),
+            "deadlineHoursLate": hours_late,
+            "insertedStartHours": round(float(insert_start_h), 2) if insert_start_h is not None else None,
+            "insertedEndHours": round(float(insert_end_h), 2) if insert_end_h is not None else None,
             "disruptionScore": float(scores["disruption_score"]),
             "timeScore": float(scores["time_score"]),
         }
@@ -1669,11 +1741,29 @@ def build_objectives(recs: Dict[str, Any]) -> Dict[str, Any]:
         return -_signed_pts_value(it[1].get("oeeDelta"))
 
     def by_time(it):
-        ts = it[1].get("timeScore")
-        if ts is not None:
-            return float(ts)
-        # Fallback: orders moved + recovery hours
-        return int(it[1].get("ordersMoved") or 0) * 30 + int((it[1].get("recovery") or {}).get("hours") or 0) * 60
+        r = it[1]
+        late = _fnone(r.get("deadlineHoursLate"))
+        if late is None and r.get("deadline") == "on time":
+            late = 0.0
+        unknown_deadline = late is None
+        late_hours = float("inf") if late is None else max(0.0, float(late))
+
+        ts = _fnone(r.get("timeScore"))
+        if ts is None:
+            # Fallback: orders moved + recovery hours
+            ts = (
+                int(r.get("ordersMoved") or 0) * 30.0
+                + int((r.get("recovery") or {}).get("hours") or 0) * 60.0
+            )
+        inserted_end = _fnone(r.get("insertedEndHours"))
+
+        return (
+            1 if unknown_deadline else 0,
+            1 if late_hours > 0 else 0,
+            late_hours,
+            float("inf") if inserted_end is None else float(inserted_end),
+            float(ts),
+        )
 
     def by_disruption(it):
         ds = it[1].get("disruptionScore")
@@ -1693,8 +1783,10 @@ def build_objectives(recs: Dict[str, Any]) -> Dict[str, Any]:
             if kind == "oee":
                 msg = f"Expected OEE {gain} pts vs comparable naive history."
             elif kind == "time":
-                msg = ("Nothing else moves — deadline respected." if moved == 0
-                       else f"Shifts {moved} order(s) on Line {k}.")
+                deadline = str(r.get("deadline") or "deadline unknown")
+                deadline_msg = "Deadline respected" if deadline == "on time" else f"Deadline {deadline}"
+                msg = (f"{deadline_msg}; nothing else moves." if moved == 0
+                       else f"{deadline_msg}; shifts {moved} order(s) on Line {k}.")
             else:
                 msg = ("Zero knock-on — nothing else moves." if moved == 0
                        else f"Shifts {moved} order(s) on Line {k}.")

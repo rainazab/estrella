@@ -18,14 +18,17 @@ const HOURS_PER_DAY = 24;
 
 const FALLBACK_WIDTH_PER_DAY = { week: 124, month: 28, quarter: 14 };
 const VISIBLE_DAYS = { week: 7, month: 35, quarter: 70 };
-const MIN_CARD_WIDTH = { week: 168, month: 80, quarter: 36 };
+const MIN_CARD_WIDTH = { week: 72, month: 54, quarter: 42 };
+const SERVICE_MIN_CARD_WIDTH = { week: 112, month: 92, quarter: 70 };
+const PX_PER_HOUR = { week: 11, month: 7.5, quarter: 5 };
+const HOUR_WIDTH_CAP = { week: 360, month: 180, quarter: 140 };
+const PX_PER_SQRT_UNIT = { week: 3.2, month: 2.25, quarter: 1.55 };
+const VOLUME_WIDTH_CAP = { week: 280, month: 210, quarter: 160 };
 const TIMELINE_HEAD_WIDTH = 156;
 
 /* Date helpers — turn day offsets/durations into labels like "Mon 19"
-   or "Mon 19 → Wed 21".
-   TODAY is hardcoded to match the prototype; later this should come from
-   data.today on the server payload. */
-const TODAY = new Date(2026, 4, 23);
+   or "Mon 19 → Wed 21". */
+const FALLBACK_TODAY = new Date(2026, 4, 23);
 const WK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -62,9 +65,20 @@ function daysSinceWeekStart(date) {
   return (date.getDay() + 6) % 7;
 }
 
-function dayRange(startOffsetDays, durationDays) {
-  const startD = addDays(TODAY, startOffsetDays);
-  const endD   = addDays(TODAY, startOffsetDays + durationDays);
+function dateFromPayload(value) {
+  const match = String(value ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return FALLBACK_TODAY;
+  const d = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return Number.isNaN(d.getTime()) ? FALLBACK_TODAY : d;
+}
+
+function timelineBaseDate(data) {
+  return dateFromPayload(data?.timeline?.anchorDate);
+}
+
+function dayRange(baseDate, startOffsetDays, durationDays) {
+  const startD = addDays(baseDate, startOffsetDays);
+  const endD   = addDays(baseDate, startOffsetDays + durationDays);
   if (startD.toDateString() === endD.toDateString()) return fmtDay(startD);
   return `${fmtDay(startD)} → ${fmtDay(endD)}`;
 }
@@ -111,9 +125,37 @@ function plannedEnd(seg, timeUnit) {
 }
 
 function segmentWidthPx(seg, zoom, pxPerDay, timeUnit) {
+  const kind = seg?.kind;
+  const isService = kind === 'clean' || kind === 'maint';
+  const durationHours = Math.max(0, segDurationHours(seg, timeUnit));
+  const byCalendar = Math.round(segDurationDays(seg, timeUnit) * pxPerDay);
+  const hourScale = PX_PER_HOUR[zoom] ?? PX_PER_HOUR.week;
+  const byHours = Math.min(
+    HOUR_WIDTH_CAP[zoom] ?? HOUR_WIDTH_CAP.week,
+    Math.round(durationHours * hourScale),
+  );
+
+  if (isService) {
+    return Math.max(
+      SERVICE_MIN_CARD_WIDTH[zoom] ?? SERVICE_MIN_CARD_WIDTH.week,
+      byCalendar,
+      byHours,
+    );
+  }
+
+  const vol = Number(seg?.vol ?? 0);
+  const byVolume = Number.isFinite(vol) && vol > 0
+    ? Math.min(
+        VOLUME_WIDTH_CAP[zoom] ?? VOLUME_WIDTH_CAP.week,
+        Math.round(Math.sqrt(vol) * (PX_PER_SQRT_UNIT[zoom] ?? PX_PER_SQRT_UNIT.week)),
+      )
+    : 0;
+
   return Math.max(
-    MIN_CARD_WIDTH[zoom] ?? 168,
-    Math.round(segDurationDays(seg, timeUnit) * pxPerDay),
+    MIN_CARD_WIDTH[zoom] ?? MIN_CARD_WIDTH.week,
+    byCalendar,
+    byHours,
+    byVolume,
   );
 }
 
@@ -172,6 +214,7 @@ export default function Timeline({
   const viewportWidth = useTimelineViewportWidth(timelineRef);
   const pxPerDay = pxPerDayForZoom(zoom, viewportWidth);
   const timeUnit = payloadTimeUnit(data);
+  const baseDate = timelineBaseDate(data);
   const mergedHistoryByLine = Object.fromEntries(
     LINES.map((k) => [k, mergeAdjacentByOrder(data?.executedHistory?.[k] ?? [])]),
   );
@@ -207,11 +250,11 @@ export default function Timeline({
          not flowed sequentially. plannedWidth here is the flex-flow
          padding needed to extend scrollWidth past the rightmost absolute
          aggregate, measured from the post-executed flex cursor. */
-      const weeks = buildWeekAggregates(planned, timeUnit);
+      const weeks = buildWeekAggregates(planned, timeUnit, baseDate);
       const postExec = (leadPadDays * pxPerDay) + executedWidth;
       let maxRight = postExec;
       for (const w of weeks) {
-        const days = Math.round((w.weekStart - TODAY) / 86400000);
+        const days = Math.round((w.weekStart - baseDate) / 86400000);
         const right = todayXForMetrics + days * pxPerDay + aggregateWidth;
         if (right > maxRight) maxRight = right;
       }
@@ -243,7 +286,7 @@ export default function Timeline({
 
     return (
       <div className="tl" ref={timelineRef}>
-        <TimelineAxis zoom={zoom} sync={sync} executedDays={execDays} pxPerDay={pxPerDay} />
+        <TimelineAxis zoom={zoom} sync={sync} executedDays={execDays} pxPerDay={pxPerDay} baseDate={baseDate} />
         {LINES.map((lineKey, idx) => (
           <RecommendationLane
             key={lineKey}
@@ -257,6 +300,7 @@ export default function Timeline({
             todayX={todayX}
             pxPerDay={pxPerDay}
             timeUnit={timeUnit}
+            baseDate={baseDate}
           />
         ))}
       </div>
@@ -265,7 +309,7 @@ export default function Timeline({
 
   return (
     <div className={`tl${moving ? ' tl-moving' : ''}`} ref={timelineRef}>
-      <TimelineAxis zoom={zoom} sync={sync} executedDays={execDays} pxPerDay={pxPerDay} />
+      <TimelineAxis zoom={zoom} sync={sync} executedDays={execDays} pxPerDay={pxPerDay} baseDate={baseDate} />
       {LINES.map((lineKey, idx) => {
         const planned = activePlan?.[lineKey] ?? [];
         const stoppage = stoppages.find((s) => s.line === lineKey) ?? null;
@@ -290,6 +334,7 @@ export default function Timeline({
             todayX={todayX}
             pxPerDay={pxPerDay}
             timeUnit={timeUnit}
+            baseDate={baseDate}
             orderLookup={orderLookup}
             onRunClick={onRunClick}
             moving={moving}
@@ -375,7 +420,7 @@ function useSharedScroll() {
 
 /* TimelineAxis — date strip above the lanes. Mirrors the horizontal scroll
    of the first lane so the dates line up with the cards. */
-function TimelineAxis({ zoom, sync, executedDays = 0, pxPerDay }) {
+function TimelineAxis({ zoom, sync, executedDays = 0, pxPerDay, baseDate }) {
   const axisBodyRef = useRef(null);
   const RANGE_START = -Math.max(0, executedDays);
   const RANGE_END = Math.max(35, Math.ceil((VISIBLE_DAYS[zoom] ?? VISIBLE_DAYS.week) * 1.25));
@@ -384,7 +429,7 @@ function TimelineAxis({ zoom, sync, executedDays = 0, pxPerDay }) {
 
   const weeks = [];
   for (let offset = RANGE_START; offset <= RANGE_END;) {
-    const date = addDays(TODAY, offset);
+    const date = addDays(baseDate, offset);
     const startOfWeek = weekStart(date);
     const daysIntoWeek = Math.round((date - startOfWeek) / 86400000);
     const span = Math.min(7 - daysIntoWeek, RANGE_END - offset + 1);
@@ -420,7 +465,7 @@ function TimelineAxis({ zoom, sync, executedDays = 0, pxPerDay }) {
   );
 }
 
-function RecommendationLane({ data, lineKey, rec, zoom, showNaive, sync, primary = false, todayX = 0, pxPerDay, timeUnit }) {
+function RecommendationLane({ data, lineKey, rec, zoom, showNaive, sync, primary = false, todayX = 0, pxPerDay, timeUnit, baseDate }) {
   const proposed = rec.plan?.[lineKey] ?? [];
   const ghosts = rec.ghosts?.[lineKey] ?? [];
   const naiveHere = showNaive && rec.naiveBand?.line === lineKey ? rec.naiveBand : null;
@@ -473,7 +518,7 @@ function RecommendationLane({ data, lineKey, rec, zoom, showNaive, sync, primary
             pxPerDay={pxPerDay}
             shiftFromHours={shiftHours(rec, seg, lineKey)}
             timeUnit={timeUnit}
-            dateLabel={dayRange(segStartDays(seg, timeUnit), segDurationDays(seg, timeUnit))}
+            dateLabel={dayRange(baseDate, segStartDays(seg, timeUnit), segDurationDays(seg, timeUnit))}
           />
         ))}
         {ghosts.map((seg, index) => (
@@ -581,11 +626,11 @@ function stoppageDurationLabel(key) {
    week / five weeks instead of an arbitrary slice starting mid-week. Quarter
    keeps today at the left edge for longer-horizon scanning.
    Returns null when the lane doesn't actually need scrolling. */
-function computeTodayScroll(body, zoom, pxPerDay) {
+function computeTodayScroll(body, zoom, pxPerDay, baseDate) {
   if (!body) return null;
   const today = body.querySelector('.tl-today');
   if (!today || body.scrollWidth <= body.clientWidth) return null;
-  const anchorBackDays = zoom === 'quarter' ? 0 : daysSinceWeekStart(TODAY);
+  const anchorBackDays = zoom === 'quarter' ? 0 : daysSinceWeekStart(baseDate);
   const target = today.offsetLeft - (anchorBackDays * pxPerDay);
   const maxScroll = Math.max(0, body.scrollWidth - body.clientWidth);
   return Math.min(maxScroll, Math.max(0, target));
@@ -615,9 +660,9 @@ function laneFormatsFromRules(rule) {
   return rule.formats.map((fmt) => fmt.label).filter(Boolean);
 }
 
-function MonthAggregateRun({ planned, baseline, timeUnit, pxPerDay, lineKey, onRunClick, todayX = 0 }) {
+function MonthAggregateRun({ planned, baseline, timeUnit, pxPerDay, lineKey, onRunClick, todayX = 0, baseDate }) {
   const widthPx = aggregateWidthPx('month', pxPerDay);
-  return buildWeekAggregates(planned, timeUnit).map((week) => {
+  return buildWeekAggregates(planned, timeUnit, baseDate).map((week) => {
     const runRef = week.currentRun ?? week.firstRun ?? null;
     const seg = runRef?.seg ?? null;
     const prev = Number.isInteger(runRef?.index) && runRef.index > 0 ? planned[runRef.index - 1] : null;
@@ -628,7 +673,7 @@ function MonthAggregateRun({ planned, baseline, timeUnit, pxPerDay, lineKey, onR
        axis weeks to the right of where its week actually sits. Absolute
        positioning anchors each aggregate to the same coordinate the
        axis uses, so "Week 21" lands under W21. */
-    const daysFromToday = Math.round((week.weekStart - TODAY) / 86400000);
+    const daysFromToday = Math.round((week.weekStart - baseDate) / 86400000);
     const left = todayX + daysFromToday * pxPerDay;
     return (
       <div
@@ -669,12 +714,12 @@ function MonthAggregateRun({ planned, baseline, timeUnit, pxPerDay, lineKey, onR
   });
 }
 
-function buildWeekAggregates(planned, timeUnit) {
+function buildWeekAggregates(planned, timeUnit, baseDate) {
   const buckets = new Map();
 
   for (const [index, seg] of (planned ?? []).entries()) {
     const startDays = segStartDays(seg, timeUnit);
-    const startDate = addDays(TODAY, startDays);
+    const startDate = addDays(baseDate, startDays);
     const bucketStart = weekStart(startDate);
     const key = bucketStart.toISOString().slice(0, 10);
     if (!buckets.has(key)) {
@@ -695,7 +740,7 @@ function buildWeekAggregates(planned, timeUnit) {
         productionRuns: [],
         currentRun: null,
         hasUrgentInsert: false,
-        isToday: bucketStart <= TODAY && TODAY <= bucketEnd,
+        isToday: bucketStart <= baseDate && baseDate <= bucketEnd,
       });
     }
 
@@ -750,7 +795,7 @@ function buildWeekAggregates(planned, timeUnit) {
     });
 }
 
-function Lane({ lineKey, centre, baseline, formats = [], executed, planned, zoom, sync, primary = false, leadPadDays = 0, tailPadPx = 0, planHorizonDays = 1, todayX = 0, pxPerDay, timeUnit, orderLookup, onRunClick = null, moving = null, onMoveDrop = null, focusRun = null, lineRules = null, stoppage = null, issues = [], onResumeLine = null }) {
+function Lane({ lineKey, centre, baseline, formats = [], executed, planned, zoom, sync, primary = false, leadPadDays = 0, tailPadPx = 0, planHorizonDays = 1, todayX = 0, pxPerDay, timeUnit, baseDate, orderLookup, onRunClick = null, moving = null, onMoveDrop = null, focusRun = null, lineRules = null, stoppage = null, issues = [], onResumeLine = null }) {
   /* Moving-mode derived state — null when no move is in flight. We
      compute compatibility and reason once per lane so the drop-zone
      children share the same verdict. */
@@ -790,7 +835,7 @@ function Lane({ lineKey, centre, baseline, formats = [], executed, planned, zoom
     const body = bodyRef.current;
     if (!body) return;
     const place = () => {
-      const target = computeTodayScroll(body, zoom, pxPerDay);
+      const target = computeTodayScroll(body, zoom, pxPerDay, baseDate);
       if (target != null) {
         body.scrollLeft = target;
         sync?.broadcast(body);
@@ -800,7 +845,7 @@ function Lane({ lineKey, centre, baseline, formats = [], executed, planned, zoom
     place();
     const t = setTimeout(place, 60);
     return () => clearTimeout(t);
-  }, [zoom, sync, primary, pxPerDay]);
+  }, [zoom, sync, primary, pxPerDay, baseDate]);
 
   useEffect(() => {
     if (!focusRun || String(focusRun.lineKey) !== String(lineKey)) return;
@@ -820,7 +865,7 @@ function Lane({ lineKey, centre, baseline, formats = [], executed, planned, zoom
     const body = bodyRef.current;
     if (!body) return;
     sync?.broadcast(body);
-    const target = computeTodayScroll(body, zoom, pxPerDay);
+    const target = computeTodayScroll(body, zoom, pxPerDay, baseDate);
     if (target == null) { setDrift(0); return; }
     setDrift(Math.abs(body.scrollLeft - target));
   }
@@ -828,7 +873,7 @@ function Lane({ lineKey, centre, baseline, formats = [], executed, planned, zoom
   function backToToday() {
     const body = bodyRef.current;
     if (!body) return;
-    const target = computeTodayScroll(body, zoom, pxPerDay);
+    const target = computeTodayScroll(body, zoom, pxPerDay, baseDate);
     if (target == null) return;
     body.scrollLeft = target;
     sync?.broadcast(body);
@@ -926,9 +971,9 @@ function Lane({ lineKey, centre, baseline, formats = [], executed, planned, zoom
         )}
         {/* At month zoom the executed history is already represented by
             the Current week aggregate, and rendering 4-5 inline cards
-            with MIN_CARD_WIDTH=80 floods the lane footer with duplicate
-            content that visually leaks under the aggregates. Hide them
-            there; the per-run detail is still available at week zoom. */}
+            floods the lane footer with duplicate content that visually
+            leaks under the aggregates. Hide them there; the per-run
+            detail is still available at week zoom. */}
         {zoom !== 'month' && (() => {
           const execEnd = executedEnd(executed, timeUnit);
           return executed.map((seg, i) => {
@@ -943,7 +988,7 @@ function Lane({ lineKey, centre, baseline, formats = [], executed, planned, zoom
                 zoom={zoom}
                 pxPerDay={pxPerDay}
                 timeUnit={timeUnit}
-                dateLabel={dayRange(segStartDays(seg, timeUnit) - execEnd, segDurationDays(seg, timeUnit))}
+                dateLabel={dayRange(baseDate, segStartDays(seg, timeUnit) - execEnd, segDurationDays(seg, timeUnit))}
                 onClick={onRunClick ? () => onRunClick({ seg: normalizeRun(seg, timeUnit), prev: normalizeRun(prev, timeUnit), next: normalizeRun(next, timeUnit), lineKey, index: i, baseline, state: 'executed' }) : null}
               />
             );
@@ -973,7 +1018,7 @@ function Lane({ lineKey, centre, baseline, formats = [], executed, planned, zoom
             slotIndex={0}
             active={activeSlot === 0}
             isFirst
-            runWidthPx={Math.max(MIN_CARD_WIDTH[zoom] ?? 168, Math.round(segDurationDays(moving.run, timeUnit) * pxPerDay))}
+            runWidthPx={segmentWidthPx(moving.run, zoom, pxPerDay, timeUnit)}
             onDragOver={onZoneDragOver}
             onDragLeave={onZoneDragLeave}
             onDrop={onZoneDrop}
@@ -998,7 +1043,7 @@ function Lane({ lineKey, centre, baseline, formats = [], executed, planned, zoom
                 zoom={zoom}
                 pxPerDay={pxPerDay}
                 timeUnit={timeUnit}
-                dateLabel={dayRange(segStartDays(seg, timeUnit), segDurationDays(seg, timeUnit))}
+                dateLabel={dayRange(baseDate, segStartDays(seg, timeUnit), segDurationDays(seg, timeUnit))}
                 focusIndex={i}
                 focused={
                   focusRun
@@ -1012,7 +1057,7 @@ function Lane({ lineKey, centre, baseline, formats = [], executed, planned, zoom
                 <DropZone
                   slotIndex={i + 1}
                   active={activeSlot === i + 1}
-                  runWidthPx={Math.max(MIN_CARD_WIDTH[zoom] ?? 168, Math.round(segDurationDays(moving.run, timeUnit) * pxPerDay))}
+                  runWidthPx={segmentWidthPx(moving.run, zoom, pxPerDay, timeUnit)}
                   onDragOver={onZoneDragOver}
                   onDragLeave={onZoneDragLeave}
                   onDrop={onZoneDrop}
@@ -1054,6 +1099,7 @@ function SegmentCard({ seg, baseline, state, zoom, pxPerDay, timeUnit, shiftFrom
         durationHours={durationHours}
         widthPx={widthPx}
         dateLabel={dateLabel}
+        label={seg.label}
       />
     );
   }

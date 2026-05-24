@@ -249,6 +249,7 @@ def _validate_recommendations(problems: list[str], data: dict[str, Any]) -> None
 
     primary_urgent = ((data.get("urgentOrders") or [{}])[0] or {})
     urgent_format = primary_urgent.get("format_key")
+    recs = data.get("recommendations") or {}
     for objective_key, objective in (data.get("objectives") or {}).items():
         order = objective.get("order") or []
         if not order:
@@ -262,6 +263,21 @@ def _validate_recommendations(problems: list[str], data: dict[str, Any]) -> None
             )
         if urgent_format == "1/2":
             _assert(problems, winner != "17", "Line 17 must not win for urgent format 1/2")
+
+        if objective_key == "time":
+            on_time_lines = [
+                str(k)
+                for k, rec in recs.items()
+                if _parse_float(rec.get("deadlineHoursLate")) == 0
+                or rec.get("deadline") == "on time"
+            ]
+            winner_late = _parse_float((recs.get(winner) or {}).get("deadlineHoursLate"))
+            _assert(
+                problems,
+                not on_time_lines or winner in on_time_lines or (winner_late is not None and winner_late <= 0),
+                f"objectives.time winner {winner!r} misses the implementation date "
+                f"while on-time recommendations exist: {on_time_lines}",
+            )
 
     oee_order = ((data.get("objectives") or {}).get("oee") or {}).get("order") or []
     if oee_order:

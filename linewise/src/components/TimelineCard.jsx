@@ -30,6 +30,7 @@ export default function TimelineCard({
   focusIndex = null,
   dateLabel = null,
   ghost = false,
+  label = null,
 }) {
   const isService = kind === 'clean' || kind === 'maint';
   const fmt = format || deriveFormat({ sku, material });
@@ -38,14 +39,16 @@ export default function TimelineCard({
   const w = widthPx ?? Math.max(168, Math.round((durationHours ?? 1) * 110));
 
   if (isService) {
+    const serviceLabel = serviceDisplayLabel(kind, label);
+    const serviceTitle = label ?? (kind === 'clean' ? 'Cleaning / CIP' : 'Maintenance');
     return (
       <div
         className={`tc tc-service tc-${kind}`}
         style={{ width: w }}
-        title={kind === 'clean' ? 'Cleaning / CIP' : 'Maintenance'}
+        title={serviceTitle}
       >
         <span className="tc-svc-label">
-          {kind === 'clean' ? 'Cleaning' : 'Maintenance'}
+          {serviceLabel}
         </span>
         {dateLabel && <span className="tc-svc-date">{dateLabel}</span>}
         <span className="tc-svc-dur">{formatDuration(durationHours)}</span>
@@ -84,9 +87,6 @@ export default function TimelineCard({
     <motion.div
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
-      layout
-      whileHover={onClick ? { y: -1 } : undefined}
-      whileTap={onClick ? { y: 0 } : undefined}
       className={cls}
       style={{ width: w }}
       data-tl-run-index={focusIndex ?? undefined}
@@ -176,6 +176,16 @@ function FormatChip({ format }) {
   return <span className={`tc-fmt tc-fmt-${tone}`}>{format}</span>;
 }
 
+function serviceDisplayLabel(kind, label) {
+  const text = String(label ?? '').toLowerCase();
+  if (text.includes('clean') && (text.includes('maint') || text.includes('mantenimiento'))) {
+    return 'Clean + Maint';
+  }
+  if (kind === 'clean') return 'Clean';
+  if (kind === 'maint') return 'Maint';
+  return 'Service';
+}
+
 /* ---------- helpers (pure) — exported for the modal to reuse ---------- */
 
 export function deriveFormat({ sku, material }) {
@@ -186,7 +196,7 @@ export function deriveFormat({ sku, material }) {
   if (material) {
     if (/13/.test(material)) return '33cl';
     if (/(12|05)/.test(material)) return '50cl';
-    if (/(2[-_]?5|44)/.test(material)) return '44cl';
+    if (/(2\s*\/\s*5|2[-_]5|\b44\b)/.test(material)) return '44cl';
   }
   return null;
 }

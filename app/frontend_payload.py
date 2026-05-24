@@ -32,7 +32,7 @@ _EVIDENCE_FIELDS = (
 _OBJECTIVE_FIELDS = ("label", "icon", "order", "notes")
 
 _BAND_PROD_FIELDS = ("of", "sku", "vol", "start", "w", "oee", "due", "inferredWidth")
-_BAND_NONPROD_FIELDS = ("kind", "start", "w", "locked", "lockReason", "cadence", "shiftPattern", "day")
+_BAND_NONPROD_FIELDS = ("kind", "label", "start", "w", "locked", "lockReason", "cadence", "shiftPattern", "day")
 
 _RECBAND_FIELDS = ("of", "sku", "vol", "start", "w", "oee", "kind", "due")
 

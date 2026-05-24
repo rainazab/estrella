@@ -81,14 +81,16 @@ class TestProjectServiceBlocks:
         # IDs embed ISO date so re-runs don't collide and they sort naturally
         assert "2026-05-25" in out1["14"][0]["id"]
 
-    def test_blocks_are_sorted_clean_before_maint_at_same_time(self):
+    def test_clean_and_maint_at_same_time_merge_to_one_service_window(self):
         rows = {"14": [
             _row("maint", "semanal", "L"),
             _row("clean", "semanal", "L"),
         ]}
         out = project_service_blocks(rows, anchor=date(2026, 5, 24), horizon_days=7)
-        same_start = [b for b in out["14"] if b["start"] == out["14"][0]["start"]]
-        assert same_start[0]["kind"] == "clean"
+        assert len(out["14"]) == 1
+        assert out["14"][0]["kind"] == "maint"
+        assert out["14"][0]["label"] == "Clean + maint."
+        assert out["14"][0]["w"] == 8.0
 
     def test_blocks_carry_locked_and_lock_reason(self):
         rows = {"14": [_row("clean", "semanal", "L")]}

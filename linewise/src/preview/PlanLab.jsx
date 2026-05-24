@@ -1407,13 +1407,10 @@ function planUnitsToHours(value, timeUnit) {
 }
 
 function buildOptions(data) {
-  /* Resolve the four card slots to *distinct* recommendations. The
-     ranker often picks the same line as the winner on multiple axes
-     (when one line dominates), so we pick the highest-ranked rec on
-     each axis that hasn't already been used. The "balanced" slot gets
-     the remaining rec when there is one, else falls back to a
-     middle-of-the-pack pick. This guarantees four meaningfully
-     different cards instead of four copies of the same numbers. */
+  /* Resolve the four card slots. The ranker often picks the same line
+     as the winner on multiple axes when one line dominates. Keep the
+     time card pinned to the true time winner, then pick distinct
+     recommendations for the remaining cards when possible. */
   const oeeOrder = data.objectives?.oee?.order ?? [];
   const timeOrder = data.objectives?.time?.order ?? [];
   const disOrder = data.objectives?.dis?.order ?? [];
@@ -1425,9 +1422,8 @@ function buildOptions(data) {
     return order[0];
   };
   const oeeKey = oeeOrder[0];
-  const used = new Set([oeeKey]);
-  const timeKey = pickFirstDistinct(timeOrder, used);
-  used.add(timeKey);
+  const timeKey = timeOrder[0] ?? oeeKey;
+  const used = new Set([oeeKey, timeKey]);
   const disKey = pickFirstDistinct(disOrder, used);
   used.add(disKey);
   // Balanced slot — take the leftover rec, or the median rec on the

@@ -68,20 +68,12 @@ def _validate_segment(problems: list[str], segment: Any, path: str) -> None:
         _fail(problems, f"{path} must be an object")
         return
 
-    if not segment.get("of"):
-        _fail(problems, f"{path} missing 'of'")
-
     start = segment.get("start")
     width = segment.get("w")
     if not _is_number(start) or float(start) < 0:
         _fail(problems, f"{path}.start must be >= 0")
     if not _is_number(width) or float(width) <= 0:
         _fail(problems, f"{path}.w must be > 0")
-
-    if "oee" in segment:
-        oee = segment.get("oee")
-        if not _is_number(oee) or not (0 <= float(oee) <= 1):
-            _fail(problems, f"{path}.oee must be between 0 and 1")
 
     kind = segment.get("kind")
     if kind in NON_PRODUCTION_KINDS:
@@ -90,6 +82,14 @@ def _validate_segment(problems: list[str], segment: Any, path: str) -> None:
         if "vol" in segment:
             _fail(problems, f"{path} is {kind!r} but includes volume")
         return
+
+    if not segment.get("of"):
+        _fail(problems, f"{path} missing 'of'")
+
+    if "oee" in segment:
+        oee = segment.get("oee")
+        if not _is_number(oee) or not (0 <= float(oee) <= 1):
+            _fail(problems, f"{path}.oee must be between 0 and 1")
 
     for key in ("sku", "vol"):
         if key not in segment:

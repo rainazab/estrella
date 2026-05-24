@@ -46,16 +46,16 @@ export function buildOptimizationContext(data, optionId = 'oee', recKeyOverride 
 }
 
 function buildOptimizationOptions(data) {
-  /* Distinct-pick so each card surfaces a different line even when
-     one line dominates every axis. Same resolution rule as PlanLab. */
+  /* Keep the time card pinned to the true time winner; the remaining
+     cards pick distinct recommendations when possible. Same resolution
+     rule as PlanLab. */
   const oeeOrder = data.objectives?.oee?.order ?? [];
   const timeOrder = data.objectives?.time?.order ?? [];
   const disOrder = data.objectives?.dis?.order ?? [];
   const pickDistinct = (order, exclude) => order.find((k) => !exclude.has(k)) ?? order[0];
   const oeeKey = oeeOrder[0];
-  const used = new Set([oeeKey]);
-  const timeKey = pickDistinct(timeOrder, used);
-  used.add(timeKey);
+  const timeKey = timeOrder[0] ?? oeeKey;
+  const used = new Set([oeeKey, timeKey]);
   const disKey = pickDistinct(disOrder, used);
   used.add(disKey);
   const recKeys = Object.keys(data.recommendations ?? {});

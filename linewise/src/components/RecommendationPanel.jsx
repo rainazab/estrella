@@ -306,17 +306,16 @@ function WhyRecommendationDrawer({
 }
 
 function buildImpactOptions(data) {
-  /* Force the four impact options to point at distinct recommendations
-     so they don't all collapse to the same line when one line wins
-     every axis. Mirrors PlanLab's buildPlanLabOptions resolution. */
+  /* Keep the time card pinned to the true time winner; the remaining
+     cards pick distinct recommendations when possible. Mirrors
+     PlanLab's resolution. */
   const oeeOrder = data.objectives?.oee?.order ?? [];
   const timeOrder = data.objectives?.time?.order ?? [];
   const disOrder = data.objectives?.dis?.order ?? [];
   const pickDistinct = (order, exclude) => order.find((k) => !exclude.has(k)) ?? order[0];
   const oeeKey = oeeOrder[0];
-  const used = new Set([oeeKey]);
-  const timeKey = pickDistinct(timeOrder, used);
-  used.add(timeKey);
+  const timeKey = timeOrder[0] ?? oeeKey;
+  const used = new Set([oeeKey, timeKey]);
   const disKey = pickDistinct(disOrder, used);
   used.add(disKey);
   const recKeys = Object.keys(data.recommendations ?? {});

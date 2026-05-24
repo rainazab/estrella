@@ -248,6 +248,42 @@ def _dedupe_by_kind(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return list(by_kind.values())
 
 
+def _merge_simultaneous_service_events(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Collapse clean+maint events that land on the same line/date.
+
+    Tabla CF can put weekly cleaning and fortnightly maintenance on the
+    same weekday. For one packaging line that is one locked service window,
+    not two independent 8h blocks drawn back-to-back in the Gantt.
+    """
+    grouped: Dict[Tuple[str, float], List[Dict[str, Any]]] = {}
+    for event in events:
+        grouped.setdefault((str(event.get("line") or ""), float(event.get("start") or 0.0)), []).append(event)
+
+    merged: List[Dict[str, Any]] = []
+    for (_line, _start), group in grouped.items():
+        if len(group) == 1:
+            merged.append(group[0])
+            continue
+        kinds = {str(item.get("kind") or "") for item in group}
+        if not ({"clean", "maint"} <= kinds):
+            merged.extend(group)
+            continue
+
+        primary = next((item for item in group if item.get("kind") == "maint"), group[0])
+        duration = max(float(item.get("durationHours") or item.get("w") or 0.0) for item in group)
+        merged.append({
+            **primary,
+            "id": "+".join(str(item.get("id") or "") for item in group if item.get("id")),
+            "kind": "maint",
+            "label": "Clean + maint.",
+            "w": duration,
+            "durationHours": duration,
+            "includedKinds": sorted(kinds),
+            "lockReason": "Cleaning and maintenance share this Tabla CF service window",
+        })
+    return sorted(merged, key=lambda e: (e["start"], 0 if e["kind"] == "clean" else 1))
+
+
 def project_service_blocks(
     cadence_rows: Dict[str, List[Dict[str, Any]]],
     anchor: date,
@@ -297,8 +333,7 @@ def project_service_blocks(
                     "lockReason": f"{cadence.title()} {kind} ({row.get('shiftPattern')}) from Tabla CF Prat 2026",
                     "source": row.get("source") or "Tabla CF Prat 2026 · Tiempos adicionales",
                 })
-        events.sort(key=lambda e: (e["start"], 0 if e["kind"] == "clean" else 1))
-        out[str(line)] = events
+        out[str(line)] = _merge_simultaneous_service_events(events)
     return out
 
 
