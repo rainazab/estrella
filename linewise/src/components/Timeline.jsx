@@ -877,20 +877,7 @@ function Lane({ lineKey, centre, baseline, formats = [], executed, planned, zoom
               >Resume</button>
             )}
           </div>
-        ) : (() => {
-          const stop = nextStop(planned, timeUnit);
-          if (!stop) return null;
-          return (
-            <div className={`tl-next-stop tl-next-stop-${stop.kind}`}>
-              <span className="ns-h">Next stop</span>
-              <div className="ns-row">
-                <span className="ns-ic">{stop.kind === 'clean' ? '⚙' : '🔧'}</span>
-                <span className="ns-lbl">{stop.kind === 'clean' ? 'Clean' : 'Maint'}</span>
-              </div>
-              <span className="ns-when">{fmtCountdown(stop.hoursFromNow)}</span>
-            </div>
-          );
-        })()}
+        ) : null}
       </div>
       <div className="tl-lane-body" ref={bodyRef} onScroll={handleScroll}>
         {leadPadDays > 0 && (

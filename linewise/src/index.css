@@ -1870,6 +1870,26 @@ table.ana .of { font-weight: 600; }
 .tc-mid  { border-left-color: var(--mid-line);  background: linear-gradient(180deg, var(--mid-bg)  0%, #fff 40%); }
 .tc-bad  { border-left-color: var(--bad-line);  background: linear-gradient(180deg, var(--bad-bg)  0%, #fff 40%); }
 
+/* Crisp tone-colored top + bottom stripes on every toned card — gives
+   the gradient a hard edge at top and balances the previously plain
+   bottom. Pseudo-elements sit above .tc's overflow:hidden so they get
+   clipped cleanly by the border-radius. */
+.tc-good::before, .tc-good::after,
+.tc-mid::before,  .tc-mid::after,
+.tc-bad::before,  .tc-bad::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0;
+  height: 3px;
+  pointer-events: none;
+  z-index: 1;
+}
+.tc-good::before, .tc-mid::before, .tc-bad::before { top: 0; }
+.tc-good::after,  .tc-mid::after,  .tc-bad::after  { bottom: 0; }
+.tc-good::before, .tc-good::after { background: var(--good-line); }
+.tc-mid::before,  .tc-mid::after  { background: var(--mid-line); }
+.tc-bad::before,  .tc-bad::after  { background: var(--bad-line); }
+
 .tc-selected { box-shadow: 0 0 0 2px var(--brand-2), var(--shadow); border-color: var(--brand-2); }
 .tc-focused { box-shadow: 0 0 0 3px rgba(47, 105, 78, 0.26), var(--shadow); border-color: var(--brand-2); }
 /* executed = the run already happened. We want it readable but obviously
