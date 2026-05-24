@@ -13,6 +13,7 @@ Endpoints (matching docs/API_CONTRACT.md, contract v2.4):
   POST /plan/stoppage-replan       — shift downstream runs by stoppage duration
   POST /plan/move/preview          — dry-run a manual move (ripple + collisions)
   POST /plan/move                  — commit a manual move
+  POST /plan/resequence            — global re-sequence to minimise changeover
 
 The server reads `data/output/data.json` on every /plan request — the batch
 exporter is still the source of truth. If the file is missing, the server
@@ -43,6 +44,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from . import config
+from . import resequencer as resequencer_mod
 from . import signals as signals_mod
 from .frontend_payload import (
     ISSUE_CATEGORIES,
@@ -341,6 +343,35 @@ def create_app(data_path: Optional[Path] = None, *, allow_cors: bool = True) -> 
             "plan": new_plan,
             "shiftedCount": len(lane),
             "shiftedHours": hours,
+        }
+
+    @app.post("/plan/resequence")
+    def resequence_plan(request: Request) -> dict:
+        """Re-order the forward plan across all lines to minimise total
+        changeover cost (Σ 1 - mean_oee per transition). Pure reorder —
+        OFs stay on their current line, service blocks stay at their
+        cadence times. Persists as a plan_override so the next /plan
+        returns the new schedule."""
+        path: Path = request.app.state.data_path
+        canonical, _etag = _load_canonical(path)
+        base_plan = canonical.get("basePlan") or {}
+        executed = canonical.get("executedHistory") or {}
+        stats = ((canonical.get("metadata") or {}).get("transition_type_stats")) or {}
+
+        result = resequencer_mod.resequence(base_plan, executed, stats)
+        request.app.state.plan_override = result["plan"]
+
+        new_payload, _ = _build_plan_response(request.app)
+        return {
+            "ok": True,
+            "plan": new_payload,
+            "summary": {
+                "totalCostBefore": result["totalCostBefore"],
+                "totalCostAfter": result["totalCostAfter"],
+                "totalCostDelta": result["totalCostDelta"],
+                "totalReordered": result["totalReordered"],
+                "byLine": result["byLine"],
+            },
         }
 
     @app.post("/plan/move/preview")

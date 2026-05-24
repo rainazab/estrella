@@ -78,3 +78,7 @@ export function postMovePreview({ runId, fromLine, toLine, slotIndex }) {
 export function postMove({ runId, fromLine, toLine, slotIndex }) {
   return postJSON('/plan/move', { runId, fromLine, toLine, slotIndex });
 }
+
+export function postResequence() {
+  return postJSON('/plan/resequence');
+}

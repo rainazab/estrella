@@ -6,6 +6,7 @@ import {
   postStoppage,
   resumeStoppage as apiResumeStoppage,
   postStoppageReplan,
+  postResequence,
 } from './api/client.js';
 import { useTimelineMoveFlow } from './hooks/useTimelineMoveFlow.js';
 import TopBar from './components/TopBar.jsx';
@@ -43,12 +44,12 @@ function App() {
 
   if (loading) return <BootShell><LoadingState /></BootShell>;
   if (error)   return <BootShell><ErrorState error={error} onRetry={reload} /></BootShell>;
-  return <Workspace data={data} />;
+  return <Workspace data={data} reload={reload} />;
 }
 
 /* Workspace — only mounts once data has arrived, so every child can
    safely assume `data` is the full plan contract. */
-function Workspace({ data }) {
+function Workspace({ data, reload }) {
   const demo = new URLSearchParams(location.search).get('demo');
   const demoRecs = demo === 'recs' || demo === 'simulate' || demo === 'recommend';
   const demoCalc = demo === 'calculating';
@@ -101,6 +102,37 @@ function Workspace({ data }) {
 
   function reviewSignal() {
     worldSignalsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function resequenceWeek() {
+    /* Fire the global re-sequencer. The endpoint persists the new
+       basePlan as a plan_override; we surface the savings as a toast
+       and pull the new schedule via reload(). Falls back to a "no
+       backend" toast if the API isn't reachable. */
+    postResequence()
+      .then((resp) => {
+        const s = resp?.summary ?? {};
+        const delta = Number(s.totalCostDelta ?? 0);
+        const reordered = Number(s.totalReordered ?? 0);
+        setToast({
+          id: `rsq-${Date.now()}`,
+          title: reordered > 0 ? 'Week resequenced' : 'Already optimal',
+          detail: reordered > 0
+            ? `Saved ${delta.toFixed(2)} changeover cost · ${reordered} runs moved`
+            : 'No moves improved the total — schedule kept as-is',
+          tone: reordered > 0 ? 'good' : 'neutral',
+        });
+        reload?.();
+      })
+      .catch((err) => {
+        if (import.meta.env.DEV) console.warn('[resequence] failed', err);
+        setToast({
+          id: `rsq-err-${Date.now()}`,
+          title: 'Resequence unavailable',
+          detail: 'Backend not reachable — start ./scripts/run_server.sh',
+          tone: 'warn',
+        });
+      });
   }
 
   /* surface the urgent-orders inbox once on boot */
@@ -377,6 +409,7 @@ function Workspace({ data }) {
                     onDismissSignal={dismissSignal}
                     onReviewSignal={reviewSignal}
                     worldSignalsRef={worldSignalsRef}
+                    onResequence={resequenceWeek}
                   />
                 )}
                 {view === 'calculating' && <CalculatingStage />}
@@ -556,6 +589,7 @@ function DefaultStage({
   signalsData = null, onRefreshSignals = null,
   dismissedSignals = new Set(), onDismissSignal = () => {}, onReviewSignal = () => {},
   worldSignalsRef = null,
+  onResequence = null,
 }) {
   const stoppedLines = stoppages.map((s) => s.line);
   return (
@@ -582,6 +616,16 @@ function DefaultStage({
           <div className="stage-sub">Executed history left of today · forward plan right</div>
         </div>
         <div className="stage-head-right">
+          {onResequence && (
+            <button
+              type="button"
+              className="resequence-btn"
+              onClick={onResequence}
+              title="Reorder the forward queue to minimise total changeover cost"
+            >
+              ↻ Re-sequence week
+            </button>
+          )}
           <ZoomCtl zoom={zoom} onZoom={onZoom} />
         </div>
       </div>
