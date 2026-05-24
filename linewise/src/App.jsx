@@ -16,6 +16,9 @@ import IssueModal from './components/IssueModal.jsx';
 import StoppageModal from './components/StoppageModal.jsx';
 import ReplanBanner from './components/ReplanBanner.jsx';
 import LogToast from './components/LogToast.jsx';
+import SettingsDrawer from './components/SettingsDrawer.jsx';
+import YearCompare from './components/YearCompare.jsx';
+import { useSettings } from './hooks/useSettings.js';
 import { computeStoppageReplan } from './lib/stoppagePlan.js';
 import { deriveFormat } from './components/TimelineCard.jsx';
 
@@ -71,6 +74,8 @@ function Workspace({ data }) {
   const [stoppages, setStoppages] = useState([]);
   const [replanPrompt, setReplanPrompt] = useState(null);
   const [toast, setToast] = useState(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settings, setSettings] = useSettings();
   const lastSyncRef = useRef(Date.now());
 
   /* surface the urgent-orders inbox once on boot */
@@ -262,7 +267,7 @@ function Workspace({ data }) {
           inboxOpen={inboxOpen}
           onBellClick={() => setInboxOpen((o) => !o)}
           onDraftPlan={() => { setInboxOpen(false); setDraftOpen(true); }}
-          onSettings={() => { /* TODO: open settings */ }}
+          onSettings={() => setSettingsOpen(true)}
           onLogout={() => { /* TODO: wire to auth */ }}
         />
 
@@ -308,6 +313,15 @@ function Workspace({ data }) {
               onClose={() => setInboxOpen(false)}
               onSelectUrgent={selectUrgent}
               onCreateOrder={createManualOrder}
+            />
+          )}
+          {settingsOpen && (
+            <SettingsDrawer
+              key="settings"
+              settings={settings}
+              lineRules={data.lineRules}
+              onChange={setSettings}
+              onClose={() => setSettingsOpen(false)}
             />
           )}
           {draftOpen && (
@@ -464,6 +478,7 @@ function DefaultStage({
   return (
     <>
       <KPIStrip data={data} stoppedLines={stoppedLines} />
+      <YearCompare data={data} />
       <ReplanBanner
         prompt={replanPrompt}
         onReplan={onReplan}

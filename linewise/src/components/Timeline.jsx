@@ -157,6 +157,7 @@ export default function Timeline({
             lineKey={lineKey}
             centre={data.lineCentre?.[lineKey] ?? 'CF Prat'}
             baseline={data.lineBaseline?.[lineKey]}
+            formats={data.lineFormats?.[lineKey] ?? laneFormatsFromRules(data.lineRules?.[lineKey])}
             executed={data.executedHistory?.[lineKey] ?? []}
             planned={planned}
             zoom={zoom}
@@ -314,6 +315,16 @@ function RecommendationLane({ data, lineKey, rec, zoom, showNaive, sync, primary
         <span className="ln">L{lineKey}</span>
         <span className="ce">{data.lineCentre?.[lineKey] ?? 'CF Prat'}</span>
         {baseline != null && <span className="bl">Baseline {baseline.toFixed(2)}</span>}
+        {(() => {
+          const fmts = data.lineFormats?.[lineKey] ?? laneFormatsFromRules(data.lineRules?.[lineKey]);
+          return fmts.length > 0 ? (
+            <span className="tl-lane-formats" aria-label="Compatible can formats">
+              {fmts.map((fmt) => (
+                <span key={fmt} className="tl-lane-fmt-chip">{fmt}</span>
+              ))}
+            </span>
+          ) : null;
+        })()}
         {rec.line.endsWith(lineKey) && (
           <div className="tl-next-stop tl-rec-badge">
             <span className="ns-h">LineWise</span>
@@ -470,7 +481,12 @@ function normalizeRun(seg) {
   };
 }
 
-function Lane({ lineKey, centre, baseline, executed, planned, zoom, sync, primary = false, leadPadDays = 0, planHorizonDays = 1, todayX = 0, pxPerDay, onRunClick = null, moving = null, onMoveDrop = null, stoppage = null, issues = [], onResumeLine = null }) {
+function laneFormatsFromRules(rule) {
+  if (!rule?.formats) return [];
+  return rule.formats.map((fmt) => fmt.label).filter(Boolean);
+}
+
+function Lane({ lineKey, centre, baseline, formats = [], executed, planned, zoom, sync, primary = false, leadPadDays = 0, planHorizonDays = 1, todayX = 0, pxPerDay, onRunClick = null, moving = null, onMoveDrop = null, stoppage = null, issues = [], onResumeLine = null }) {
   /* Moving-mode derived state — null when no move is in flight. We
      compute compatibility and reason once per lane so the drop-zone
      children share the same verdict. */
@@ -592,6 +608,13 @@ function Lane({ lineKey, centre, baseline, executed, planned, zoom, sync, primar
                 Runs above the baseline are favourable; below it are flagged for review.
               </p>
             </InfoPopover>
+          </span>
+        )}
+        {formats.length > 0 && (
+          <span className="tl-lane-formats" aria-label="Compatible can formats">
+            {formats.map((fmt) => (
+              <span key={fmt} className="tl-lane-fmt-chip">{fmt}</span>
+            ))}
           </span>
         )}
         <IssueBadge issues={issues} lineKey={lineKey} />
