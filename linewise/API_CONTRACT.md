@@ -69,6 +69,15 @@ Top-level keys (all required unless noted):
 | `recommendations` | `{ [lineId]: Recommendation }` | One rec card per line option |
 | `objectives` | `Objectives` | Ranked options by OEE / Time / Disruption |
 | `manualSlots` | `{ [slotKey]: ManualSlot }` | UI hint cards for hand-placed slots |
+| `lineFormats` *(planned)* | `{ [lineId]: string[] }` | Can formats each line supports — see `LineFormats` below |
+| `issues` *(planned)* | `Issue[]` | Active line-issue log surfaced on lane badges — see `Issue` below |
+| `stoppages` *(planned)* | `Stoppage[]` | Currently active line stoppages — see `Stoppage` below |
+
+> **Status of "planned" fields**: `issues` and `stoppages` are currently
+> held in frontend state only (no API round-trip). The contract entries
+> below describe the shape we want when the backend takes ownership of
+> persistence. Until then the frontend treats them as empty arrays if
+> absent.
 
 ### `Order`
 ```ts
@@ -156,6 +165,12 @@ Production run:
   start: number;         // hours
   w: number;             // width in hours
   oee: number;           // 0–1
+  due?: string;          // ISO8601 committed delivery time. Optional but
+                         // strongly recommended for forward runs — the
+                         // move-to-another-line flow uses this to flag
+                         // per-run delivery risk after a manual override.
+                         // Without it we fall back to a service-block
+                         // collision check (see below).
 }
 ```
 
@@ -165,8 +180,23 @@ Non-production block:
   kind: "clean" | "maint";
   start: number;
   w: number;
+  locked?: boolean;      // true = externally committed (contractor visit,
+                         // CIP cycle locked by quality, etc.). Pushing a
+                         // locked block surfaces a stronger warning in
+                         // the move-impact panel ("contractor-locked CIP
+                         // on Fri 29 cannot be rescheduled"). Default false
+                         // means "internal, soft-locked" — still warned
+                         // about, but with milder copy.
+  lockReason?: string;   // human-readable explanation surfaced in the
+                         // warning copy. Free text.
 }
 ```
+
+> **Important for `basePlan`**: service blocks (`kind: clean | maint`)
+> must appear in the forward `basePlan` lane arrays, not only in
+> `executedHistory`. The move flow's delivery-risk check fires when a
+> manual move pushes a forward service block — if these blocks aren't
+> in the contract output, the warning has nothing to fire against.
 
 ### `Recommendation`
 One per candidate line. The `plan` field is the **full three-line plan
@@ -251,6 +281,30 @@ of `lineId`s sorted best→worst on that axis.
 }
 ```
 
+### `LineFormats` (new)
+
+The set of can formats each line is capable of running. Drives the
+move-to-another-line flow's compatibility overlay (incompatible lanes
+get the red-striped "33cl only — can't run 50cl" treatment) and would
+also let the recommendation engine prune impossible insertions before
+ranking.
+
+Today this is **hardcoded in the frontend** at [`src/lib/movePlan.js`](src/lib/movePlan.js):
+```js
+LINE_FORMATS = { "14": ["50cl","33cl"], "17": ["33cl"], "19": ["50cl","33cl","44cl"] }
+```
+
+Server-side shape we want:
+```ts
+{
+  lineFormats: { [lineKey: string]: string[] };  // e.g. {"14":["50cl","33cl"]}
+}
+```
+
+Add this to the `/plan` payload and we delete the hardcode in one PR.
+Putting it on the server also means format rules can change (new line
+tooling, certification update) without a frontend deploy.
+
 ### `ManualSlot`
 Keyed by an opaque slot id (see `data/plan.json` for examples like
 `"17-after-AM05LTST"`, `"14-end"`).
@@ -263,6 +317,63 @@ Keyed by an opaque slot id (see `data/plan.json` for examples like
   banner: string;                          // operator-facing sentence
 }
 ```
+
+### `Issue` (new)
+
+Append-only audit log of line-side issues Maria reports from the floor
+FAB (mechanical fault, quality hold, etc.). Issues do **not** change
+the plan — they're context that explains later OEE dips. Surfaced as
+the small `!` badge in the lane head ([`IssueBadge.jsx`](src/components/IssueBadge.jsx))
+and submitted via [`IssueModal.jsx`](src/components/IssueModal.jsx).
+
+```ts
+{
+  id: string;                              // server-assigned (e.g. "iss-1716...")
+  line: "14" | "17" | "19";                // line key
+  category: "mech" | "elec" | "quality" | "material";
+  severity: "warn" | "critical";
+  note: string;                            // free text, may be empty
+  ts: number;                              // epoch ms when reported
+}
+```
+
+The frontend renders the six most recent per line in a popover, with
+older issues collapsed under a `+N older` footer. No deletion flow yet
+— if you add one, expose it as `DELETE /issues/{id}`.
+
+### `Stoppage` (new)
+
+Currently-active line stoppage. Drives:
+
+- The `KPIStrip` "Lines running" tile (`running/total` plus a `bad`
+  tone when any line is stopped — see [`KPIStrip.jsx`](src/components/KPIStrip.jsx)).
+- The red lane badge in the [`Timeline`](src/components/Timeline.jsx)
+  with a `Resume` action.
+- The `ReplanBanner` decision prompt right after logging.
+
+Submitted via [`StoppageModal.jsx`](src/components/StoppageModal.jsx).
+Today the frontend keeps at most one active entry per line (a new
+report for the same line replaces the prior one); the backend should
+enforce the same invariant.
+
+```ts
+{
+  id: string;                              // server-assigned
+  line: "14" | "17" | "19";
+  reason: "breakdown" | "no-material" | "no-operator" | "quality-hold" | "other";
+  startedAt: number;                       // epoch ms of stoppage start
+  startAgoMin: 0 | 5 | 10 | 15;            // chip selection retained for audit
+  duration: "15m" | "30m" | "1h" | "2h+" | "unknown";
+                                           // expected, not actual — drives the
+                                           // replan shift amount (see
+                                           // src/lib/stoppagePlan.js)
+  ts: number;                              // epoch ms when reported
+}
+```
+
+Resume clears the entry server-side (see `POST /stoppages/{id}/resume`
+below). Any plan changes already committed via a replan stay in place
+— resuming a line does **not** revert the schedule.
 
 ---
 
@@ -281,6 +392,152 @@ Keyed by an opaque slot id (see `data/plan.json` for examples like
 5. **HTML in `evidence.reason`**: the field today contains `<b>` tags
    rendered by the UI. If backend prefers structured text we can move
    the bolding into the frontend.
+6. **Move-to-another-line writes**: the planner can manually relocate
+   a forward run (drag-drop on a compatible lane → calculating flash
+   → impact panel → Confirm/Discard). Today this only mutates frontend
+   state. The eventual write endpoint should accept:
+   ```ts
+   POST /plan/move
+   { runId: string, fromLine: string, toLine: string, slotIndex: number }
+   ```
+   and return the recomputed `Plan` payload so the UI re-renders against
+   the server's view (rather than trusting its local preview).
+   Open: do we want a separate `POST /plan/move/preview` that returns
+   just the ripple summary without committing? It would let us replace
+   the frontend's `computeMovePreview` heuristic with the server's
+   actual planner — at the cost of one extra round-trip per drop. If we
+   build it, return the `MovePreview` shape described below so the
+   impact panel can render unchanged.
+7. **Forward service blocks**: see the note under `Band` — `basePlan`
+   should include `clean` / `maint` entries with their forward `start`,
+   not only `executedHistory`. The move flow's delivery-risk check
+   depends on this.
+
+---
+
+## Write endpoints (planned)
+
+All three flows below today mutate **frontend state only** — the
+backend can ignore them while wiring `/plan`. Once persistence lands,
+match these shapes and the frontend swaps over with the same
+`VITE_API_BASE` switch as the read path. Each endpoint should return
+the new server-truth so the UI can re-render without a follow-up
+`GET /plan`.
+
+### `POST /issues`
+Log a line-side issue (no plan mutation).
+
+**Request**
+```ts
+{
+  line: "14" | "17" | "19";
+  category: "mech" | "elec" | "quality" | "material";
+  severity: "warn" | "critical";
+  note: string;                            // may be empty string
+  ts: number;                              // epoch ms (client clock)
+}
+```
+
+**200**
+```ts
+{ issue: Issue }                           // server-assigned id, server ts
+```
+
+### `POST /stoppages`
+Log a line stoppage. Server enforces one-active-per-line (a new entry
+for the same `line` supersedes the prior one). Does **not** replan on
+its own — the planner is prompted (ReplanBanner) and explicitly opts
+in via `POST /plan/stoppage-replan`.
+
+**Request**
+```ts
+{
+  line: "14" | "17" | "19";
+  reason: "breakdown" | "no-material" | "no-operator" | "quality-hold" | "other";
+  startedAt: number;                       // epoch ms
+  startAgoMin: 0 | 5 | 10 | 15;
+  duration: "15m" | "30m" | "1h" | "2h+" | "unknown";
+  ts: number;                              // epoch ms (client clock)
+}
+```
+
+**200**
+```ts
+{ stoppage: Stoppage; stoppages: Stoppage[] }   // full active set after insert
+```
+
+### `POST /stoppages/{id}/resume`
+Mark a stopped line resumed. Removes the stoppage from the active set;
+leaves any committed replan changes in place.
+
+**200**
+```ts
+{ stoppages: Stoppage[] }                  // remaining active set
+```
+
+### `POST /plan/stoppage-replan`
+Commit the "shift downstream runs forward by the expected stoppage
+duration" plan change. Today implemented client-side in
+[`src/lib/stoppagePlan.js`](src/lib/stoppagePlan.js) — see
+`computeStoppageReplan`. Service blocks (`clean`/`maint`) shift along
+with production runs in the hackathon implementation; in production
+they'd be time-locked and the backend would negotiate around them.
+
+**Request**
+```ts
+{
+  stoppageId: string;
+  line: "14" | "17" | "19";
+  durationKey: "15m" | "30m" | "1h" | "2h+" | "unknown";
+}
+```
+
+**200**
+```ts
+{
+  plan: Plan;                              // recomputed full payload
+  shiftedCount: number;                    // # runs (+ service blocks) shifted
+  shiftedHours: number;                    // amount each was pushed
+}
+```
+
+### `POST /plan/move` and `POST /plan/move/preview`
+See open question (6) above for the move-flow endpoints. The preview
+endpoint should return:
+
+```ts
+// MovePreview
+{
+  plan: Plan;                              // hypothetical plan if confirmed
+  ripple: {
+    runId: string;                         // moved order code
+    fromLine: string;
+    toLine: string;
+    destPrev: string | null;               // neighbour OF or null
+    destNext: string | null;
+    pushedCount: number;                   // forward runs shifted on destination
+    formatSwitchesOld: number;
+    formatSwitchesNew: number;
+    collisions: Collision[];               // delivery-risk signal — see below
+  };
+}
+
+// Collision — one entry per service window that the move pushes.
+// Drives the warning bar and "Override & confirm" red button in
+// MoveImpactPanel.jsx. Empty array means the move is safe to commit.
+{
+  of: string;                              // human label, e.g. "Scheduled cleaning"
+  kind: "clean" | "maint";
+  byHours: number;                         // how far the service block is pushed
+}
+```
+
+The frontend collision computation lives in `computeMovePreview` in
+[`src/lib/movePlan.js`](src/lib/movePlan.js) and only flags pushed
+service blocks today. If the backend has per-run due dates (see the
+optional `Band.due` field), prefer flagging concrete delivery misses
+instead and return both — `MoveImpactPanel` will render whichever is
+non-empty.
 
 ---
 
