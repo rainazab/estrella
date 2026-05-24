@@ -1,0 +1,675 @@
+/* ============================================================================
+   Linewise — Theme (single source of truth)
+   Every color, font, radius, shadow, and motion token used across the app:
+     index.css  · components/BrewLoader.css  · preview/plan-lab.css  · presentation/deck.css
+
+   Layout:
+     §1  PALETTE          raw colors, grouped by hue ramp
+     §2  SURFACES         app / cards / panels / popovers / modals / scrims
+     §3  INK              text colors (on-surface and on-brand)
+     §4  BORDERS          hairlines / focus rings
+     §5  BRAND & ACCENT   primary green + amber accents
+     §6  STATUS           good / mid / bad triads (bg / text / line / icon)
+     §7  BUTTONS          default / primary / ghost / back / FAB / bell
+     §8  FORMS            input + select (bg, border, focus, placeholder)
+     §9  PILLS & CHIPS    pills, chips, status pills, badges
+     §10 SIDEBAR          on-brand dark surfaces
+     §11 LANE & TIMELINE  lane head, timeline run states
+     §12 LOADER           BrewLoader palette
+     §13 DECK             presentation slide palette
+     §14 PLANLAB          plan-lab specific colors
+     §15 OVERLAYS         alpha scrims used in shadows/banners
+     §16 TYPOGRAPHY       families, size scale, weights, line-heights, tracking
+     §17 RADII
+     §18 SHADOWS
+     §19 MOTION
+     §20 LAYERING         z-index
+   ============================================================================ */
+
+:root {
+  /* ──────────────────────────────────────────────────────────────────────────
+     §1  PALETTE — raw colors grouped by hue
+     ────────────────────────────────────────────────────────────────────────── */
+
+  /* Paper / neutrals (warm) */
+  --paper-50:  #ffffff;
+  --paper-75:  #f7f6f3;   /* app bg */
+  --paper-100: #f6f5f1;
+  --paper-125: #f3f2ec;
+  --paper-150: #f1f0ec;   /* surface-2 */
+  --paper-175: #e7e6e0;   /* surface-3 */
+  --paper-200: #e6e3d8;
+  --paper-300: #e0dfd8;   /* line */
+  --paper-400: #d8d4c8;
+  --paper-500: #c8c6c0;
+  --paper-600: #c7c6bd;   /* line-2 */
+  --paper-700: #918f86;   /* ink-3 */
+  --paper-800: #7a7969;
+  --paper-850: #5b5a53;   /* ink-2 */
+  --paper-900: #4b4a3f;
+  --paper-950: #23231f;   /* ink */
+  --paper-1000:#1f1e16;
+  --paper-1050:#1a1a1a;
+
+  /* Greens (brand) */
+  --green-50:  #f2f7ef;
+  --green-100: #edf4ea;   /* lane head bg */
+  --green-150: #eef4e3;   /* good-bg */
+  --green-200: #e7eee8;
+  --green-300: #dfead0;
+  --green-400: #c8e6a1;
+  --green-450: #c8d7cb;   /* lane head border */
+  --green-500: #b3c98b;
+  --green-550: #9bc4a8;
+  --green-600: #94b89b;
+  --green-700: #8fa869;
+  --green-750: #6d8f4a;   /* good-line */
+  --green-800: #4a7864;   /* brand inner ring */
+  --green-825: #3b6d11;   /* good */
+  --green-850: #2e6f3a;
+  --green-870: #2c5410;
+  --green-900: #2f5d49;   /* brand-2 */
+  --green-925: #2c543f;   /* nav active on brand */
+  --green-950: #234538;   /* nav hover on brand */
+  --green-975: #1d3f29;
+  --green-1000:#1b3a2e;   /* brand */
+  --green-on:  #14271f;   /* dividers on brand */
+
+  /* Greens — on-brand text */
+  --green-tx-100:#f4f3ee;
+  --green-tx-200:#f1f0ec;
+  --green-tx-300:#d9e3dc;
+  --green-tx-500:#9fb3a8;
+  --green-tx-700:#6a877b;
+
+  /* Ambers / oranges (accent) */
+  --amber-100: #fff6eb;
+  --amber-200: #fff7f3;
+  --amber-300: #f8e2c5;
+  --amber-350: #f3e6cf;
+  --amber-400: #f0d8a0;
+  --amber-450: #efe4c8;
+  --amber-500: #e8d6ab;
+  --amber-550: #f0e3c2;
+  --amber-600: #d9bf86;
+  --amber-650: #d6c084;
+  --amber-700: #dfc579;
+  --amber-750: #f0a948;   /* loader amber-1 */
+  --amber-800: #e89b4a;
+  --amber-850: #d97a3f;
+  --amber-900: #c97a1f;   /* accent-2 */
+  --amber-925: #c87a1a;   /* loader amber-2 */
+  --amber-940: #c47a1f;   /* plan-lab tag */
+  --amber-950: #b8732b;   /* accent */
+  --amber-960: #b56e1c;
+  --amber-970: #8a4920;
+  --amber-980: #805b0e;
+  --amber-985: #7a5c1e;
+  --amber-990: #7a4a10;   /* loader amber-3 */
+  --amber-995: #6e4f0c;
+  --amber-999: #6c4a0d;
+
+  /* Avatar accent */
+  --avatar-ring: #c98a4e;
+
+  /* Reds */
+  --red-100:  #fde8ea;    /* damm-red-soft */
+  --red-150:  #fbeee8;
+  --red-200:  #fbf2dc;
+  --red-250:  #f9ebe9;
+  --red-300:  #f8e3dc;
+  --red-350:  #f7e7e6;    /* bad-bg */
+  --red-400:  #f6dccd;
+  --red-450:  #f0b8b8;
+  --red-500:  #efd6d6;
+  --red-550:  #e8b0a2;
+  --red-600:  #e2745e;    /* timeline collision */
+  --red-650:  #d49270;
+  --red-700:  #b06b6b;    /* bad-line */
+  --red-750:  #b3422f;    /* FAB stop icon */
+  --red-800:  #9d3a29;
+  --red-825:  #9a2f2f;    /* bad */
+  --red-850:  #8b3a1e;
+  --red-870:  #8a3a3a;    /* plan-lab tradeoff ink */
+  --red-880:  #842828;
+  --red-900:  #8f1f25;    /* deck challenge ink */
+  --red-925:  #7a2f17;
+  --red-950:  #7a2525;
+  --red-damm: #e30613;    /* DAMM brand red */
+  --red-damm-deep: #a3000d;
+
+  /* Mids (ochre/olive) */
+  --mid-50:   #faf2e1;
+  --mid-100:  #f7efdd;    /* mid-bg */
+  --mid-200:  #b89a52;    /* mid-line */
+  --mid-300:  #8a6410;    /* mid */
+
+  /* Steels (BrewLoader / dark hero) */
+  --steel-100: #c2c9d4;
+  --steel-200: #a8b0bd;
+  --steel-300: #8893a5;   /* steel */
+  --steel-310: #8893a0;
+  --steel-400: #6b7785;
+  --steel-450: #5b6473;
+  --steel-500: #4a5363;   /* steel-dark */
+  --steel-600: #3a4252;
+  --steel-700: #0f172a;
+  --steel-900: #0a0e1a;
+
+  /* Loader reds */
+  --red-loader-hot:    #ff5a5a;
+  --red-loader-hotter: #ff4d4d;
+  --red-loader-d1:     #8a000a;
+  --red-loader-d2:     #5a000a;
+  --red-loader-d3:     #5a3608;
+  --red-loader-d4:     #3a0008;
+  --amber-loader-glow: #ffc870;
+
+  /* Purples (analogues lab / chart) */
+  --purple-50:  #ece4f0;
+  --purple-100: #ece5d3;
+  --purple-150: #e2dbef;
+  --purple-300: #aea1ce;
+  --purple-500: #5a3e7a;
+  --purple-700: #3d2766;
+
+  /* Deck (presentation) base */
+  --deck-paper: #f5efe0;
+  --deck-ink:   #171812;
+  --deck-paper-2:#f7faf3;
+  --deck-paper-3:#ddd4bd;
+  --deck-line:  #dde3e9;
+
+  /* Pure utility */
+  --white:     #ffffff;
+  --white-alt: #fff;
+  --black:     #000000;
+  --selection: #d8e3da;
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     §2  SURFACES
+     ────────────────────────────────────────────────────────────────────────── */
+  --bg:               var(--paper-75);     /* app background */
+  --surface:          var(--paper-50);     /* card, popover, panel, modal, input */
+  --surface-2:        var(--paper-150);    /* hover / subtle alt surface, summary, chip bg */
+  --surface-3:        var(--paper-175);    /* nested alt (why-row hover) */
+  --surface-on-brand: rgba(255,255,255,0.04); /* live pill on dark sidebar */
+
+  --card-bg:          var(--surface);
+  --card-bg-hover:    var(--surface-2);
+  --card-bg-selected: #f7faf3;             /* impact-option-card.selected */
+  --card-bg-on:       var(--green-1000);   /* pl-card.on selected on brand */
+
+  --panel-bg:         var(--surface);
+  --panel-divider:    var(--paper-300);
+
+  --popover-bg:       var(--surface);
+
+  --modal-bg:         var(--surface);
+  --modal-scrim:      rgba(35,35,31,0.28); /* inbox-overlay */
+  --modal-scrim-2:    rgba(35,35,31,0.34); /* order modal */
+  --modal-scrim-3:    rgba(35,35,31,0.32); /* plan-lab drawer */
+  --modal-scrim-4:    rgba(35,35,31,0.5);  /* generic strong scrim */
+
+  --inbox-panel-bg:   var(--surface);
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     §3  INK (text)
+     ────────────────────────────────────────────────────────────────────────── */
+  --ink:        var(--paper-950);   /* primary */
+  --ink-2:      var(--paper-850);   /* secondary */
+  --ink-3:      var(--paper-700);   /* tertiary / captions */
+  --ink-deep:   var(--paper-1000);
+  --ink-mute:   var(--paper-800);   /* very-muted heading */
+
+  /* on-brand text (sidebar / FAB / pills.on / pl-card.on) */
+  --ink-on-brand:        var(--green-tx-200);  /* default text on brand */
+  --ink-on-brand-strong: var(--green-tx-100);  /* brand wordmark, active nav */
+  --ink-on-brand-mute:   var(--green-tx-300);  /* sidebar body */
+  --ink-on-brand-cap:    var(--green-tx-500);  /* sidebar caption */
+  --ink-on-brand-sect:   var(--green-tx-700);  /* sidebar section label */
+
+  /* card on selected (white text variants used in pl-card.on) */
+  --ink-on-selected:        var(--white);
+  --ink-on-selected-soft:   rgba(255,255,255,0.78);
+  --ink-on-selected-softer: rgba(255,255,255,0.65);
+  --ink-on-selected-star:   rgba(255,255,255,0.85);
+
+  --link:        var(--green-900);
+  --link-hover:  var(--green-1000);
+
+  --placeholder: var(--ink-3);
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     §4  BORDERS
+     ────────────────────────────────────────────────────────────────────────── */
+  --line:               var(--paper-300);
+  --line-2:             var(--paper-600);
+  --line-dashed:        var(--paper-300);
+  --line-on-brand:      var(--green-on);       /* divider inside sidebar */
+  --line-on-card-on:    rgba(255,255,255,0.10);/* divider inside selected card */
+  --hairline-loader:    rgba(0,0,0,0.08);
+
+  --focus-ring:         var(--green-900);
+  --focus-ring-bg:      rgba(47,93,73,0.16);   /* input focus glow */
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     §5  BRAND & ACCENT
+     ────────────────────────────────────────────────────────────────────────── */
+  --brand:         var(--green-1000);     /* primary deep green */
+  --brand-2:       var(--green-900);      /* hover / accent green */
+  --brand-ring:    var(--green-800);      /* bell-btn.on inner ring */
+  --brand-soft:    var(--green-200);      /* target-brand bg */
+
+  --accent:        var(--amber-950);      /* warm amber */
+  --accent-2:      var(--amber-900);      /* FAB warn / accent variant */
+  --accent-tag:    var(--amber-940);      /* plan-lab order tag */
+  --accent-deep:   var(--amber-960);
+  --accent-loader: var(--amber-750);      /* loader amber */
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     §6  STATUS — good / mid / bad triads
+     ────────────────────────────────────────────────────────────────────────── */
+  --good:        var(--green-825);
+  --good-bg:     var(--green-150);
+  --good-line:   var(--green-750);
+  --good-soft:   var(--green-50);
+
+  --mid:         var(--mid-300);
+  --mid-bg:      var(--mid-100);
+  --mid-line:    var(--mid-200);
+  --mid-soft:    var(--mid-50);
+
+  --bad:         var(--red-825);
+  --bad-bg:      var(--red-350);
+  --bad-line:    var(--red-700);
+  --bad-icon:    var(--red-750);
+  --bad-soft:    var(--red-250);
+  --bad-ink-2:   var(--red-870);
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     §7  BUTTONS
+     ────────────────────────────────────────────────────────────────────────── */
+  --btn-bg:           var(--surface);
+  --btn-bg-hover:     var(--surface-2);
+  --btn-bg-disabled:  var(--surface);
+  --btn-border:       var(--line-2);
+  --btn-ink:          var(--ink);
+  --btn-ghost-ink:    var(--ink-2);
+
+  --btn-primary-bg:        var(--brand);
+  --btn-primary-bg-hover:  var(--brand-2);
+  --btn-primary-ink:       var(--ink-on-brand);
+  --btn-primary-border:    var(--brand);
+
+  --btn-back-ink:       var(--ink-2);
+  --btn-back-ink-hover: var(--ink);
+
+  /* FAB */
+  --fab-bg:        var(--brand);
+  --fab-bg-hover:  var(--brand-2);
+  --fab-ink:       var(--ink-on-brand);
+  --fab-item-bg:   var(--surface);
+  --fab-item-ink:  var(--ink);
+  --fab-item-border:var(--line);
+  --fab-icon-warn: var(--amber-900);
+  --fab-icon-stop: var(--red-750);
+
+  /* Bell */
+  --bell-bg:       var(--brand);
+  --bell-bg-hover: var(--brand-2);
+  --bell-bg-on:    var(--brand-2);
+  --bell-ink:      var(--ink-on-brand);
+  --bell-ring:     var(--brand-ring);
+  --bell-badge-bg: var(--accent);
+  --bell-badge-ink:var(--white);
+  --bell-badge-ring:var(--surface);
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     §8  FORMS — input, select, textarea
+     ────────────────────────────────────────────────────────────────────────── */
+  --input-bg:           var(--surface);
+  --input-bg-focus:     var(--white);
+  --input-ink:          var(--ink);
+  --input-placeholder:  var(--ink-3);
+  --input-border:       var(--line-2);
+  --input-border-focus: var(--brand-2);
+  --input-focus-glow:   var(--focus-ring-bg);
+  --input-label-ink:    var(--ink-3);
+
+  --select-bg:          var(--surface);
+  --select-border:      var(--line-2);
+  --select-ink:         var(--ink);
+  --select-caret-ink:   var(--ink-3);
+
+  --checkbox-on-bg:     var(--brand);
+  --checkbox-on-ink:    var(--ink-on-brand);
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     §9  PILLS / CHIPS / BADGES / TAGS
+     ────────────────────────────────────────────────────────────────────────── */
+  --pill-bg:           var(--surface);
+  --pill-border:       var(--line-2);
+  --pill-ink:          var(--ink-2);
+  --pill-bg-hover:     var(--surface-2);
+  --pill-on-bg:        var(--brand);
+  --pill-on-border:    var(--brand);
+  --pill-on-ink:       var(--ink-on-brand);
+
+  --chip-bg:           var(--surface-2);
+  --chip-ink:          var(--ink-2);
+  --chip-icon:         var(--ink-3);
+
+  --status-pill-urgent-bg: var(--bad-bg);
+  --status-pill-urgent-ink:var(--bad);
+  --status-pill-queued-bg: var(--mid-bg);
+  --status-pill-queued-ink:var(--mid);
+  --status-pill-done-bg:   var(--good-bg);
+  --status-pill-done-ink:  var(--good);
+
+  --badge-bg:    var(--accent);
+  --badge-ink:   var(--white);
+
+  --tag-line-bg: var(--surface-2);   /* line-tag in draft-card */
+  --tag-line-ink:var(--ink-2);
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     §10  SIDEBAR (on-brand dark)
+     ────────────────────────────────────────────────────────────────────────── */
+  --sb-bg:            var(--brand);
+  --sb-ink:           var(--ink-on-brand-mute);
+  --sb-divider:       var(--green-on);
+  --sb-brand-name:    var(--ink-on-brand-strong);
+  --sb-brand-cap:     var(--ink-on-brand-cap);
+  --sb-section-label: var(--ink-on-brand-sect);
+  --sb-item-bg-hover: var(--green-950);
+  --sb-item-bg-on:    var(--green-925);
+  --sb-item-ink:      var(--ink-on-brand-mute);
+  --sb-item-ink-on:   var(--ink-on-brand-strong);
+  --sb-icon:          var(--ink-on-brand-cap);
+  --sb-icon-on:       var(--accent);
+  --sb-foot-bg:       var(--surface-on-brand);
+  --sb-foot-border:   var(--green-925);
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     §11  LANE / TIMELINE
+     ────────────────────────────────────────────────────────────────────────── */
+  --lane-head-bg:      var(--green-100);
+  --lane-head-border:  var(--green-450);
+  --timeline-head-width: 156px;
+
+  --tl-run-bg:           var(--surface);
+  --tl-run-border:       var(--line);
+  --tl-run-border-hover: var(--line-2);
+  --tl-run-good-bg:      #f1f6e6;
+  --tl-run-good-border:  var(--green-500);
+  --tl-run-good-glow:    rgba(143,168,105,0.18);
+  --tl-run-mid-bg:       #faf2e1;
+  --tl-run-mid-border:   var(--amber-650);
+  --tl-run-bad-bg:       var(--red-350);
+  --tl-run-bad-border:   var(--bad-line);
+
+  --tl-collision-fill:   var(--red-600);
+  --tl-collision-fill-2: #e2745e80;
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     §12  LOADER (BrewLoader)
+     ────────────────────────────────────────────────────────────────────────── */
+  --loader-bg:        var(--white);
+  --loader-bg-soft:   var(--paper-75);
+  --loader-ink:       var(--paper-1050);
+  --loader-ink-2:     var(--paper-850);
+  --loader-ink-3:     var(--paper-700);
+  --loader-steel-dark:var(--steel-500);
+  --loader-steel:     var(--steel-300);
+  --loader-steel-lt:  var(--steel-100);
+  --loader-amber-1:   var(--amber-750);
+  --loader-amber-2:   var(--amber-925);
+  --loader-amber-3:   var(--amber-990);
+  --loader-red:       var(--red-damm);
+  --loader-red-deep:  var(--red-damm-deep);
+  --loader-red-soft:  var(--red-100);
+  --loader-on:        var(--white);
+  --loader-glow:      rgba(227,6,19,0.15);
+  --loader-glow-2:    rgba(227,6,19,0.25);
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     §13  DECK (presentation)
+     ────────────────────────────────────────────────────────────────────────── */
+  --deck-bg:           var(--deck-paper);
+  --deck-fg:           var(--deck-ink);
+  --deck-red:          #b6252a;
+  --deck-red-ink:      var(--red-900);
+  --deck-grid:         rgba(24, 25, 18, 0.08);
+  --deck-grid-2:       rgba(24, 25, 18, 0.07);
+  --deck-rule:         rgba(23, 24, 18, 0.18);
+  --deck-ink-50:       rgba(23, 24, 18, 0.5);
+  --deck-ink-60:       rgba(23, 24, 18, 0.6);
+  --deck-ink-66:       rgba(23, 24, 18, 0.66);
+  --deck-paper-tint:   rgba(245, 239, 224, 0.88);
+  --deck-paper-tint-2: rgba(245, 239, 224, 0.74);
+  --deck-cream-tint:   rgba(255, 252, 244, 0.86);
+  --deck-cream-tint-2: rgba(255, 252, 244, 0.78);
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     §14  PLANLAB (preview)
+     ────────────────────────────────────────────────────────────────────────── */
+  --pl-bg:             var(--surface-2);
+  --pl-order-accent:   var(--amber-940);
+  --pl-tradeoff-bg:    #f9ebe9;
+  --pl-tradeoff-line:  var(--bad-line);
+  --pl-tradeoff-ink:   var(--red-870);
+  --pl-verdict-good-bg:#f1f6e6;
+  --pl-verdict-good-line:var(--green-700);
+  --pl-verdict-mid-bg: #faf2e1;
+  --pl-verdict-mid-line:var(--mid-200);
+  --pl-verdict-bad-bg: var(--pl-tradeoff-bg);
+  --pl-verdict-bad-line:var(--bad-line);
+  --pl-chip-manual-clear:#f0e3c2;
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     §15  OVERLAYS — alphas used for shadows, banners, tints
+     ────────────────────────────────────────────────────────────────────────── */
+  --alpha-ink-02:  rgba(35,35,31,0.02);
+  --alpha-ink-025: rgba(35,35,31,0.025);
+  --alpha-ink-03:  rgba(35,35,31,0.03);
+  --alpha-ink-04:  rgba(35,35,31,0.04);
+  --alpha-ink-05:  rgba(35,35,31,0.05);
+  --alpha-ink-06:  rgba(35,35,31,0.06);
+  --alpha-ink-08:  rgba(35,35,31,0.08);
+  --alpha-ink-10:  rgba(35,35,31,0.10);
+  --alpha-ink-12:  rgba(35,35,31,0.12);
+  --alpha-ink-14:  rgba(35,35,31,0.14);
+  --alpha-ink-16:  rgba(35,35,31,0.16);
+  --alpha-ink-18:  rgba(35,35,31,0.18);
+  --alpha-ink-22:  rgba(35,35,31,0.22);
+  --alpha-ink-24:  rgba(35,35,31,0.24);
+  --alpha-ink-28:  rgba(35,35,31,0.28);
+  --alpha-ink-32:  rgba(35,35,31,0.32);
+  --alpha-ink-34:  rgba(35,35,31,0.34);
+  --alpha-ink-50:  rgba(35,35,31,0.50);
+
+  --alpha-brand-08: rgba(27,58,46,0.08);
+  --alpha-brand-12: rgba(27,58,46,0.12);
+  --alpha-brand-14: rgba(27,58,46,0.14);
+  --alpha-brand-18: rgba(27,58,46,0.18);
+  --alpha-brand-22: rgba(27,58,46,0.22);
+  --alpha-brand-28: rgba(27,58,46,0.28);
+  --alpha-brand-34: rgba(27,58,46,0.34);
+  --alpha-brand-40: rgba(27,58,46,0.40);
+
+  --alpha-brand2-05: rgba(47,93,73,0.05);
+  --alpha-brand2-08: rgba(47,93,73,0.08);
+  --alpha-brand2-12: rgba(47,93,73,0.12);
+  --alpha-brand2-16: rgba(47,93,73,0.16);
+  --alpha-brand2-22: rgba(47,93,73,0.22);
+  --alpha-brand2-28: rgba(47,93,73,0.28);
+  --alpha-brand2-45: rgba(47,93,73,0.45);
+
+  --alpha-good-26:  rgba(109,143,74,0.26);
+  --alpha-good-30:  rgba(109,143,74,0.30);
+  --alpha-bad-05:   rgba(154,47,47,0.05);
+  --alpha-bad-10:   rgba(154,47,47,0.10);
+  --alpha-bad-13:   rgba(154,47,47,0.13);
+  --alpha-bad-line: rgba(176,107,107,0.30);
+  --alpha-mid-16:   rgba(184,154,82,0.16);
+  --alpha-mid-20:   rgba(184,154,82,0.20);
+  --alpha-mid-30:   rgba(184,154,82,0.30);
+  --alpha-mid-40:   rgba(184,154,82,0.40);
+  --alpha-accent-65:rgba(184,115,43,0.65);
+  --alpha-good-darker-14: rgba(59,109,17,0.14);
+  --alpha-accent-12:rgba(184,115,43,0.12);
+  --alpha-accent-18:rgba(184,115,43,0.18);
+  --alpha-accent-45:rgba(184,115,43,0.45);
+
+  --alpha-white-04: rgba(255,255,255,0.04);
+  --alpha-white-10: rgba(255,255,255,0.10);
+  --alpha-white-18: rgba(255,255,255,0.18);
+  --alpha-white-58: rgba(255,255,255,0.58);
+  --alpha-white-60: rgba(255,255,255,0.60);
+  --alpha-white-65: rgba(255,255,255,0.65);
+  --alpha-white-72: rgba(255,255,255,0.72);
+  --alpha-white-78: rgba(255,255,255,0.78);
+  --alpha-white-85: rgba(255,255,255,0.85);
+  --alpha-white-96: rgba(255,255,255,0.96);
+
+  --alpha-black-025:rgba(0,0,0,0.025);
+  --alpha-black-05: rgba(0,0,0,0.05);
+  --alpha-black-08: rgba(0,0,0,0.08);
+  --alpha-black-18: rgba(0,0,0,0.18);
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     §16  TYPOGRAPHY
+     ────────────────────────────────────────────────────────────────────────── */
+  --font-sans:  ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono:  ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-serif: Georgia, "Times New Roman", serif;
+
+  --font-size-base:    14px;
+  --line-height-base:  1.5;
+  --line-height-snug:  1.2;
+  --line-height-tight: 1.15;
+  --line-height-loose: 1.6;
+
+  /* Size scale — every distinct size used across the app */
+  --fs-7:    7px;
+  --fs-8:    8px;
+  --fs-8-5:  8.5px;
+  --fs-9:    9px;
+  --fs-9-5:  9.5px;
+  --fs-10:   10px;   /* eyebrows, micro labels */
+  --fs-10-5: 10.5px;
+  --fs-11:   11px;   /* captions */
+  --fs-11-5: 11.5px;
+  --fs-12:   12px;   /* secondary UI text */
+  --fs-12-5: 12.5px;
+  --fs-13:   13px;   /* default UI text */
+  --fs-13-5: 13.5px;
+  --fs-14:   14px;   /* body */
+  --fs-15:   15px;
+  --fs-15-5: 15.5px;
+  --fs-16:   16px;
+  --fs-17:   17px;
+  --fs-18:   18px;
+  --fs-19:   19px;
+  --fs-20:   20px;
+  --fs-21:   21px;
+  --fs-22:   22px;   /* brand wordmark */
+  --fs-24:   24px;
+  --fs-26:   26px;   /* FAB plus */
+  --fs-34:   34px;   /* display */
+
+  /* Weight scale (every value used) */
+  --fw-regular:    400;
+  --fw-medium:     500;
+  --fw-semi:       600;
+  --fw-semi-plus:  650;
+  --fw-bold:       700;
+  --fw-bold-plus:  750;
+  --fw-extrabold:  800;
+  --fw-extra-plus: 850;
+  --fw-black:      900;
+  --fw-black-plus: 950;
+
+  /* Tracking (letter spacing) */
+  --tracking-tight:    -0.4px;   /* sidebar brand wordmark */
+  --tracking-tight-2:  -0.3px;   /* topbar brand */
+  --tracking-normal:   0;
+  --tracking-eyebrow:  0.6px;    /* small-caps labels */
+  --tracking-eyebrow-2:0.8px;
+  --tracking-eyebrow-3:0.9px;
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     §17  RADII
+     ────────────────────────────────────────────────────────────────────────── */
+  --r-xs:     2px;
+  --r-sm:     4px;
+  --r-md:     6px;
+  --r:        7px;   /* default — Tailwind `rounded-tok` */
+  --r-8:      8px;
+  --r-9:      9px;
+  --r-10:    10px;
+  --r-lg:    11px;   /* Tailwind `rounded-toklg` */
+  --r-12:    12px;
+  --r-14:    14px;   /* FAB */
+  --r-pill: 999px;
+  --r-round: 50%;
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     §18  SHADOWS
+     ────────────────────────────────────────────────────────────────────────── */
+  --shadow:           0 1px 2px rgba(35,35,31,0.04), 0 4px 14px rgba(35,35,31,0.05);
+  --shadow-hairline:  0 1px 0 rgba(35,35,31,0.03);
+  --shadow-hairline-2:0 1px 0 rgba(35,35,31,0.04);
+  --shadow-hairline-3:0 1px 0 rgba(35,35,31,0.06);
+  --shadow-soft:      0 4px 14px rgba(35,35,31,0.16);
+  --shadow-pop:       0 6px 18px rgba(35,35,31,0.22);
+  --shadow-lift:      0 2px 8px rgba(35,35,31,0.15);
+  --shadow-card-hover:0 2px 8px rgba(0,0,0,0.05);
+  --shadow-brand:     0 4px 16px rgba(27,58,46,0.34);
+  --shadow-brand-hi:  0 6px 22px rgba(27,58,46,0.40);
+  --shadow-brand-lift:0 2px 6px rgba(27,58,46,0.18);
+  --shadow-brand-pop: 0 4px 10px rgba(27,58,46,0.22);
+  --shadow-brand-amb: 0 3px 10px rgba(27,58,46,0.12);
+  --shadow-logo:      0 6px 18px rgba(0,0,0,0.18);
+  --shadow-panel:     -8px 0 28px rgba(35,35,31,0.14);
+  --shadow-panel-l:   -8px 0 24px rgba(35,35,31,0.08);
+  --shadow-modal:     0 18px 54px rgba(35,35,31,0.24);
+  --shadow-modal-hi:  0 24px 70px rgba(35,35,31,0.24), 0 0 0 1px rgba(27,58,46,0.08);
+  --shadow-modal-card:0 8px 24px rgba(0,0,0,0.08), 0 1px 2px rgba(35,35,31,0.04), 0 4px 14px rgba(35,35,31,0.05);
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     §19  MOTION
+     ────────────────────────────────────────────────────────────────────────── */
+  --dur-1:   80ms;
+  --dur-2:  120ms;
+  --dur-3:  150ms;
+  --dur-4:  160ms;
+  --dur-5:  220ms;
+  --ease-std: cubic-bezier(.2,.7,.2,1);
+  --ease-out: ease-out;
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     §20  LAYERING
+     ────────────────────────────────────────────────────────────────────────── */
+  --z-fab:      30;
+  --z-topbar:   30;
+  --z-overlay:  40;
+  --z-menu:     50;
+  --z-modal:    90;
+}
+
+/* ============================================================================
+   Base typography — applies the tokens to <body>. Mirrors index.css; safe to
+   keep both because the cascade resolves to the same values.
+   ============================================================================ */
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: var(--selection); }

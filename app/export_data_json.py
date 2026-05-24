@@ -190,15 +190,23 @@ def build_executed_and_plan(
 
 
 def build_urgent_orders(products: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Pick real products: one 1/3 (urgent) + one 1/2 (queued)."""
+    """Pick real products: two 1/3 urgent examples + one 1/2 queued."""
     today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
 
     def due_in(days: int) -> str:
         return (today + timedelta(days=days)).strftime("%d %b")
 
+    def product_format_key(product: Dict[str, Any]) -> Optional[str]:
+        return product.get("format_key") or normalize_format(product.get("format"))
+
     out: List[Dict[str, Any]] = []
-    one_third = next((p for p in products if p.get("format_key") == "1/3"), None)
-    half = next((p for p in products if p.get("format_key") == "1/2"), None)
+    one_thirds = [p for p in products if product_format_key(p) == "1/3"]
+    one_third = one_thirds[0] if one_thirds else None
+    second_one_third = next(
+        (p for p in one_thirds[1:] if p.get("sku") != one_third.get("sku")),
+        None,
+    ) if one_third else None
+    half = next((p for p in products if product_format_key(p) == "1/2"), None)
     if one_third:
         out.append({
             "of": "ED13LTNN",
@@ -209,7 +217,19 @@ def build_urgent_orders(products: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             "hl": 594,
             "due": due_in(5),
             "volume_hl": 594,
-            "format_key": one_third.get("format_key"),
+            "format_key": product_format_key(one_third),
+        })
+    if second_one_third:
+        out.append({
+            "of": "ED13LTEX",
+            "status": "urgent",
+            "sku": second_one_third.get("name") or second_one_third["sku"],
+            "productSku": second_one_third["sku"],
+            "units": 12000,
+            "hl": 396,
+            "due": due_in(6),
+            "volume_hl": 396,
+            "format_key": product_format_key(second_one_third),
         })
     if half:
         out.append({
@@ -221,7 +241,7 @@ def build_urgent_orders(products: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             "hl": 198,
             "due": due_in(8),
             "volume_hl": 198,
-            "format_key": half.get("format_key"),
+            "format_key": product_format_key(half),
         })
     return out
 

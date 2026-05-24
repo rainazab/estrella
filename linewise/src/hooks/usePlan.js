@@ -19,6 +19,14 @@ export function usePlan() {
     return () => { active = false; };
   }, [nonce]);
 
+  useEffect(() => {
+    if (!import.meta.env.DEV) return undefined;
+    const id = window.setInterval(() => {
+      setNonce((n) => n + 1);
+    }, 2500);
+    return () => window.clearInterval(id);
+  }, []);
+
   return {
     data,
     loading: !data && !error,

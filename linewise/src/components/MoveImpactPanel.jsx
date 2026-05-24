@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 
 /* MoveImpactPanel — replaces the throwaway pill with a substantial,
@@ -15,6 +16,9 @@ import { motion } from 'framer-motion';
      - Re-rank of Inbox urgent-order suggestions against post-move plan */
 export default function MoveImpactPanel({ preview, onConfirm, onDiscard }) {
   const { ripple } = preview;
+  const inferredReason = inferReason(ripple);
+  const [reasonDraft, setReasonDraft] = useState(null);
+  const reason = reasonDraft ?? inferredReason;
 
   const oldOee = num(ripple.oeeOld);
   const newOee = num(ripple.oeeNew);
@@ -55,10 +59,18 @@ export default function MoveImpactPanel({ preview, onConfirm, onDiscard }) {
           )}
         </div>
         <div className="mi-actions">
+          <label className="mi-reason">
+            <span>Reason</span>
+            <input
+              value={reason}
+              onChange={(e) => setReasonDraft(oneWord(e.target.value))}
+              aria-label="Move rationale"
+            />
+          </label>
           <button className="mi-btn mi-btn-ghost" onClick={onDiscard}>Discard</button>
           <button
             className={`mi-btn ${hasCollisions ? 'mi-btn-danger' : 'mi-btn-primary'}`}
-            onClick={onConfirm}
+            onClick={() => onConfirm?.(reason || inferredReason)}
           >
             {hasCollisions ? 'Override & confirm' : 'Confirm move'}
           </button>
@@ -169,6 +181,19 @@ function toneFromPts(pts) {
   if (pts > 1) return 'good';
   if (pts < -1) return 'bad';
   return 'mid';
+}
+function inferReason(ripple) {
+  if ((ripple.collisions?.length ?? 0) > 0) return 'override';
+  const switchDelta = (ripple.formatSwitchesNew ?? 0) - (ripple.formatSwitchesOld ?? 0);
+  if (switchDelta < 0) return 'cip';
+  const weekDelta = pts(ripple.weekOeeNew, ripple.weekOeeOld);
+  if (weekDelta > 1) return 'oee';
+  if (ripple.fromLine !== ripple.toLine && (ripple.sourceFreedHours ?? 0) > 0) return 'slack';
+  if ((ripple.pushedCount ?? 0) > 0) return 'sequence';
+  return 'manual';
+}
+function oneWord(value) {
+  return String(value ?? '').trim().split(/\s+/)[0]?.toLowerCase() ?? '';
 }
 function fmtHours(h) {
   if (h == null) return '—';

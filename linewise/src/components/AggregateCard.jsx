@@ -36,6 +36,11 @@ export default function AggregateCard({
   const delta = lineBaseline != null && avgOee != null ? avgOee - lineBaseline : null;
   const band = oeeBand(delta);
   const w = widthPx ?? 220;
+  const ariaParts = [
+    label,
+    `${formatVol(totalVolume)} units`,
+    avgOee != null ? `OEE ${avgOee.toFixed(2)}` : null,
+  ].filter(Boolean);
 
   const cls = [
     'tc', 'tc-agg', `tc-${band}`,
@@ -53,7 +58,7 @@ export default function AggregateCard({
         <div className="tc-row tc-row-top">
           <span className="tc-mat">{label}</span>
           {subLabel && <span className="tc-agg-sublabel">{subLabel}</span>}
-          {isToday && <span className="tc-agg-today-pill">today</span>}
+          {isToday && <span className="tc-agg-today-pill">current</span>}
         </div>
         <div className="tc-agg-idle-msg">No production scheduled</div>
       </div>
@@ -69,7 +74,7 @@ export default function AggregateCard({
       className={cls}
       style={{ width: w }}
       onClick={onClick}
-      aria-label={`${label}, ${formatVol(totalVolume)} units, OEE ${avgOee?.toFixed(2)}`}
+      aria-label={ariaParts.join(', ')}
     >
       {hasUrgentInsert && (
         <div className="tc-banner tc-banner-ins">
@@ -82,7 +87,7 @@ export default function AggregateCard({
           and counts live in the subtitle so the date never truncates. */}
       <div className="tc-row tc-row-top">
         <span className="tc-mat tc-agg-label">{label}</span>
-        {isToday && <span className="tc-agg-today-pill">today</span>}
+        {isToday && <span className="tc-agg-today-pill">current</span>}
         <span className={`tc-dot tc-dot-${band}`} aria-hidden="true" />
       </div>
 

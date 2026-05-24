@@ -9,6 +9,14 @@
       "due": "29 May"
     },
     {
+      "of": "ED13LTEX",
+      "status": "urgent",
+      "sku": "FREE DAMM 33CL LATA LC",
+      "units": 12000,
+      "hl": 396,
+      "due": "30 May"
+    },
+    {
       "of": "ED12LTW",
       "status": "queued",
       "sku": "ESTRELLA DAMM 1/2 LATA KR00127",

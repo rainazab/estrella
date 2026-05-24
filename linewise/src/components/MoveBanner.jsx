@@ -12,35 +12,45 @@ import { motion } from 'framer-motion';
 export default function MoveBanner({ moving, onCancel }) {
   const run = moving.run;
   return (
-    <motion.div
-      className="move-banner"
-      initial={{ y: -32, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      exit={{ y: -32, opacity: 0 }}
-      transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
-    >
-      <span className="mb-tag">MOVING</span>
-      <div className="mb-main">
-        <span className="mb-of">{run.of}</span>
-        <span className="mb-sku">{run.sku}</span>
-      </div>
-      <div
-        className="mb-chip"
-        draggable
-        onDragStart={(e) => {
-          e.dataTransfer.setData('text/plain', 'move:' + run.of);
-          e.dataTransfer.effectAllowed = 'move';
-        }}
-        aria-label={`Drag ${run.of} to a compatible line`}
+    <>
+      <motion.div
+        className="move-focus-backdrop"
+        aria-hidden="true"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.16, ease: 'easeOut' }}
+      />
+      <motion.div
+        className="move-banner"
+        initial={{ x: '-50%', y: -32, opacity: 0 }}
+        animate={{ x: '-50%', y: 0, opacity: 1 }}
+        exit={{ x: '-50%', y: -32, opacity: 0 }}
+        transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
       >
-        <span className="mb-chip-grip">⠿</span>
-        <span className="mb-chip-of">{run.of}</span>
-        <span className="mb-chip-fmt">{moving.format}</span>
-      </div>
-      <span className="mb-hint">Drag to a compatible line · Esc to cancel</span>
-      <button className="mb-cancel" onClick={onCancel} aria-label="Cancel move">
-        Cancel
-      </button>
-    </motion.div>
+        <span className="mb-tag">MOVING</span>
+        <div className="mb-main">
+          <span className="mb-of">{run.of}</span>
+          <span className="mb-sku">{run.sku}</span>
+        </div>
+        <div
+          className="mb-chip"
+          draggable
+          onDragStart={(e) => {
+            e.dataTransfer.setData('text/plain', 'move:' + run.of);
+            e.dataTransfer.effectAllowed = 'move';
+          }}
+          aria-label={`Drag ${run.of} to a compatible line`}
+        >
+          <span className="mb-chip-grip">⠿</span>
+          <span className="mb-chip-of">{run.of}</span>
+          <span className="mb-chip-fmt">{moving.format}</span>
+        </div>
+        <span className="mb-hint">Drag to a compatible line · Esc to cancel</span>
+        <button className="mb-cancel" onClick={onCancel} aria-label="Cancel move">
+          Cancel
+        </button>
+      </motion.div>
+    </>
   );
 }
