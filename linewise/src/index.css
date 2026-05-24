@@ -3038,7 +3038,7 @@ table.ana .of { font-weight: 600; }
      head (fewer chips → shorter head → shorter lane) so L14/L17/L19
      end up different heights. Pin to the tallest expected head
      (L19 with 50cl/33cl/44cl chips wrapping to two lines). */
-  min-height: 220px;
+  min-height: 196px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
