@@ -104,6 +104,7 @@ class TestPlan:
             "yearCompare", "executedHistory", "basePlan", "lineCentre",
             "recommendations", "objectives", "manualSlots",
             "lineFormats", "issues", "stoppages",
+            "insertion_moves",
         }
         assert isinstance(data["lineBaseline"]["19"], float)
         assert data["issues"] == []
@@ -271,3 +272,124 @@ class TestResequence:
         # one of the lines exists; just check the override took effect by
         # confirming we still get a valid basePlan back.
         assert "19" in live["basePlan"]
+
+
+class TestPlanDrafts:
+    def test_save_draft_returns_server_assigned_id(self, client):
+        c, _ = client
+        r = c.post("/plan/drafts", json={
+            "title": "Manual placement for AM05LTST",
+            "mode": "manual",
+            "order": None,
+            "metrics": [{"label": "OEE", "value": "0.62"}],
+            "plan": {"14": [{"of": "B14", "start": 0, "w": 6}]},
+        })
+        assert r.status_code == 200, r.text
+        draft = r.json()["draft"]
+        assert draft["id"].startswith("drft-")
+        assert draft["title"] == "Manual placement for AM05LTST"
+        assert isinstance(draft["savedAt"], int) and draft["savedAt"] > 0
+
+    def test_save_draft_rejects_bad_mode(self, client):
+        c, _ = client
+        r = c.post("/plan/drafts", json={"title": "x", "mode": "lol", "plan": {"14": []}})
+        assert r.status_code == 400
+
+    def test_apply_plan_overrides_baseplan(self, client):
+        c, _ = client
+        new_plan = {
+            "14": [{"of": "APPLIED-A", "start": 0, "w": 4, "sku": "S", "vol": 1, "oee": 0.7}],
+            "17": [{"of": "APPLIED-B", "start": 0, "w": 4, "sku": "S", "vol": 1, "oee": 0.55}],
+            "19": [{"of": "APPLIED-C", "start": 0, "w": 4, "sku": "S", "vol": 1, "oee": 0.6}],
+        }
+        r = c.post("/plan/apply", json={"title": "Manual apply", "mode": "manual", "plan": new_plan})
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert "plan" in body
+        # /plan now reflects the override
+        live = c.get("/plan").json()
+        ofs = [b.get("of") for b in live["basePlan"]["14"] if not b.get("kind")]
+        assert "APPLIED-A" in ofs
+
+    def test_apply_plan_rejects_empty_plan(self, client):
+        c, _ = client
+        r = c.post("/plan/apply", json={"plan": {}})
+        assert r.status_code == 400
+
+
+class TestChangeLedger:
+    def test_post_then_get_round_trip(self, client):
+        c, _ = client
+        r = c.post("/changes", json={
+            "sessionId": "sess-abc",
+            "type": "manual_move_confirmed",
+            "summary": "Moved B14 to L17",
+        })
+        assert r.status_code == 200
+        change_id = r.json()["change"]["id"]
+        # GET returns it
+        rows = c.get("/changes").json()["changes"]
+        assert any(c["id"] == change_id for c in rows)
+
+    def test_idempotency_via_supplied_id(self, client):
+        c, _ = client
+        c.post("/changes", json={"id": "chg-fixed-1", "type": "issue_logged", "summary": "x"})
+        c.post("/changes", json={"id": "chg-fixed-1", "type": "issue_logged", "summary": "x"})
+        rows = c.get("/changes").json()["changes"]
+        # Both POSTs should have collapsed into a single entry.
+        assert sum(1 for r in rows if r["id"] == "chg-fixed-1") == 1
+
+    def test_filters_by_session_and_since(self, client):
+        c, _ = client
+        c.post("/changes", json={"sessionId": "s1", "type": "issue_logged", "summary": "a", "ts": 1000})
+        c.post("/changes", json={"sessionId": "s2", "type": "issue_logged", "summary": "b", "ts": 2000})
+        s1 = c.get("/changes", params={"sessionId": "s1"}).json()["changes"]
+        assert all(r["sessionId"] == "s1" for r in s1)
+        recent = c.get("/changes", params={"since": 1500}).json()["changes"]
+        assert all(r["ts"] >= 1500 for r in recent)
+
+
+class TestShiftHandoff:
+    def test_latest_is_null_when_empty(self, client):
+        c, _ = client
+        r = c.get("/shifts/handoff/latest")
+        assert r.status_code == 200
+        assert r.json()["handoff"] is None
+
+    def test_post_then_latest(self, client):
+        c, _ = client
+        c.post("/shifts/handoff", json={
+            "notes": "Shift went well",
+            "changes": [],
+            "openRisks": ["L17 clean Mon"],
+        })
+        r = c.get("/shifts/handoff/latest")
+        latest = r.json()["handoff"]
+        assert latest is not None
+        assert latest["notes"] == "Shift went well"
+        assert latest["id"].startswith("handoff-")
+        assert isinstance(latest["sentAt"], int)
+
+    def test_latest_returns_most_recent(self, client):
+        c, _ = client
+        c.post("/shifts/handoff", json={"notes": "first", "changes": [], "openRisks": []})
+        c.post("/shifts/handoff", json={"notes": "second", "changes": [], "openRisks": []})
+        latest = c.get("/shifts/handoff/latest").json()["handoff"]
+        assert latest["notes"] == "second"
+
+
+class TestTimelineNow:
+    def test_plan_carries_iso_now_when_canonical_has_it(self, tmp_path):
+        # Build a canonical that sets timeline.now and confirm it survives
+        # the frontend_payload transform.
+        from tests.test_server import _canonical_payload
+        payload = _canonical_payload()
+        payload["timeline"]["now"] = "2026-05-24T09:40:00+00:00"
+        data_path = tmp_path / "data.json"
+        data_path.write_text(json.dumps(payload), encoding="utf-8")
+        app = create_app(data_path=data_path, allow_cors=False)
+        client = TestClient(app)
+        r = client.get("/plan")
+        assert r.status_code == 200
+        timeline = r.json()["timeline"]
+        assert timeline.get("now") == "2026-05-24T09:40:00+00:00"

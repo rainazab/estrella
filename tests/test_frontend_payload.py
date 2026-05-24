@@ -159,6 +159,8 @@ class TestFrontendShape:
             "recommendations", "objectives", "manualSlots",
             # contract v2.3 additions:
             "lineFormats", "issues", "stoppages",
+            # v2.4 additions:
+            "insertion_moves",
         }
 
     def test_line_formats_derived_from_line_rules(self):

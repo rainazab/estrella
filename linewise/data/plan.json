@@ -47,7 +47,8 @@
         "daysBack": 30.0,
         "daysAhead": 90.0
       }
-    }
+    },
+    "now": "2026-05-24T10:34:35.433744+00:00"
   },
   "lineRules": {
     "14": {
@@ -53806,5 +53807,234 @@
     ]
   },
   "issues": [],
-  "stoppages": []
+  "stoppages": [],
+  "insertion_moves": [
+    {
+      "line": "14",
+      "line_avg_oee": 0.422,
+      "inserted": {
+        "of": "ED13LTNN",
+        "sku_code": "ED13LTNN",
+        "sku_name": "ED13LTNN",
+        "format": "",
+        "units": 594,
+        "duration_minutes": 162,
+        "oee": 0.48,
+        "oee_delta_vs_line_avg": 0.058
+      },
+      "shifted": [
+        {
+          "of": "VO13LTMP",
+          "sku_code": "VO13LTMP",
+          "sku_name": "VOLL DAMM 33CL LT LC6 MP",
+          "format": "33cl",
+          "units": 238,
+          "duration_minutes": 360,
+          "oee": 0.0,
+          "oee_delta_vs_line_avg": -0.422,
+          "shift_hours": 3.0,
+          "reason": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LTNN",
+          "sku_code": "ED13LTNN",
+          "sku_name": "ESTRELLA DAMM 1/3 LATA LC",
+          "format": "33cl",
+          "units": 475,
+          "duration_minutes": 480,
+          "oee": 0.0,
+          "oee_delta_vs_line_avg": -0.422,
+          "shift_hours": 3.0,
+          "reason": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LTNN",
+          "sku_code": "ED13LTNN",
+          "sku_name": "ESTRELLA DAMM 1/3 LATA LC",
+          "format": "33cl",
+          "units": 832,
+          "duration_minutes": 480,
+          "oee": 0.0,
+          "oee_delta_vs_line_avg": -0.422,
+          "shift_hours": 3.0,
+          "reason": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LTNN",
+          "sku_code": "ED13LTNN",
+          "sku_name": "ESTRELLA DAMM 1/3 LATA LC",
+          "format": "33cl",
+          "units": 832,
+          "duration_minutes": 480,
+          "oee": 0.0,
+          "oee_delta_vs_line_avg": -0.422,
+          "shift_hours": 3.0,
+          "reason": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LTNN",
+          "sku_code": "ED13LTNN",
+          "sku_name": "ESTRELLA DAMM 1/3 LATA LC",
+          "format": "33cl",
+          "units": 832,
+          "duration_minutes": 480,
+          "oee": 0.0,
+          "oee_delta_vs_line_avg": -0.422,
+          "shift_hours": 3.0,
+          "reason": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LTNN",
+          "sku_code": "ED13LTNN",
+          "sku_name": "ESTRELLA DAMM 1/3 LATA LC",
+          "format": "33cl",
+          "units": 790,
+          "duration_minutes": 480,
+          "oee": 0.0,
+          "oee_delta_vs_line_avg": -0.422,
+          "shift_hours": 3.0,
+          "reason": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LTNN",
+          "sku_code": "ED13LTNN",
+          "sku_name": "ESTRELLA DAMM 1/3 LATA LC",
+          "format": "33cl",
+          "units": 790,
+          "duration_minutes": 480,
+          "oee": 0.0,
+          "oee_delta_vs_line_avg": -0.422,
+          "shift_hours": 3.0,
+          "reason": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LTNN",
+          "sku_code": "ED13LTNN",
+          "sku_name": "ESTRELLA DAMM 1/3 LATA LC",
+          "format": "33cl",
+          "units": 790,
+          "duration_minutes": 480,
+          "oee": 0.0,
+          "oee_delta_vs_line_avg": -0.422,
+          "shift_hours": 3.0,
+          "reason": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LTNN",
+          "sku_code": "ED13LTNN",
+          "sku_name": "ESTRELLA DAMM 1/3 LATA LC",
+          "format": "33cl",
+          "units": 790,
+          "duration_minutes": 480,
+          "oee": 0.0,
+          "oee_delta_vs_line_avg": -0.422,
+          "shift_hours": 3.0,
+          "reason": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LTNN",
+          "sku_code": "ED13LTNN",
+          "sku_name": "ESTRELLA DAMM 1/3 LATA LC",
+          "format": "33cl",
+          "units": 790,
+          "duration_minutes": 480,
+          "oee": 0.0,
+          "oee_delta_vs_line_avg": -0.422,
+          "shift_hours": 3.0,
+          "reason": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LTNN",
+          "sku_code": "ED13LTNN",
+          "sku_name": "ESTRELLA DAMM 1/3 LATA LC",
+          "format": "33cl",
+          "units": 790,
+          "duration_minutes": 480,
+          "oee": 0.0,
+          "oee_delta_vs_line_avg": -0.422,
+          "shift_hours": 3.0,
+          "reason": "pushed back to make room for the insertion"
+        }
+      ]
+    },
+    {
+      "line": "17",
+      "line_avg_oee": 0.531,
+      "inserted": {
+        "of": "ED13LTNN",
+        "sku_code": "ED13LTNN",
+        "sku_name": "ED13LTNN",
+        "format": "",
+        "units": 594,
+        "duration_minutes": 198,
+        "oee": 0.574,
+        "oee_delta_vs_line_avg": 0.043
+      },
+      "shifted": [
+        {
+          "of": "ED13LCN",
+          "sku_code": "ED13LCN",
+          "sku_name": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+          "format": "33cl",
+          "units": 1618,
+          "duration_minutes": 480,
+          "oee": 0.0,
+          "oee_delta_vs_line_avg": -0.531,
+          "shift_hours": 3.0,
+          "reason": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LCN",
+          "sku_code": "ED13LCN",
+          "sku_name": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+          "format": "33cl",
+          "units": 1618,
+          "duration_minutes": 480,
+          "oee": 0.0,
+          "oee_delta_vs_line_avg": -0.531,
+          "shift_hours": 3.0,
+          "reason": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LCN",
+          "sku_code": "ED13LCN",
+          "sku_name": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+          "format": "33cl",
+          "units": 1618,
+          "duration_minutes": 480,
+          "oee": 0.0,
+          "oee_delta_vs_line_avg": -0.531,
+          "shift_hours": 3.0,
+          "reason": "pushed back to make room for the insertion"
+        },
+        {
+          "of": "ED13LCN",
+          "sku_code": "ED13LCN",
+          "sku_name": "ESTRELLA DAMM 33CL LATA CAT/CAS LC",
+          "format": "33cl",
+          "units": 1618,
+          "duration_minutes": 480,
+          "oee": 0.0,
+          "oee_delta_vs_line_avg": -0.531,
+          "shift_hours": 3.0,
+          "reason": "pushed back to make room for the insertion"
+        }
+      ]
+    },
+    {
+      "line": "19",
+      "line_avg_oee": 0.481,
+      "inserted": {
+        "of": "ED13LTNN",
+        "sku_code": "ED13LTNN",
+        "sku_name": "ED13LTNN",
+        "format": "",
+        "units": 594,
+        "duration_minutes": 149,
+        "oee": 0.649,
+        "oee_delta_vs_line_avg": 0.168
+      },
+      "shifted": []
+    }
+  ]
 }

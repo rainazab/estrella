@@ -44,7 +44,7 @@ import pandas as pd
 
 from . import config, data_loader, sample_data
 from .block_classifier import classify_blocks, verify_of_woid_join
-from .cf_matrix import load_cf_matrix, load_operational_contract, project_service_blocks
+from .cf_matrix import FORMAT_UI, load_cf_matrix, load_operational_contract, project_service_blocks
 from .production_projector import project_forward_production, horizon_days_to_eoy
 from .changeover_typing import annotate_master
 from .config import LINES
@@ -359,6 +359,13 @@ def build_timeline_metadata(
     return {
         "anchorDate": exported_at.date().isoformat(),
         "anchorLabel": "Today",
+        # `now` is an authoritative ISO 8601 datetime the frontend uses
+        # as "current time" — replaces the three hardcoded FAKE_NOW
+        # constants scattered in Inbox.jsx, Timeline.jsx, cala-mock.js.
+        # We emit `exported_at` (the moment the canonical pipeline ran);
+        # if you want wall-clock now instead, set this at server-response
+        # time in app/server.py rather than at export time.
+        "now": exported_at.isoformat(),
         "timeUnit": "hours",
         "views": {
             "week": {"daysBack": 7, "daysAhead": 14},
@@ -440,7 +447,7 @@ def find_analogues(
     previous_sku: Optional[str],
     current_sku: Optional[str],
     cur_format_key: Optional[str],
-    top_k: int = 6,
+    top_k: int = 12,
     min_n: int = 3,
 ) -> Dict[str, Any]:
     """Score and return top-k REAL historical analogues (production-only).
@@ -1530,6 +1537,125 @@ def build_manual_slots(
     return out
 
 
+def _format_label_from_key(key: Optional[str]) -> str:
+    """1/2 → 50cl, 1/3 → 33cl, 2/5 → 44cl, anything else → passthrough."""
+    if not key:
+        return ""
+    spec = FORMAT_UI.get(str(key))
+    if isinstance(spec, dict) and spec.get("label"):
+        return str(spec["label"])
+    return str(key)
+
+
+def _parse_shift_hours(value: Any) -> float:
+    """Recommendation.moves[].shift looks like "+3h" / "-2h". Parse to a
+    float; returns 0.0 when unparseable."""
+    if value is None:
+        return 0.0
+    s = str(value).strip().lower().replace("h", "").replace("+", "").strip()
+    if not s:
+        return 0.0
+    try:
+        return float(s)
+    except ValueError:
+        return 0.0
+
+
+def build_insertion_moves(
+    recommendations: Dict[str, Any],
+    line_baseline: Dict[str, Any],
+    *,
+    time_unit: str = "hours",
+) -> List[Dict[str, Any]]:
+    """Flatten Recommendation.plan[line] segments with kind="ins"/"shift"
+    into the `InsertionShiftPanel` shape the Stride plan-review page
+    consumes (see API_CONTRACT.md §insertion_moves).
+
+    One record per recommendation that actually inserts an urgent run.
+    Each record carries:
+      - line, line_avg_oee
+      - inserted: the kind="ins" run
+      - shifted[]: every kind="shift" run on the same lane, joined with
+        the matching entry in `moves[]` for shift_hours + reason.
+
+    The legacy Vite planner already reads kind="ins"/"shift" + moves[]
+    directly; this is the flattened mirror for the Next.js plan-review
+    surface.
+    """
+    out: List[Dict[str, Any]] = []
+    if not isinstance(recommendations, dict):
+        return out
+
+    for line_key, rec in recommendations.items():
+        if not isinstance(rec, dict):
+            continue
+        plan_lane = ((rec.get("plan") or {}).get(str(line_key))
+                     or (rec.get("plan") or {}).get(line_key)
+                     or [])
+        if not isinstance(plan_lane, list):
+            continue
+        inserted_seg = next((s for s in plan_lane if isinstance(s, dict) and s.get("kind") == "ins"), None)
+        if inserted_seg is None:
+            continue  # rec doesn't actually insert anything — skip
+        shifted_segs = [s for s in plan_lane if isinstance(s, dict) and s.get("kind") == "shift"]
+        moves_list = rec.get("moves") or []
+        moves_by_of = {m.get("of"): m for m in moves_list if isinstance(m, dict)}
+
+        # Line baseline can be either a number or {avg_oee: number}.
+        raw_base = (line_baseline or {}).get(str(line_key)) or (line_baseline or {}).get(line_key)
+        if isinstance(raw_base, dict):
+            base = raw_base.get("avg_oee")
+        else:
+            base = raw_base
+        try:
+            line_avg = float(base) if base is not None else 0.5
+        except (TypeError, ValueError):
+            line_avg = 0.5
+
+        def _flatten(seg: Dict[str, Any], *, include_shift: bool = False) -> Dict[str, Any]:
+            try:
+                oee_val = float(seg.get("oee") or 0.0)
+            except (TypeError, ValueError):
+                oee_val = 0.0
+            try:
+                duration_hours = float(seg.get("w") or 0.0)
+            except (TypeError, ValueError):
+                duration_hours = 0.0
+            # w is in `timeline.timeUnit` — convert to minutes for the
+            # plan-review shape.
+            if time_unit == "days":
+                duration_minutes = int(round(duration_hours * 24 * 60))
+            else:
+                duration_minutes = int(round(duration_hours * 60))
+            try:
+                units = int(seg.get("vol") or 0)
+            except (TypeError, ValueError):
+                units = 0
+            payload: Dict[str, Any] = {
+                "of": str(seg.get("of") or ""),
+                "sku_code": str(seg.get("of") or ""),
+                "sku_name": seg.get("sku") if seg.get("sku") else None,
+                "format": _format_label_from_key(seg.get("format_key")),
+                "units": units,
+                "duration_minutes": duration_minutes,
+                "oee": round(oee_val, 4),
+                "oee_delta_vs_line_avg": round(oee_val - line_avg, 4),
+            }
+            if include_shift:
+                move_entry = moves_by_of.get(seg.get("of")) or {}
+                payload["shift_hours"] = _parse_shift_hours(move_entry.get("shift"))
+                payload["reason"] = str(move_entry.get("why") or "pushed back to make room")
+            return payload
+
+        out.append({
+            "line": str(line_key),
+            "line_avg_oee": round(line_avg, 4),
+            "inserted": _flatten(inserted_seg),
+            "shifted": [_flatten(s, include_shift=True) for s in shifted_segs],
+        })
+    return out
+
+
 def build_objectives(recs: Dict[str, Any]) -> Dict[str, Any]:
     if not recs:
         return {}
@@ -2068,6 +2194,14 @@ def main(argv: Optional[List[str]] = None) -> int:
         "recommendations": recommendations,
         "objectives": objectives,
         "manualSlots": manual_slots,
+        # Flattened insertion/shift cards for the Stride /plan-review
+        # InsertionShiftPanel (see API_CONTRACT.md §insertion_moves).
+        # Derived from Recommendation.plan kind=ins/shift + moves[].
+        "insertion_moves": build_insertion_moves(
+            recommendations,
+            line_baseline,
+            time_unit=timeline.get("timeUnit") or "hours",
+        ),
         # additive metadata
         "metadata": {
             "contract_version": CONTRACT_VERSION,

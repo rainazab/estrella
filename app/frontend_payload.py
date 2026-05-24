@@ -247,12 +247,19 @@ def _clean_timeline(timeline: Any) -> Dict[str, Any]:
     if time_unit not in ("hours", "days"):
         time_unit = _DEFAULT_TIMELINE["timeUnit"]
 
-    return {
+    out = {
         "anchorDate": str(timeline.get("anchorDate") or _DEFAULT_TIMELINE["anchorDate"]),
         "anchorLabel": str(timeline.get("anchorLabel") or _DEFAULT_TIMELINE["anchorLabel"]),
         "timeUnit": time_unit,
         "views": views,
     }
+    # `now` is an ISO 8601 datetime — preserve it so the frontend can
+    # drop its hardcoded FAKE_NOW constants. Only emit when present so
+    # we don't fabricate a datetime when the canonical didn't supply one.
+    now_value = timeline.get("now")
+    if now_value:
+        out["now"] = str(now_value)
+    return out
 
 
 def _clean_line_rules(value: Any) -> Dict[str, Any]:
@@ -418,6 +425,7 @@ def build_frontend_payload(canonical: Dict[str, Any]) -> Dict[str, Any]:
             "lineFormats": _derive_line_formats(default_rules),
             "issues": [],
             "stoppages": [],
+            "insertion_moves": [],
         }
 
     recs_in = canonical.get("recommendations") or {}
@@ -453,6 +461,9 @@ def build_frontend_payload(canonical: Dict[str, Any]) -> Dict[str, Any]:
         "lineFormats": line_formats,
         "issues": _clean_issues(canonical.get("issues")),
         "stoppages": _clean_stoppages(canonical.get("stoppages")),
+        # Pass-through: canonical builds this via build_insertion_moves
+        # in app/export_data_json.py; just hand it to the FE as-is.
+        "insertion_moves": list(canonical.get("insertion_moves") or []),
     }
 
 

@@ -14,6 +14,11 @@ Endpoints (matching docs/API_CONTRACT.md, contract v2.4):
   POST /plan/move/preview          — dry-run a manual move (ripple + collisions)
   POST /plan/move                  — commit a manual move
   POST /plan/resequence            — global re-sequence to minimise changeover
+  POST /plan/drafts                — save a Plan Lab WIP draft
+  POST /plan/apply                 — commit a plan as the new basePlan
+  POST /changes, GET /changes      — append-only audit log
+  POST /shifts/handoff             — persist a shift handoff record
+  GET  /shifts/handoff/latest      — most recent handoff (for inbox briefing)
 
 The server reads `data/output/data.json` on every /plan request — the batch
 exporter is still the source of truth. If the file is missing, the server
@@ -122,6 +127,11 @@ def create_app(data_path: Optional[Path] = None, *, allow_cors: bool = True) -> 
     app.state.issues = []
     app.state.stoppages = []
     app.state.plan_override = None  # dict[lineKey, Band[]] or None
+    # Stores for the v2.4-planned endpoints (drafts/changes/handoff).
+    # In-memory; the FE writes through these and reconciles on response.
+    app.state.plan_drafts = []      # list[Draft]; Draft has id + savedAt + title + body
+    app.state.change_ledger = []    # list[ChangeLedgerEntry]
+    app.state.shift_handoffs = []   # list[ShiftHandoff], newest last
 
     @app.exception_handler(HTTPException)
     async def _http_exc_handler(_request: Request, exc: HTTPException):
@@ -383,6 +393,119 @@ def create_app(data_path: Optional[Path] = None, *, allow_cors: bool = True) -> 
     async def move_commit(request: Request) -> dict:
         body = await _read_json(request)
         return _move_response(request.app, body, commit=True)
+
+    # ------------------------- drafts + apply -------------------------
+
+    @app.post("/plan/drafts")
+    async def save_plan_draft(request: Request) -> dict:
+        """Persist a Plan Lab WIP. Body matches the contract v2.4 shape:
+        `{title, mode, order, metrics, plan}`. Returns the persisted
+        record with server-assigned id + savedAt."""
+        body = await _read_json(request)
+        title = str(body.get("title") or "").strip() or "Untitled draft"
+        mode = body.get("mode")
+        if mode not in ("rec", "manual"):
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "bad_request", "detail": "mode must be 'rec' or 'manual'"},
+            )
+        record = {
+            "id": f"drft-{uuid.uuid4().hex[:12]}",
+            "savedAt": int(time.time() * 1000),
+            "title": title,
+            "mode": mode,
+            "order": body.get("order"),
+            "metrics": list(body.get("metrics") or []),
+            "plan": body.get("plan") or {},
+        }
+        request.app.state.plan_drafts.append(record)
+        # Public response only carries the lightweight pointer; the full
+        # body is kept in memory if /plan/apply wants it later.
+        return {"draft": {"id": record["id"], "savedAt": record["savedAt"], "title": record["title"]}}
+
+    @app.post("/plan/apply")
+    async def apply_plan(request: Request) -> dict:
+        """Commit the supplied plan as the new server-truth basePlan.
+        Same body shape as /plan/drafts but the `plan` field is
+        applied immediately (and the next /plan reflects it)."""
+        body = await _read_json(request)
+        new_plan = body.get("plan")
+        if not isinstance(new_plan, dict) or not new_plan:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "bad_request", "detail": "plan must be a non-empty {lineKey: Band[]} object"},
+            )
+        # Normalise: ensure each lane is a list; coerce line keys to str.
+        override: Dict[str, List[Dict[str, Any]]] = {}
+        for line, lane in new_plan.items():
+            if not isinstance(lane, list):
+                continue
+            override[str(line)] = list(lane)
+        request.app.state.plan_override = override
+        # Audit trail entry — same pattern the FE's useChangeLedger uses.
+        request.app.state.change_ledger.append({
+            "id": f"chg-{int(time.time() * 1000)}-{len(request.app.state.change_ledger) + 1}",
+            "ts": int(time.time() * 1000),
+            "type": "plan_applied",
+            "summary": str(body.get("title") or "Plan applied"),
+            "sessionId": str(body.get("sessionId") or ""),
+        })
+        new_payload, _ = _build_plan_response(request.app)
+        return {"plan": new_payload}
+
+    # ---------------------------- changes ----------------------------
+
+    @app.post("/changes")
+    async def post_change(request: Request) -> dict:
+        """Append a ChangeLedgerEntry. Server assigns id + ts (or honors
+        the FE-supplied id for idempotency)."""
+        body = await _read_json(request)
+        change = {
+            **body,
+            "id": str(body.get("id") or f"chg-{int(time.time() * 1000)}-{len(request.app.state.change_ledger) + 1}"),
+            "ts": int(body.get("ts") or time.time() * 1000),
+        }
+        # Idempotency: if an entry with this id already exists, no-op.
+        existing = next((c for c in request.app.state.change_ledger if c.get("id") == change["id"]), None)
+        if existing is not None:
+            return {"change": existing}
+        request.app.state.change_ledger.append(change)
+        return {"change": change}
+
+    @app.get("/changes")
+    def get_changes(
+        request: Request,
+        sessionId: Optional[str] = None,
+        since: Optional[int] = None,
+        limit: int = 200,
+    ) -> dict:
+        """Filtered, capped fetch of the audit log. Matches contract:
+        sessionId / since (epoch ms) / limit query params."""
+        rows = list(request.app.state.change_ledger)
+        if sessionId:
+            rows = [c for c in rows if c.get("sessionId") == sessionId]
+        if since is not None:
+            rows = [c for c in rows if int(c.get("ts") or 0) >= int(since)]
+        rows = rows[-max(1, min(int(limit), 1000)):]
+        return {"changes": rows}
+
+    # -------------------------- shift handoff --------------------------
+
+    @app.post("/shifts/handoff")
+    async def post_handoff(request: Request) -> dict:
+        body = await _read_json(request)
+        handoff = {
+            **body,
+            "id": str(body.get("id") or f"handoff-{int(time.time() * 1000)}"),
+            "sentAt": int(body.get("sentAt") or time.time() * 1000),
+        }
+        request.app.state.shift_handoffs.append(handoff)
+        return {"handoff": handoff}
+
+    @app.get("/shifts/handoff/latest")
+    def get_latest_handoff(request: Request) -> dict:
+        store = request.app.state.shift_handoffs
+        return {"handoff": store[-1] if store else None}
 
     return app
 

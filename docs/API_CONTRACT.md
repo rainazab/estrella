@@ -17,12 +17,19 @@ contract change — bump the version and notify the frontend team.
   `urgent | queued | scheduled | planned | done`. `planned` is emitted
   only by the frontend's optimistic preview path; the backend never
   needs to return it.
-- **Planned (FE-only today):** three planned write endpoint groups that
-  currently mutate `localStorage` only: `POST /changes` + `GET /changes`,
-  `POST /shifts/handoff` + `GET /shifts/handoff/latest`, and
-  `POST /plan/drafts` + `POST /plan/apply`. Until the backend takes
-  ownership, the frontend treats them as best-effort no-ops. New types:
+- **Shipped (in-memory):** `POST /changes` + `GET /changes`,
+  `POST /shifts/handoff` + `GET /shifts/handoff/latest`,
+  `POST /plan/drafts` + `POST /plan/apply`. Process-local stores (no
+  DB); the canonical pipeline is still the source of truth, these are
+  mutations layered on top so the FE can round-trip writes. New types:
   `ChangeLedgerEntry`, `ShiftHandoff`.
+- **Shipped:** `TimelineMeta.now` (ISO 8601 datetime) so the FE can
+  retire the three FAKE_NOW hardcodes.
+- **Shipped:** `insertion_moves[]` on `/plan` — flattened
+  inserted+shifted card shape for the Stride plan-review surface,
+  derived from `Recommendation.plan` (kind=ins/shift) + `moves[]`.
+- **Shipped:** Recommendation `evidence.analogues` now carries up to
+  12 rows (was 6), so the FE can retire its analogue synthesiser.
 
 ## Conventions
 
@@ -202,7 +209,7 @@ returns the new layout; the canonical `data.json` is *not* rewritten
 
 **200** → `{ plan: Plan; ripple: MovePreview["ripple"] }`
 
-### `POST /plan/drafts` *(new in 2.4 — planned)*
+### `POST /plan/drafts` *(new in 2.4 — shipped, in-memory)*
 
 Persist the current Plan Lab state as a named draft. Today frontend-only
 (`onSaveDraft` in `linewise/src/preview/PlanLab.jsx`); when the backend
@@ -222,7 +229,7 @@ the frontend can confirm and list drafts later.
 
 **200** → `{ draft: { id: string; savedAt: number; title: string } }`
 
-### `POST /plan/apply` *(new in 2.4 — planned)*
+### `POST /plan/apply` *(new in 2.4 — shipped, in-memory)*
 
 Commit the current Plan Lab plan as the new server-truth `basePlan`.
 Same request body as `/plan/drafts`. Equivalent to a multi-band
@@ -231,7 +238,7 @@ re-render against committed state.
 
 **200** → `{ plan: Plan }`
 
-### `POST /changes` and `GET /changes` *(new in 2.4 — planned)*
+### `POST /changes` and `GET /changes` *(new in 2.4 — shipped, in-memory)*
 
 Append-only planner audit log. Today written client-side from
 `useChangeLedger`. Backends may either accept explicit POSTs here (one
@@ -254,7 +261,7 @@ endpoints (`/plan/move`, `/plan/stoppage-replan`, `/issues`,
 
 **GET 200** → `{ changes: ChangeLedgerEntry[] }`
 
-### `POST /shifts/handoff` and `GET /shifts/handoff/latest` *(new in 2.4 — planned)*
+### `POST /shifts/handoff` and `GET /shifts/handoff/latest` *(new in 2.4 — shipped, in-memory)*
 
 Persist and retrieve the most recent `ShiftHandoff`. The Inbox briefing
 fetches `/latest` on boot to compute the "changes since last handoff"
@@ -302,6 +309,7 @@ Top-level keys (all required):
 | `manualSlots` | `{ [slotKey]: ManualSlot }` | UI hint cards for hand-placed slots |
 | `issues` | `Issue[]` | Active issue log surfaced on lane badges |
 | `stoppages` | `Stoppage[]` | Active line stoppages |
+| `insertion_moves` | `InsertionMove[]` | Flattened urgent-insert + downstream-shift cards for the plan-review surface |
 
 ### `Order`
 ```ts
@@ -334,6 +342,11 @@ of the previous calendar year.
 {
   anchorDate: string;     // ISO date represented by start=0
   anchorLabel: string;    // usually "Today"
+  now?: string;           // ISO 8601 datetime — authoritative "current time"
+                          // the frontend can use in place of hardcoded clocks
+                          // (FAKE_NOW in Inbox / Timeline / cala-mock).
+                          // Server emits it on every /plan; absence means
+                          // the frontend may fall back to Date.now().
   timeUnit: "hours"|"days";
   views: {
     week:    { daysBack: number; daysAhead: number };
@@ -503,6 +516,45 @@ line; a new entry on the same line supersedes the prior one.
   ts: number;                              // epoch ms (server-assigned)
 }
 ```
+
+### `InsertionMove`
+
+Flattened mirror of `Recommendation.plan[line]` segments with
+`kind="ins"` / `kind="shift"`, joined with the matching `moves[]`
+entry for shift metadata. Powers the `InsertionShiftPanel` on the
+Stride plan-review surface. One entry per recommendation that
+actually inserts an urgent run; `shifted` lists every kind="shift"
+run on the same lane.
+
+```ts
+{
+  line: string;                              // "14"
+  line_avg_oee: number;                      // 30-day rolling baseline (0..1)
+  inserted: {
+    of: string;                              // "ED13LTNN"
+    sku_code: string;                        // same as `of` today
+    sku_name: string | null;
+    format: string;                          // "33cl"
+    units: number;
+    duration_minutes: number;
+    oee: number;                             // 0..1
+    oee_delta_vs_line_avg: number;
+  };
+  shifted: Array<{
+    // same fields as `inserted`, plus:
+    shift_hours: number;                     // positive = pushed later
+    reason: string;                          // "pushed back to make room for ED13LTNN"
+  }>;
+}
+```
+
+Derivation is deterministic (no new model work): for each
+`Recommendation`, group `plan[line]` segments where `kind="ins"` with
+the consecutive `kind="shift"` segments on the same line; join each
+shifted run with the matching entry in `moves[]` (key on `of`) for
+`shift_hours` and `reason`; carry `line_avg_oee` from
+`lineBaseline[line]`; compute `oee_delta_vs_line_avg = oee - line_avg_oee`
+per run. Recs that don't carry a `kind="ins"` segment are skipped.
 
 ### `Signal` & `Citation`
 
