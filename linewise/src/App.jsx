@@ -1,6 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { usePlan } from './hooks/usePlan.js';
+import {
+  postIssue,
+  postStoppage,
+  resumeStoppage as apiResumeStoppage,
+  postStoppageReplan,
+} from './api/client.js';
 import { useTimelineMoveFlow } from './hooks/useTimelineMoveFlow.js';
 import TopBar from './components/TopBar.jsx';
 import KPIStrip from './components/KPIStrip.jsx';
@@ -164,64 +170,103 @@ function Workspace({ data }) {
   }
 
   function logIssue(payload) {
-    const entry = { id: `iss-${Date.now()}`, ...payload };
-    setIssues((prev) => [entry, ...prev]);
+    /* Optimistic update with a client-generated id, then reconcile with
+       the server's view (server-assigned id + ts). If the backend isn't
+       reachable we keep the optimistic entry — the demo stays interactive
+       offline. */
+    const optimistic = { id: `iss-local-${Date.now()}`, ts: Date.now(), ...payload };
+    setIssues((prev) => [optimistic, ...prev]);
     setIssueModalOpen(false);
     setToast({
-      id: entry.id,
-      title: `Issue logged on L${entry.line}`,
-      detail: `${labelCategory(entry.category)} · ${labelSeverity(entry.severity)}`,
-      tone: entry.severity === 'critical' ? 'warn' : 'neutral',
+      id: optimistic.id,
+      title: `Issue logged on L${optimistic.line}`,
+      detail: `${labelCategory(optimistic.category)} · ${labelSeverity(optimistic.severity)}`,
+      tone: optimistic.severity === 'critical' ? 'warn' : 'neutral',
     });
+    postIssue({ ...payload, ts: optimistic.ts })
+      .then(({ issue }) => {
+        setIssues((prev) => prev.map((i) => (i.id === optimistic.id ? issue : i)));
+      })
+      .catch((err) => {
+        if (import.meta.env.DEV) console.warn('[issues] backend unavailable, keeping local entry', err);
+      });
   }
 
   function logStoppage(payload) {
-    /* One active stoppage per line — replace any prior. Keeps the KPI
-       and lane badge unambiguous; if a planner re-logs the same line
-       they probably mean to update it. */
-    const entry = { id: `stp-${Date.now()}`, ...payload };
+    /* One active stoppage per line — replace any prior. Optimistic local
+       update mirrors the server's invariant; reconcile from the response
+       so the id/ts match what the server stored. */
+    const optimistic = { id: `stp-local-${Date.now()}`, ts: Date.now(), ...payload };
     setStoppages((prev) => [
-      entry,
-      ...prev.filter((s) => s.line !== entry.line),
+      optimistic,
+      ...prev.filter((s) => s.line !== optimistic.line),
     ]);
     setStoppageModalOpen(false);
-    setReplanPrompt(entry);
+    setReplanPrompt(optimistic);
     setToast({
-      id: entry.id,
-      title: `L${entry.line} stopped`,
-      detail: `${labelReason(entry.reason)} · est. ${labelDuration(entry.duration)}`,
+      id: optimistic.id,
+      title: `L${optimistic.line} stopped`,
+      detail: `${labelReason(optimistic.reason)} · est. ${labelDuration(optimistic.duration)}`,
       tone: 'bad',
     });
+    postStoppage({ ...payload, ts: optimistic.ts })
+      .then(({ stoppages: serverList, stoppage }) => {
+        setStoppages(serverList ?? []);
+        if (stoppage) {
+          setReplanPrompt((prev) => (prev?.id === optimistic.id ? stoppage : prev));
+        }
+      })
+      .catch((err) => {
+        if (import.meta.env.DEV) console.warn('[stoppages] backend unavailable, keeping local entry', err);
+      });
   }
 
   function startReplan() {
     if (!replanPrompt) return;
     /* Real replan: shift every planned segment on the stopped lane
-       forward by the stoppage duration and commit the new plan. The
-       short calculating flash mirrors the urgent-order flow so it
-       feels like the same product moment, but here we end up back
-       on the schedule (not the recs view) with a visibly updated
-       timeline. */
+       forward by the stoppage duration and commit the new plan. We try
+       the backend first; if it answers we use the server's new plan
+       (which also covers service blocks), otherwise we fall back to the
+       client-side shift in stoppagePlan.js so the demo still moves. */
     const prompt = replanPrompt;
     const line = prompt.line;
     setReplanPrompt(null);
     setView('calculating');
 
-    setTimeout(() => {
-      const replan = computeStoppageReplan({
-        basePlan: effectivePlan,
-        line,
-        durationKey: prompt.duration,
-      });
-      setCommittedPlan(replan.plan);
+    const finish = (shiftedCount, shiftedHours, nextPlan) => {
+      if (nextPlan) setCommittedPlan(nextPlan);
       setView('queue');
       setToast({
         id: `rpl-${Date.now()}`,
         title: `L${line} replanned`,
-        detail: `Shifted ${replan.shiftedCount} ${replan.shiftedCount === 1 ? 'run' : 'runs'} by ${fmtShiftHours(replan.shiftedHours)}`,
+        detail: `Shifted ${shiftedCount} ${shiftedCount === 1 ? 'run' : 'runs'} by ${fmtShiftHours(shiftedHours)}`,
         tone: 'neutral',
       });
-    }, 1300);
+    };
+
+    /* Fire the request in parallel with the calculating flash so the UI
+       still feels instant even if the network is slow. */
+    const apiCall = postStoppageReplan({
+      stoppageId: prompt.id,
+      line,
+      durationKey: prompt.duration,
+    }).catch((err) => {
+      if (import.meta.env.DEV) console.warn('[replan] backend unavailable, using client-side shift', err);
+      return null;
+    });
+
+    Promise.all([apiCall, new Promise((r) => setTimeout(r, 1300))]).then(([resp]) => {
+      if (resp?.plan?.basePlan) {
+        finish(resp.shiftedCount ?? 0, resp.shiftedHours ?? 0, resp.plan.basePlan);
+      } else {
+        const replan = computeStoppageReplan({
+          basePlan: effectivePlan,
+          line,
+          durationKey: prompt.duration,
+        });
+        finish(replan.shiftedCount, replan.shiftedHours, replan.plan);
+      }
+    });
   }
 
   function resumeLine(line) {
@@ -229,6 +274,7 @@ function Workspace({ data }) {
        returns to N/N and the lane badge clears. Any plan changes from
        a Replan are intentionally left in place — the planner already
        committed to that new sequence. */
+    const active = stoppages.find((s) => s.line === line);
     setStoppages((prev) => prev.filter((s) => s.line !== line));
     /* If a replan banner is still up for the same line (planner hadn't
        acted yet), clear it too. */
@@ -239,6 +285,15 @@ function Workspace({ data }) {
       detail: 'Line back in production',
       tone: 'neutral',
     });
+    if (active?.id && !active.id.startsWith('stp-local-')) {
+      apiResumeStoppage(active.id)
+        .then(({ stoppages: serverList }) => {
+          if (Array.isArray(serverList)) setStoppages(serverList);
+        })
+        .catch((err) => {
+          if (import.meta.env.DEV) console.warn('[resume] backend unavailable', err);
+        });
+    }
   }
 
   function dropOnLine(line) {

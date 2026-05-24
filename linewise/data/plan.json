@@ -3421,5 +3421,21 @@
       "label": "Line 19 · end of queue",
       "banner": "End of queue — zero knock-on to scheduled orders."
     }
-  }
+  },
+  "lineFormats": {
+    "14": [
+      "50cl",
+      "33cl"
+    ],
+    "17": [
+      "33cl"
+    ],
+    "19": [
+      "50cl",
+      "33cl",
+      "44cl"
+    ]
+  },
+  "issues": [],
+  "stoppages": []
 }
