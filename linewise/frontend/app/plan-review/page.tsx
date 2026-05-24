@@ -45,7 +45,7 @@ export default function PlanReviewPage() {
           Where are we about to lose OEE and money?
         </h1>
         <p className="mt-2 text-damm-muted max-w-2xl">
-          LineWise walks every transition in the loaded plan, compares it against
+          Stride walks every transition in the loaded plan, compares it against
           the CF baseline and the diagnostic memory, and flags the slots that
           historically slip — with HL and € numbers attached.
         </p>

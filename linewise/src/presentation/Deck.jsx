@@ -12,7 +12,7 @@ function Deck() {
       number="04"
       label="Feature 1"
       title="Diagnose where sequencing hurt OEE."
-      subtitle="LineWise starts by investigating executed history, not by asking the planner to trust a prediction."
+      subtitle="Stride starts by investigating executed history, not by asking the planner to trust a prediction."
       mode="diagnose"
     />,
     <FeatureSlide
@@ -56,7 +56,7 @@ function Deck() {
   }, [slides.length])
 
   return (
-    <main className="deck-root" aria-label="LineWise presentation">
+    <main className="deck-root" aria-label="Stride presentation">
       {slides[slide]}
       <div className="slide-progress" aria-hidden="true">
         <span>{String(slide + 1).padStart(2, '0')}</span>
@@ -69,7 +69,7 @@ function Deck() {
 
 function TitleSlide() {
   return (
-    <section className="slide title-slide" aria-label="Slide 1: LineWise">
+    <section className="slide title-slide" aria-label="Slide 1: Stride">
       <div className="brand-row" aria-label="Hackathon partners">
         <img src="/brand/logo-damm.png" alt="Damm" className="brand-logo damm-logo" />
         <span className="partner-mark">x</span>
@@ -99,13 +99,13 @@ function TitleSlide() {
 
       <div className="title-content">
         <p className="challenge-label">Operations Challenge</p>
-        <h1>LineWise</h1>
+        <h1>Stride</h1>
         <p className="title-subtitle">When the plan changes, decide with evidence.</p>
       </div>
 
       <footer className="slide-footer">
         <span>Damm x Engineering HUB Hackathon</span>
-        <span>Team LineWise</span>
+        <span>Team Stride</span>
       </footer>
     </section>
   )
@@ -234,7 +234,7 @@ function PromiseSlide() {
       </div>
 
       <div className="promise-hero">
-        <h2>LineWise gives the factory a memory.</h2>
+        <h2>Stride gives the factory a memory.</h2>
         <p>Executed history becomes decision support at the moment of replanning.</p>
       </div>
 
@@ -246,7 +246,7 @@ function PromiseSlide() {
 
         <div className="memory-core">
           <div className="core-ring" />
-          <div className="core-title">LineWise</div>
+          <div className="core-title">Stride</div>
           <div className="core-sub">evidence engine</div>
         </div>
 
@@ -299,7 +299,7 @@ function FeatureSlide({ number, label, title, subtitle, mode }) {
 
       <div className="demo-frame" aria-hidden="true">
         <div className="demo-topbar">
-          <span>LineWise product UI</span>
+          <span>Stride product UI</span>
           <b>{mode}</b>
         </div>
         <ProductUiExample mode={mode} />
@@ -324,7 +324,7 @@ const UI_EXAMPLES = {
   recommend: {
     src: '/deck/ui-recommend.png',
     eyebrow: 'Recommendation with evidence',
-    headline: 'LineWise ranks the move and shows the cases behind it.',
+    headline: 'Stride ranks the move and shows the cases behind it.',
     stats: ['+16.9 OEE', '6 analogues', 'Line 19'],
   },
 }
@@ -353,10 +353,10 @@ function ProductUiExample({ mode }) {
 
 function ApproachSlide() {
   return (
-    <section className="slide approach-slide" aria-label="Slide 8: How LineWise works">
+    <section className="slide approach-slide" aria-label="Slide 8: How Stride works">
       <div className="slide-kicker">
         <span>07</span>
-        <b>How LineWise Works</b>
+        <b>How Stride Works</b>
       </div>
       <div className="approach-title">
         <h2>A decision pipeline, not just a dashboard.</h2>

@@ -181,7 +181,7 @@ export default function Inbox({
         </div>
 
         <div className="panel-foot bordered">
-          Pick an urgent order — LineWise ranks every line and insertion point
+          Pick an urgent order — Stride ranks every line and insertion point
           against 2025's executed changeover history.
         </div>
         <ProvenanceModal

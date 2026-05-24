@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 /* TopBar — full-width header.
-   Left: LineWise brand + plant subtitle.
+   Left: Stride brand + plant subtitle.
    Centre: empty (room for future page-title / breadcrumb).
    Right: green bell (urgent orders), user avatar + caret menu.
    (Live status lives in the sidebar footer — bottom-left of the app.) */
@@ -40,11 +40,11 @@ export default function TopBar({
         <span className="topbar-brand-sep" aria-hidden="true" />
         <svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true">
           <rect x="2" y="2" width="36" height="36" rx="9" fill="var(--brand)" />
-          <path d="M11 28 L11 12 L15 12 L15 24 L24 24 L24 28 Z" fill="var(--ink-on-brand-strong)" />
+          <text x="13" y="27" fill="var(--ink-on-brand-strong)" fontSize="22" fontWeight="800">S</text>
           <circle cx="29" cy="14" r="3" fill="var(--accent)" />
         </svg>
         <div className="topbar-brand-text">
-          <div className="topbar-brand-name">LineWise</div>
+          <div className="topbar-brand-name">Stride</div>
           <div className="topbar-brand-plant">El Prat · Damm</div>
         </div>
       </div>

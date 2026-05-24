@@ -76,10 +76,10 @@ export default function AboutModelPage() {
           Model flow
         </div>
         <h1 className="text-3xl md:text-4xl font-semibold text-white mt-1">
-          How LineWise works
+          How Stride works
         </h1>
         <p className="mt-2 text-damm-muted max-w-2xl">
-          LineWise first learns which transitions historically hurt OEE, then
+          Stride first learns which transitions historically hurt OEE, then
           uses that learned factory memory to simulate urgent-order placements
           and recommend the line and slot with the lowest expected operational
           damage.

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 /* MoveCalculating — the "Recalculating impact..." moment between drop
    and the impact panel. Borrows the scanning-lines visual language from
    the urgent-order calculate stage so the move feels like the same kind
-   of action: a constraint that LineWise re-evaluates the plan against,
+   of action: a constraint that Stride re-evaluates the plan against,
    not a sticker the user pasted on. */
 export default function MoveCalculating({ moving, dest }) {
   return (

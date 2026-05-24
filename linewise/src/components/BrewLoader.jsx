@@ -1,7 +1,7 @@
 import './BrewLoader.css';
 
 /* BrewLoader v2 — DAMM brewery loading animation.
-   What it shows = what LineWise actually does:
+   What it shows = what Stride actually does:
      1. Reading orders from the demand book (hopper feeds bottles in)
      2. Routing each SKU to the right line (mascot conducts to L1/L2/L3)
      3. Optimising OEE / minimising changeovers (KPIs tick up below)
@@ -102,7 +102,7 @@ export default function BrewLoader() {
           </div>
         </div>
         <div className="brew-loader__title">
-          <b>LineWise</b>
+          <b>Stride</b>
           <span>Production Planner</span>
         </div>
       </div>

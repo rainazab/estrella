@@ -1,7 +1,7 @@
 import LiveStatus from './LiveStatus.jsx';
 
 /* Sidebar — full-height left rail.
-   Top: large brand block (logo mark + "LineWise" + "El Prat" subtitle).
+   Top: large brand block (logo mark + "Stride" + "El Prat" subtitle).
    Middle: nav items (planner / history / settings — placeholders for now).
    Bottom: Live status pill anchored bottom-left, above a thin border. */
 export default function Sidebar({ data, lastSync, activeView = 'planner' }) {
@@ -14,7 +14,7 @@ export default function Sidebar({ data, lastSync, activeView = 'planner' }) {
           className="sb-damm-mark"
         />
         <div className="sb-brand-text">
-          <div className="sb-brand-name">LineWise</div>
+          <div className="sb-brand-name">Stride</div>
           <div className="sb-brand-plant">El Prat planning</div>
         </div>
       </div>

@@ -416,7 +416,7 @@ function RecommendationLane({ data, lineKey, rec, zoom, showNaive, sync, primary
         })()}
         {rec.line.endsWith(lineKey) && (
           <div className="tl-next-stop tl-rec-badge">
-            <span className="ns-h">LineWise</span>
+            <span className="ns-h">Stride</span>
             <div className="ns-row">
               <span className="ns-lbl">Recommended</span>
             </div>

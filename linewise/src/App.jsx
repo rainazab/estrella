@@ -1005,7 +1005,7 @@ function RecommendationStage({ data, line, zoom, onZoom, showNaive, onToggleNaiv
           onChange={(e) => onToggleNaive(e.target.checked)}
           disabled={!rec.naiveBand}
         />
-        Show the naive slot (what you'd do without LineWise)
+        Show the naive slot (what you'd do without Stride)
         {!rec.naiveBand && <span style={{ color: 'var(--ink-3)', fontStyle: 'italic' }}>— n/a for this option</span>}
       </label>
       <div className="drag-tray">

@@ -178,7 +178,7 @@ export function signalToCitation(signal) {
     lineage: [
       `Cala ${signal.vertical} watcher`,
       signal.sourceName,
-      'LineWise mock resolver',
+      'Stride mock resolver',
     ],
     affects: signal.affects,
   };
