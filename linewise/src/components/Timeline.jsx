@@ -900,7 +900,12 @@ function Lane({ lineKey, centre, baseline, formats = [], executed, planned, zoom
             style={{ flex: 'none', width: leadPadDays * pxPerDay }}
           />
         )}
-        {(() => {
+        {/* At month zoom the executed history is already represented by
+            the Current week aggregate, and rendering 4-5 inline cards
+            with MIN_CARD_WIDTH=80 floods the lane footer with duplicate
+            content that visually leaks under the aggregates. Hide them
+            there; the per-run detail is still available at week zoom. */}
+        {zoom !== 'month' && (() => {
           const execEnd = executedEnd(executed, timeUnit);
           return executed.map((seg, i) => {
             const prev = i > 0 ? executed[i - 1] : null;
