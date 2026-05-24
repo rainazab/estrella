@@ -75,6 +75,26 @@ def _payload() -> dict:
         }],
         "lineBaseline": {l: {"avg_oee": 0.6} for l in ("14", "17", "19")},
         "lineCentre": {"14": "CF Prat", "17": "CF Prat", "19": "CF Prat"},
+        "timeline": {
+            "anchorDate": "2026-05-24",
+            "anchorLabel": "Today",
+            "timeUnit": "hours",
+            "views": {
+                "week": {"daysBack": 7, "daysAhead": 14},
+                "month": {"daysBack": 14, "daysAhead": 35},
+                "quarter": {"daysBack": 30, "daysAhead": 90},
+            },
+        },
+        "lineRules": {
+            "14": {"formats": [{"key": "1/2", "label": "50cl", "name": "medio"}, {"key": "1/3", "label": "33cl", "name": "tercio"}]},
+            "17": {"formats": [{"key": "1/3", "label": "33cl", "name": "tercio"}]},
+            "19": {"formats": [{"key": "1/2", "label": "50cl", "name": "medio"}, {"key": "1/3", "label": "33cl", "name": "tercio"}, {"key": "2/5", "label": "44cl", "name": "2/5"}]},
+        },
+        "weeklyStops": {
+            "14": [{"kind": "clean", "start": 24, "w": 8, "locked": True}],
+            "17": [{"kind": "clean", "start": 24, "w": 8, "locked": True}],
+            "19": [{"kind": "clean", "start": 24, "w": 8, "locked": True}],
+        },
         "yearCompare": {},
         "executedHistory": {l: [_seg(f"E{l}", 0.0, 0.4)] for l in ("14", "17", "19")},
         "basePlan": {l: [_seg(f"B{l}", 0.0, 0.4)] for l in ("14", "17", "19")},
@@ -88,8 +108,8 @@ class TestRequiredKeysExist:
     def test_required_top_level_constants_match_expected(self):
         assert set(REQUIRED_TOP_LEVEL) == {
             "urgentOrders", "lineBaseline", "lineCentre", "yearCompare",
-            "executedHistory", "basePlan", "recommendations", "objectives",
-            "manualSlots",
+            "timeline", "lineRules", "weeklyStops", "executedHistory",
+            "basePlan", "recommendations", "objectives", "manualSlots",
         }
 
     def test_required_recommendation_fields_include_plan_and_evidence(self):

@@ -14,8 +14,26 @@ import MoveBanner from './components/MoveBanner.jsx';
 import MoveCalculating from './components/MoveCalculating.jsx';
 import MoveImpactPanel from './components/MoveImpactPanel.jsx';
 import DraftPlanPanel from './components/DraftPlanPanel.jsx';
+import PlannerActionDrawer from './components/PlannerActionDrawer.jsx';
+import SettingsDrawer from './components/SettingsDrawer.jsx';
 import { computeMovePreview, isLineCompatible } from './lib/movePlan.js';
 import { deriveFormat } from './components/TimelineCard.jsx';
+
+const DEFAULT_SETTINGS = {
+  defaultObjective: 'oee',
+  defaultView: 'week',
+  showOriginalOverlay: false,
+  compactCards: false,
+  comparisonBaseline: 'sevenDay',
+};
+
+function loadPlannerSettings() {
+  try {
+    return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem('linewise.settings') || '{}') };
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
+}
 
 /* App state mirrors the prototype's `state` object 1:1.
    view : 'queue' (landing planner) | 'calculating' | 'recs'
@@ -38,18 +56,24 @@ function Workspace({ data }) {
   const demo = new URLSearchParams(location.search).get('demo');
   const demoRecs = demo === 'recs' || demo === 'simulate' || demo === 'recommend';
   const demoCalc = demo === 'calculating';
+  const initialSettings = loadPlannerSettings();
   const [view, setView] = useState(demoCalc ? 'calculating' : demoRecs ? 'recs' : 'queue');
-  const [objective, setObjective] = useState('oee');
+  const [settings, setSettings] = useState(initialSettings);
+  const [objective, setObjective] = useState(initialSettings.defaultObjective);
   const [selectedImpact, setSelectedImpact] = useState(demoRecs ? 'oee' : null);
   const [selectedLine, setSelectedLine] = useState(demoRecs ? data.objectives.oee.order[0] : null);
   const [manualSlot, setManualSlot] = useState(null);
   const [showNaive, setShowNaive] = useState(demo === 'simulate');
-  const [zoom, setZoom] = useState('week');
+  const [zoom, setZoom] = useState(initialSettings.defaultView);
   const [inboxOpen, setInboxOpen] = useState(demo === 'inbox');
   const [draftOpen, setDraftOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [actionDrawer, setActionDrawer] = useState(null);
+  const [showOriginalPlan, setShowOriginalPlan] = useState(Boolean(initialSettings.showOriginalOverlay));
   const [orders, setOrders] = useState(data.urgentOrders);
   const [activeOrder, setActiveOrder] = useState(data.urgentOrders[0]);
   const [runDetail, setRunDetail] = useState(null);
+  const [lineEvents, setLineEvents] = useState({ '14': [], '17': [], '19': [] });
   /* Move flow state:
      - `moving` = the run currently being moved (set when Maria clicks
        "Move to another line" in the run detail modal). Closes the modal,
@@ -77,6 +101,10 @@ function Workspace({ data }) {
     if (!demo) setInboxOpen(true);
   }, [demo]);
 
+  useEffect(() => {
+    localStorage.setItem('linewise.settings', JSON.stringify(settings));
+  }, [settings]);
+
   /* Esc cancels moving mode. Listening here (not in the timeline) so the
      handler survives across re-renders of the lane components. */
   useEffect(() => {
@@ -89,7 +117,10 @@ function Workspace({ data }) {
   /* Effective plan — folds any committed move into data.basePlan. The
      timeline reads from this rather than data.basePlan directly so a
      confirmed move sticks across renders. */
-  const effectivePlan = committedPlan ?? data.basePlan;
+  const optimizedLine = data.objectives?.oee?.order?.[0];
+  const optimizedPlan = data.recommendations?.[optimizedLine]?.plan ?? data.basePlan;
+  const effectivePlan = showOriginalPlan ? data.basePlan : (committedPlan ?? optimizedPlan);
+  const planState = showOriginalPlan ? 'original' : committedPlan ? 'draft' : 'optimized';
 
   /* Drop handler — fires the calculate flash and then routes into the
      impact-review panel. We deliberately don't commit the plan until
@@ -98,7 +129,7 @@ function Workspace({ data }) {
   function handleMoveDrop({ lineKey, slotIndex }) {
     if (!moving) return;
     const format = moving.format;
-    if (!isLineCompatible(lineKey, format)) return;
+    if (!isLineCompatible(lineKey, format, data.lineRules)) return;
     const preview = computeMovePreview({
       basePlan: effectivePlan,
       lineBaseline: data.lineBaseline,
@@ -130,9 +161,8 @@ function Workspace({ data }) {
 
   function discardMove() {
     if (!movePending) return;
-    setCommittedPlan(
-      movePending.priorPlan === data.basePlan ? null : movePending.priorPlan,
-    );
+    const baseForCurrentMode = showOriginalPlan ? data.basePlan : optimizedPlan;
+    setCommittedPlan(movePending.priorPlan === baseForCurrentMode ? null : movePending.priorPlan);
     setMovePending(null);
   }
 
@@ -166,10 +196,9 @@ function Workspace({ data }) {
   }
 
   function dropOnLine(line) {
-    const LINE_DROP_SLOT = { '14': '14-end', '17': '17-after-AM05LTST', '19': '19-end' };
-    const key = LINE_DROP_SLOT[line];
-    if (!key) return;
+    const key = resolveManualSlotKey({ lineKey: line });
     setManualSlot(key);
+    setSelectedLine(data.manualSlots?.[key]?.recKey ?? line);
     setView('calculating');
     setTimeout(() => {
       setShowNaive(false);
@@ -177,21 +206,74 @@ function Workspace({ data }) {
     }, 900);
   }
 
+  function dropUrgentOnSlot({ lineKey, anchorOf = null }) {
+    const urgentFormat = deriveFormat({ sku: activeOrder?.sku, material: activeOrder?.of });
+    if (!isLineCompatible(lineKey, urgentFormat, data.lineRules)) return;
+    const key = resolveManualSlotKey({ lineKey, anchorOf });
+    setManualSlot(key);
+    setSelectedLine(data.manualSlots?.[key]?.recKey ?? lineKey);
+    setView('calculating');
+    setTimeout(() => {
+      setShowNaive(false);
+      setView('recs');
+    }, 900);
+  }
+
+  function resolveManualSlotKey({ lineKey, anchorOf = null }) {
+    const slots = data.manualSlots ?? {};
+    const exact = anchorOf ? `${lineKey}-after-${anchorOf}` : null;
+    if (exact && slots[exact]) return exact;
+    const end = `${lineKey}-end`;
+    if (!anchorOf && slots[end]) return end;
+    const fallback = Object.entries(slots).find(([key, slot]) => (
+      String(slot.recKey) === String(lineKey)
+      && (!anchorOf || key.includes(anchorOf))
+    ));
+    return fallback?.[0] ?? null;
+  }
+
+  function updateSettings(nextSettings) {
+    setSettings(nextSettings);
+    setZoom(nextSettings.defaultView);
+    setShowOriginalPlan(Boolean(nextSettings.showOriginalOverlay));
+    setObjective(nextSettings.defaultObjective);
+  }
+
+  function addLineEvent(event) {
+    setLineEvents((current) => ({
+      ...current,
+      [event.line]: [event, ...(current[event.line] ?? [])],
+    }));
+  }
+
+  function startMoveFromPlan(lineKey, fromIndex) {
+    const lane = effectivePlan?.[lineKey] ?? [];
+    const run = lane[fromIndex];
+    if (!run || run.kind === 'clean' || run.kind === 'maint') return;
+    setMoving({
+      run,
+      fromLine: lineKey,
+      fromIndex,
+      format: run.format || deriveFormat({ sku: run.sku, material: run.of }),
+    });
+    setDraftOpen(false);
+  }
+
   const stageLine = manualSlot
-    ? data.manualSlots[manualSlot].recKey
-    : selectedLine || data.objectives[objective].order[0];
+    ? data.manualSlots[manualSlot]?.recKey
+    : selectedLine || data.objectives?.[objective]?.order?.[0] || data.objectives?.oee?.order?.[0];
 
   const urgentCount = orders.filter((o) => o.status === 'urgent').length;
 
   return (
-    <div className="app">
+    <div className={`app${settings.compactCards ? ' app-compact' : ''}`}>
       <div className={`main${inRecs ? ' main-recs' : ''}`}>
         <TopBar
           urgentCount={urgentCount}
           inboxOpen={inboxOpen}
           onBellClick={() => setInboxOpen((o) => !o)}
           onDraftPlan={() => { setInboxOpen(false); setDraftOpen(true); }}
-          onSettings={() => { /* TODO: open settings */ }}
+          onSettings={() => { setInboxOpen(false); setSettingsOpen(true); }}
           onLogout={() => { /* TODO: wire to auth */ }}
         />
 
@@ -236,6 +318,16 @@ function Workspace({ data }) {
                   onRunClick={setRunDetail}
                   moving={moving}
                   onMoveDrop={handleMoveDrop}
+                  planState={planState}
+                  showOriginalPlan={showOriginalPlan}
+                  onToggleOriginal={(checked) => {
+                    setShowOriginalPlan(checked);
+                    setSettings((cur) => ({ ...cur, showOriginalOverlay: checked }));
+                  }}
+                  lineRules={data.lineRules}
+                  weeklyStops={data.weeklyStops}
+                  events={lineEvents}
+                  settings={settings}
                 />
               )}
               {view === 'calculating' && <CalculatingStage />}
@@ -248,6 +340,11 @@ function Workspace({ data }) {
                   showNaive={showNaive}
                   onToggleNaive={setShowNaive}
                   onDropOnLine={dropOnLine}
+                  onUrgentDrop={dropUrgentOnSlot}
+                  lineRules={data.lineRules}
+                  weeklyStops={data.weeklyStops}
+                  activeOrder={activeOrder}
+                  events={lineEvents}
                 />
               )}
             </div>
@@ -268,7 +365,30 @@ function Workspace({ data }) {
             <DraftPlanPanel
               key="draft"
               plan={effectivePlan}
+              originalPlan={data.basePlan}
+              lineRules={data.lineRules}
+              weeklyStops={data.weeklyStops}
+              planState={planState}
               onClose={() => setDraftOpen(false)}
+              onMoveRun={startMoveFromPlan}
+            />
+          )}
+          {settingsOpen && (
+            <SettingsDrawer
+              key="settings"
+              settings={settings}
+              lineRules={data.lineRules}
+              onChange={updateSettings}
+              onClose={() => setSettingsOpen(false)}
+            />
+          )}
+          {actionDrawer && (
+            <PlannerActionDrawer
+              key={actionDrawer}
+              type={actionDrawer}
+              lineRules={data.lineRules}
+              onClose={() => setActionDrawer(null)}
+              onSubmit={addLineEvent}
             />
           )}
         </AnimatePresence>
@@ -277,8 +397,8 @@ function Workspace({ data }) {
           <Fab
             onAction={(key) => {
               if (key === 'order')    setInboxOpen(true);
-              if (key === 'issue')    console.log('[fab] report issue — TODO');
-              if (key === 'stoppage') console.log('[fab] log stoppage — TODO');
+              if (key === 'issue')    setActionDrawer('issue');
+              if (key === 'stoppage') setActionDrawer('stoppage');
             }}
           />
         )}
@@ -401,16 +521,47 @@ function PanelCalculating({ order }) {
   );
 }
 
-function DefaultStage({ data, effectivePlan, zoom, onZoom, onRunClick, moving, onMoveDrop }) {
+function DefaultStage({
+  data,
+  effectivePlan,
+  zoom,
+  onZoom,
+  onRunClick,
+  moving,
+  onMoveDrop,
+  planState,
+  showOriginalPlan,
+  onToggleOriginal,
+  lineRules,
+  weeklyStops,
+  events,
+  settings,
+}) {
   return (
     <>
-      <KPIStrip data={data} />
+      <KPIStrip data={data} events={events} settings={settings} />
+      <EventStrip events={events} />
       <div className="stage-head">
         <div>
-          <div className="stage-title">Production schedule</div>
-          <div className="stage-sub">Executed history left of today · forward plan right</div>
+          <div className="stage-title">
+            {planState === 'original' ? 'Original plan' : planState === 'draft' ? 'Draft plan' : 'Optimized plan'}
+            {planState === 'optimized' && <span className="plan-compare-chip">vs original Planificado</span>}
+          </div>
+          <div className="stage-sub">
+            {planState === 'original'
+              ? 'Planificado baseline · LineWise optimized view available'
+              : 'LineWise recommended schedule · executed history left of today'}
+          </div>
         </div>
         <div className="stage-head-right">
+          <label className="stage-plan-toggle">
+            <input
+              type="checkbox"
+              checked={showOriginalPlan}
+              onChange={(e) => onToggleOriginal(e.target.checked)}
+            />
+            Original plan
+          </label>
           <ZoomCtl zoom={zoom} onZoom={onZoom} />
         </div>
       </div>
@@ -422,6 +573,9 @@ function DefaultStage({ data, effectivePlan, zoom, onZoom, onRunClick, moving, o
         onRunClick={onRunClick}
         moving={moving}
         onMoveDrop={onMoveDrop}
+        lineRules={lineRules}
+        weeklyStops={weeklyStops}
+        events={events}
       />
     </>
   );
@@ -451,9 +605,24 @@ function CalculatingStage() {
   );
 }
 
-function RecommendationStage({ data, line, zoom, onZoom, showNaive, onToggleNaive, onDropOnLine }) {
+function RecommendationStage({
+  data,
+  line,
+  zoom,
+  onZoom,
+  showNaive,
+  onToggleNaive,
+  onDropOnLine,
+  onUrgentDrop,
+  lineRules,
+  weeklyStops,
+  activeOrder,
+  events,
+}) {
   const rec = data.recommendations[line];
-  const order = data.urgentOrders[0];
+  const order = activeOrder ?? data.urgentOrders[0];
+  const [draggingUrgent, setDraggingUrgent] = useState(false);
+  const urgentFormat = deriveFormat({ sku: order.sku, material: order.of });
   return (
     <>
       <div className="stage-head">
@@ -482,7 +651,12 @@ function RecommendationStage({ data, line, zoom, onZoom, showNaive, onToggleNaiv
         <div
           className="drag-token"
           draggable
-          onDragStart={(e) => { e.dataTransfer.setData('text/plain', 'urgent'); e.dataTransfer.effectAllowed = 'move'; }}
+          onDragStart={(e) => {
+            e.dataTransfer.setData('text/plain', order.of);
+            e.dataTransfer.effectAllowed = 'move';
+            setDraggingUrgent(true);
+          }}
+          onDragEnd={() => setDraggingUrgent(false)}
         >
           <span className="dt-of">{order.of}</span>
           <span className="dt-sub">{order.sku}</span>
@@ -496,8 +670,30 @@ function RecommendationStage({ data, line, zoom, onZoom, showNaive, onToggleNaiv
         rec={rec}
         showNaive={showNaive}
         onDropOnLine={onDropOnLine}
+        onUrgentDrop={onUrgentDrop}
+        lineRules={lineRules}
+        weeklyStops={weeklyStops}
+        urgentDrop={draggingUrgent ? { active: true, format: urgentFormat, w: 8 } : null}
+        events={events}
       />
     </>
+  );
+}
+
+function EventStrip({ events }) {
+  const list = Object.entries(events ?? {}).flatMap(([line, lineEvents]) => (
+    (lineEvents ?? []).map((event) => ({ ...event, line }))
+  ));
+  if (!list.length) return null;
+  return (
+    <div className="event-strip">
+      {list.slice(0, 4).map((event) => (
+        <span key={event.id} className={`event-pill event-${event.type}`}>
+          L{event.line} · {event.category}
+          {event.type === 'stoppage' && event.durationMinutes ? ` · ${event.durationMinutes}m` : ''}
+        </span>
+      ))}
+    </div>
   );
 }
 

@@ -11,26 +11,23 @@
         ripple summary the UI can render in the post-move pill. */
 
 import { deriveFormat } from '../components/TimelineCard.jsx';
+import { FALLBACK_LINE_RULES, compatibilityReason, isCompatible } from './lineRules.js';
 
 /* Production rules — which trenes can run which can format.
    Mirrors the matrix from the previous RunDetailModal compatible-lines
    section, lifted here so the move flow doesn't depend on the modal. */
 export const LINE_FORMATS = {
-  '14': new Set(['50cl', '33cl']),
-  '17': new Set(['33cl']),
-  '19': new Set(['50cl', '33cl', '44cl']),
+  '14': new Set(FALLBACK_LINE_RULES['14'].formats.map((fmt) => fmt.label)),
+  '17': new Set(FALLBACK_LINE_RULES['17'].formats.map((fmt) => fmt.label)),
+  '19': new Set(FALLBACK_LINE_RULES['19'].formats.map((fmt) => fmt.label)),
 };
 
-export function isLineCompatible(lineKey, format) {
-  if (!format) return true;
-  return LINE_FORMATS[lineKey]?.has(format) ?? false;
+export function isLineCompatible(lineKey, format, lineRules = null) {
+  return isCompatible(lineKey, format, lineRules);
 }
 
-export function incompatibleReason(lineKey, format) {
-  const allowed = LINE_FORMATS[lineKey];
-  if (!allowed) return null;
-  const fmts = [...allowed].join(' / ');
-  return `${fmts} only — can't run ${format}`;
+export function incompatibleReason(lineKey, format, lineRules = null) {
+  return compatibilityReason(lineKey, format, lineRules) ?? null;
 }
 
 /* computeMovePreview — given the current plan, the run being moved, and a
@@ -59,7 +56,7 @@ export function computeMovePreview({ basePlan, lineBaseline, moving, dest }) {
   const removedRun = sourceLane[fromIndex];
   if (!removedRun) return null;
   sourceLane.splice(fromIndex, 1);
-  const sourceFreedHours = (removedRun.w ?? 0) * 24;
+  const sourceFreedHours = removedRun.w ?? 0;
 
   // DEST — insert at toIndex, push downstream segments forward by run.w.
   // If we're inserting back into the SAME lane, adjust toIndex for the
@@ -108,7 +105,7 @@ export function computeMovePreview({ basePlan, lineBaseline, moving, dest }) {
       fromLine,
       toLine,
       pushedCount,
-      pushedHours: pushAmount * 24,
+      pushedHours: pushAmount,
       sourceFreedHours,
       oeeOld: removedRun.oee,
       oeeNew: newOee,

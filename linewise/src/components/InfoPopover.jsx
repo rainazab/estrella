@@ -51,17 +51,30 @@ export default function InfoPopover({ title, children }) {
     };
   }, [open]);
 
+  function toggle(e) {
+    e.stopPropagation();
+    setOpen((o) => !o);
+  }
+
+  function onTriggerKeyDown(e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    toggle(e);
+  }
+
   return (
     <span className="tc-info-wrap">
-      <button
+      <span
         ref={btnRef}
-        type="button"
+        role="button"
+        tabIndex={0}
         className="tc-info"
-        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+        onClick={toggle}
+        onKeyDown={onTriggerKeyDown}
         onMouseDown={(e) => e.stopPropagation()}
         aria-label="More info"
         aria-expanded={open}
-      >ⓘ</button>
+      >ⓘ</span>
       {open && pos && createPortal(
         <div
           ref={popRef}

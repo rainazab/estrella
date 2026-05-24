@@ -36,6 +36,47 @@ _BAND_NONPROD_FIELDS = ("kind", "start", "w")
 
 _RECBAND_FIELDS = ("of", "sku", "vol", "start", "w", "oee", "kind")
 
+_DEFAULT_TIMELINE = {
+    "anchorDate": "1970-01-01",
+    "anchorLabel": "Today",
+    "timeUnit": "hours",
+    "views": {
+        "week": {"daysBack": 7, "daysAhead": 14},
+        "month": {"daysBack": 14, "daysAhead": 35},
+        "quarter": {"daysBack": 30, "daysAhead": 90},
+    },
+}
+_DEFAULT_LINE_RULES = {
+    "14": {
+        "line": "14",
+        "formats": [
+            {"key": "1/2", "label": "50cl", "name": "medio"},
+            {"key": "1/3", "label": "33cl", "name": "tercio"},
+        ],
+        "summary": "L14 only runs 50cl, 33cl",
+        "locked": True,
+        "source": "fallback",
+    },
+    "17": {
+        "line": "17",
+        "formats": [{"key": "1/3", "label": "33cl", "name": "tercio"}],
+        "summary": "L17 only runs 33cl",
+        "locked": True,
+        "source": "fallback",
+    },
+    "19": {
+        "line": "19",
+        "formats": [
+            {"key": "1/2", "label": "50cl", "name": "medio"},
+            {"key": "1/3", "label": "33cl", "name": "tercio"},
+            {"key": "2/5", "label": "44cl", "name": "2/5"},
+        ],
+        "summary": "L19 only runs 50cl, 33cl, 44cl",
+        "locked": True,
+        "source": "fallback",
+    },
+}
+
 
 def _pick(obj: Dict[str, Any], fields) -> Dict[str, Any]:
     return {k: obj[k] for k in fields if k in obj}
@@ -163,6 +204,99 @@ def _clean_manual_slots(slots: Any) -> Dict[str, Dict[str, Any]]:
     return out
 
 
+def _num_or_default(value: Any, default: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _clean_timeline(timeline: Any) -> Dict[str, Any]:
+    if not isinstance(timeline, dict):
+        return {
+            "anchorDate": _DEFAULT_TIMELINE["anchorDate"],
+            "anchorLabel": _DEFAULT_TIMELINE["anchorLabel"],
+            "timeUnit": _DEFAULT_TIMELINE["timeUnit"],
+            "views": dict(_DEFAULT_TIMELINE["views"]),
+        }
+
+    defaults = _DEFAULT_TIMELINE["views"]
+    views_in = timeline.get("views") if isinstance(timeline.get("views"), dict) else {}
+    views: Dict[str, Dict[str, float]] = {}
+    for key, fallback in defaults.items():
+        cfg = views_in.get(key) if isinstance(views_in.get(key), dict) else {}
+        views[key] = {
+            "daysBack": _num_or_default(cfg.get("daysBack"), fallback["daysBack"]),
+            "daysAhead": _num_or_default(cfg.get("daysAhead"), fallback["daysAhead"]),
+        }
+
+    time_unit = timeline.get("timeUnit")
+    if time_unit not in ("hours", "days"):
+        time_unit = _DEFAULT_TIMELINE["timeUnit"]
+
+    return {
+        "anchorDate": str(timeline.get("anchorDate") or _DEFAULT_TIMELINE["anchorDate"]),
+        "anchorLabel": str(timeline.get("anchorLabel") or _DEFAULT_TIMELINE["anchorLabel"]),
+        "timeUnit": time_unit,
+        "views": views,
+    }
+
+
+def _clean_line_rules(value: Any) -> Dict[str, Any]:
+    if not isinstance(value, dict):
+        return dict(_DEFAULT_LINE_RULES)
+    out: Dict[str, Any] = {}
+    for line in ("14", "17", "19"):
+        rule = value.get(line) if isinstance(value.get(line), dict) else _DEFAULT_LINE_RULES[line]
+        formats = []
+        for fmt in rule.get("formats") or []:
+            if not isinstance(fmt, dict):
+                continue
+            formats.append({
+                "key": str(fmt.get("key") or ""),
+                "label": str(fmt.get("label") or fmt.get("key") or ""),
+                "name": str(fmt.get("name") or fmt.get("label") or ""),
+            })
+        if not formats:
+            formats = list(_DEFAULT_LINE_RULES[line]["formats"])
+        out[line] = {
+            "line": str(rule.get("line") or line),
+            "formats": formats,
+            "summary": str(rule.get("summary") or _DEFAULT_LINE_RULES[line]["summary"]),
+            "locked": bool(rule.get("locked", True)),
+            "source": str(rule.get("source") or ""),
+        }
+    return out
+
+
+def _clean_weekly_stops(value: Any) -> Dict[str, List[Dict[str, Any]]]:
+    out: Dict[str, List[Dict[str, Any]]] = {"14": [], "17": [], "19": []}
+    if not isinstance(value, dict):
+        return out
+    for line in out:
+        stops = value.get(line)
+        if not isinstance(stops, list):
+            continue
+        for stop in stops:
+            if not isinstance(stop, dict) or stop.get("kind") not in ("clean", "maint"):
+                continue
+            out[line].append({
+                "id": str(stop.get("id") or f"L{line}-{stop.get('kind')}-{len(out[line])}"),
+                "line": str(stop.get("line") or line),
+                "kind": stop["kind"],
+                "label": str(stop.get("label") or ("Cleaning" if stop["kind"] == "clean" else "Maintenance")),
+                "start": _num_or_default(stop.get("start"), 0.0),
+                "w": _num_or_default(stop.get("w"), _num_or_default(stop.get("durationHours"), 8.0)),
+                "durationHours": _num_or_default(stop.get("durationHours"), _num_or_default(stop.get("w"), 8.0)),
+                "day": str(stop.get("day") or ""),
+                "cadence": str(stop.get("cadence") or ""),
+                "shiftPattern": str(stop.get("shiftPattern") or ""),
+                "locked": bool(stop.get("locked", True)),
+                "source": str(stop.get("source") or ""),
+            })
+    return out
+
+
 def build_frontend_payload(canonical: Dict[str, Any]) -> Dict[str, Any]:
     """Convert the canonical data.json shape into the frontend HTTP contract.
 
@@ -174,6 +308,9 @@ def build_frontend_payload(canonical: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "urgentOrders": [],
             "lineBaseline": {},
+            "timeline": _clean_timeline(None),
+            "lineRules": _clean_line_rules(None),
+            "weeklyStops": _clean_weekly_stops(None),
             "yearCompare": {"weekLabel": "—", "lines": {}},
             "executedHistory": {},
             "basePlan": {},
@@ -193,6 +330,9 @@ def build_frontend_payload(canonical: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "urgentOrders": _trim_orders(canonical.get("urgentOrders")),
         "lineBaseline": _flatten_line_baseline(canonical.get("lineBaseline")),
+        "timeline": _clean_timeline(canonical.get("timeline")),
+        "lineRules": _clean_line_rules(canonical.get("lineRules")),
+        "weeklyStops": _clean_weekly_stops(canonical.get("weeklyStops")),
         "yearCompare": canonical.get("yearCompare") or {"weekLabel": "—", "lines": {}},
         "executedHistory": _line_segments(canonical.get("executedHistory") or {}),
         "basePlan": _line_segments(canonical.get("basePlan") or {}),
@@ -240,8 +380,11 @@ def main(argv: Optional[list] = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    def reject_constant(value: str):
+        raise ValueError(f"non-standard JSON constant {value}")
+
     if args.src == "-":
-        canonical = json.loads(sys.stdin.read())
+        canonical = json.loads(sys.stdin.read(), parse_constant=reject_constant)
     else:
         src_path = Path(args.src).expanduser().resolve()
         if not src_path.exists():
@@ -251,10 +394,10 @@ def main(argv: Optional[list] = None) -> int:
                 file=sys.stderr,
             )
             return 1
-        canonical = json.loads(src_path.read_text(encoding="utf-8"))
+        canonical = json.loads(src_path.read_text(encoding="utf-8"), parse_constant=reject_constant)
 
     payload = build_frontend_payload(canonical)
-    body = json.dumps(payload, indent=2, ensure_ascii=False)
+    body = json.dumps(payload, indent=2, ensure_ascii=False, allow_nan=False)
 
     if args.dst == "-":
         sys.stdout.write(body + "\n")

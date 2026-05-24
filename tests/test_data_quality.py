@@ -16,8 +16,11 @@ DATA_JSON = Path(__file__).resolve().parents[1] / "data" / "output" / "data.json
 def _load_data():
     if not DATA_JSON.exists():
         pytest.skip(f"{DATA_JSON} not present — run scripts/run_export.sh first")
+    def reject_constant(value: str):
+        raise ValueError(value)
+
     with DATA_JSON.open("r", encoding="utf-8") as handle:
-        return json.load(handle)
+        return json.load(handle, parse_constant=reject_constant)
 
 
 @pytest.fixture(scope="module")
@@ -26,11 +29,20 @@ def data():
 
 
 class TestTopLevel:
+    def test_data_json_is_strict_json(self):
+        if not DATA_JSON.exists():
+            pytest.skip(f"{DATA_JSON} not present — run scripts/run_export.sh first")
+
+        def reject_constant(value: str):
+            raise ValueError(value)
+
+        json.loads(DATA_JSON.read_text(encoding="utf-8"), parse_constant=reject_constant)
+
     def test_has_all_required_top_level_keys(self, data):
         for key in (
             "urgentOrders", "lineBaseline", "lineCentre", "yearCompare",
-            "executedHistory", "basePlan", "recommendations", "objectives",
-            "manualSlots",
+            "timeline", "lineRules", "weeklyStops", "executedHistory",
+            "basePlan", "recommendations", "objectives", "manualSlots",
         ):
             assert key in data, f"missing top-level key {key!r}"
 
@@ -67,6 +79,28 @@ class TestSegments:
                         f"{block_key}.{line}[{idx}].w must be > 0"
                     assert float(seg.get("start", -1)) >= 0, \
                         f"{block_key}.{line}[{idx}].start must be >= 0"
+
+    def test_weekly_stops_are_locked_nonproduction_blocks(self, data):
+        for line in ("14", "17", "19"):
+            stops = data.get("weeklyStops", {}).get(line)
+            assert isinstance(stops, list), f"weeklyStops.{line} missing"
+            assert stops, f"weeklyStops.{line} should include Tabla CF cleaning/maintenance"
+            for idx, stop in enumerate(stops):
+                assert stop.get("kind") in ("clean", "maint"), f"weeklyStops.{line}[{idx}] invalid kind"
+                assert stop.get("locked") is True, f"weeklyStops.{line}[{idx}] should be locked"
+                assert float(stop.get("w", 0)) > 0
+
+
+class TestLineRules:
+    def test_line_format_rules_match_ops_constraints(self, data):
+        rules = data.get("lineRules") or {}
+        labels = {
+            line: {fmt["label"] for fmt in rules.get(line, {}).get("formats", [])}
+            for line in ("14", "17", "19")
+        }
+        assert labels["14"] == {"50cl", "33cl"}
+        assert labels["17"] == {"33cl"}
+        assert labels["19"] == {"50cl", "33cl", "44cl"}
 
 
 class TestRecommendations:

@@ -46,13 +46,15 @@ for the exact shape.
 - Reconstructs per-line sequences and types every changeover.
 - Generates recommendations for an urgent order, scored against real 2025
   analogues.
+- Exposes locked line-format rules plus Tabla CF cleaning/maintenance markers
+  for the planner UI.
 - Emits a single self-contained `data.json` matching the frontend contract.
 
 ## 2. What this repo does NOT do
 
-- No frontend code. The dashboard lives in a separate repo and only consumes
-  `data/output/data.json`.
-- No FastAPI / live API. The pipeline is a batch exporter.
+- No recursive self-improvement. The model learns from frozen executed
+  history offline; accepted future decisions would need execution actuals
+  before retraining.
 - No OpenAI / LLM calls. All explanations are deterministic.
 - No €/cost figures — no validated cost data exists in the source files.
 - No mutation of executed 2025 history — past blocks render as-is.
@@ -119,8 +121,9 @@ Or in one shot:
 ### What the validators check
 
 - `validate_data_json` — contract shape: top-level keys, per-recommendation
-  required fields, evidence fields, segment validity, non-empty position,
-  slot-search counters, anchor OF present in `basePlan`.
+  required fields, evidence fields, line rules, weekly locked stops, segment
+  validity, non-empty position, slot-search counters, anchor OF present in
+  `basePlan`.
 - `validate_model_outputs` — model invariants: OEE baselines exclude
   cleaning/maintenance, every analogue OF is real and its OEE matches the
   source row, `gain == analogueMean − naiveMean`, weak-scope recommendations
@@ -174,7 +177,7 @@ Endpoints:
 | Method | Path | Purpose |
 |---|---|---|
 | `GET`  | `/health` | Liveness probe — `{ "ok": true }` |
-| `GET`  | `/plan`   | Full planning payload (frontend contract v2.0). ETag + `Cache-Control: no-store`. |
+| `GET`  | `/plan`   | Full planning payload (frontend contract v2.2). ETag + `Cache-Control: no-store`. |
 | `POST` | `/plan/recompute` | Re-run the exporter from `data/raw/` |
 
 The frontend's `.env`:

@@ -48,8 +48,11 @@ def _load_canonical(path: Path) -> tuple[dict, str]:
             },
         )
     raw = path.read_bytes()
+    def reject_constant(value: str):
+        raise json.JSONDecodeError(f"invalid JSON constant {value}", value, 0)
+
     try:
-        canonical = json.loads(raw.decode("utf-8"))
+        canonical = json.loads(raw.decode("utf-8"), parse_constant=reject_constant)
     except json.JSONDecodeError as exc:
         raise HTTPException(
             status_code=500,
@@ -62,8 +65,8 @@ def _load_canonical(path: Path) -> tuple[dict, str]:
 def create_app(data_path: Optional[Path] = None, *, allow_cors: bool = True) -> FastAPI:
     app = FastAPI(
         title="LineWise",
-        version="2.0",
-        description="LineWise backend HTTP API (frontend contract v2.0).",
+        version="2.2",
+        description="LineWise backend HTTP API (frontend contract v2.2).",
     )
 
     if allow_cors:

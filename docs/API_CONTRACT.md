@@ -5,7 +5,7 @@ designed for the React/Vite client; the canonical Python payload in
 `data/output/data.json` is richer and is transformed at request time by
 `app/frontend_payload.py`.
 
-`CONTRACT_VERSION` is **2.0**. Adding or removing a top-level key is a
+`CONTRACT_VERSION` is **2.2**. Adding or removing a top-level key is a
 contract change — bump the version and notify the frontend team.
 
 ## Conventions
@@ -79,6 +79,9 @@ Top-level keys (all required):
 |---|---|---|
 | `urgentOrders` | `Order[]` | Inbox of incoming urgent OFs |
 | `lineBaseline` | `{ [lineId]: number }` | Baseline OEE per line, 0–1 |
+| `timeline` | `TimelineMeta` | Backend-owned date anchor, time unit and view windows |
+| `lineRules` | `{ [lineId]: LineRule }` | Locked format capabilities per line |
+| `weeklyStops` | `{ [lineId]: Stop[] }` | Locked weekly cleaning/maintenance markers from Tabla CF |
 | `yearCompare` | `YearCompare` | YoY week strip on the top bar |
 | `executedHistory` | `{ [lineId]: Band[] }` | What already ran (left of "now") |
 | `basePlan` | `{ [lineId]: Band[] }` | Current committed plan (right of "now") |
@@ -108,14 +111,62 @@ Top-level keys (all required):
 `Now` is the most recent ISO week with data; `Last` is the same ISO week
 of the previous calendar year.
 
+### `TimelineMeta`
+```ts
+{
+  anchorDate: string;     // ISO date represented by start=0
+  anchorLabel: string;    // usually "Today"
+  timeUnit: "hours"|"days";
+  views: {
+    week:    { daysBack: number; daysAhead: number };
+    month:   { daysBack: number; daysAhead: number };
+    quarter: { daysBack: number; daysAhead: number };
+  };
+}
+```
+
+The Week / Month / Quarter controls use the same `basePlan` and
+`executedHistory` arrays; they only change the rendered window/scale. The
+window sizes come from `timeline.views`, while card geometry remains a
+frontend concern.
+
+### `LineRule`
+```ts
+{
+  line: string;
+  formats: Array<{ key: "1/2"|"1/3"|"2/5"; label: "50cl"|"33cl"|"44cl"; name: string }>;
+  summary: string;
+  locked: boolean;
+  source: string;
+}
+```
+
+### `Stop`
+```ts
+{
+  id: string;
+  line: string;
+  kind: "clean"|"maint";
+  label: string;
+  start: number;        // in timeline.timeUnit, currently hours
+  w: number;            // in timeline.timeUnit, currently hours
+  durationHours: number;
+  day: "L"|"M"|"X"|"J"|"V"|"S"|"D";
+  cadence: string;
+  shiftPattern: string;
+  locked: true;
+  source: string;
+}
+```
+
 ### `Band`
 Discriminated by the presence of `kind`.
 
 Production:
 ```ts
 { of: string; sku?: string; vol?: number;
-  start: number;     // hours
-  w: number;         // hours
+  start: number;     // in timeline.timeUnit, currently hours
+  w: number;         // in timeline.timeUnit, currently hours
   oee: number }      // 0–1
 ```
 
@@ -184,6 +235,9 @@ the same line are `"ok"`; infeasible lines surface a single
 |---|---|---|
 | `urgentOrders[]` | `urgentOrders[]` | Trim to `{of, status, sku, units, hl, due}` |
 | `lineBaseline[line]` | `lineBaseline[line].avg_oee` | Flatten the rich object to a number |
+| `timeline` | `timeline` | Trim to `{anchorDate, anchorLabel, timeUnit, views}` |
+| `lineRules` | `lineRules` | Trim to `{line, formats, summary, locked, source}` |
+| `weeklyStops` | `weeklyStops` | Trim to locked clean/maint marker fields |
 | `yearCompare` | `yearCompare` | Already in the new weekly shape |
 | `executedHistory[line]` | `executedHistory[line]` | Hours unchanged; clean/maint stripped to `{kind, start, w}` |
 | `basePlan[line]` | `basePlan[line]` | Same as above |

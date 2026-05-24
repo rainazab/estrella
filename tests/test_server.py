@@ -47,6 +47,22 @@ def _canonical_payload() -> dict:
                           "productSku": "X", "units": 1, "hl": 1, "due": "today"}],
         "lineBaseline": {"14": {"avg_oee": 0.6}, "17": {"avg_oee": 0.5}, "19": {"avg_oee": 0.6}},
         "lineCentre": {"14": "CF Prat", "17": "CF Prat", "19": "CF Prat"},
+        "timeline": {
+            "anchorDate": "2026-05-24",
+            "anchorLabel": "Today",
+            "timeUnit": "hours",
+            "views": {
+                "week": {"daysBack": 7, "daysAhead": 14},
+                "month": {"daysBack": 14, "daysAhead": 35},
+                "quarter": {"daysBack": 30, "daysAhead": 90},
+            },
+        },
+        "lineRules": {
+            "14": {"formats": [{"key": "1/2", "label": "50cl", "name": "medio"}, {"key": "1/3", "label": "33cl", "name": "tercio"}]},
+            "17": {"formats": [{"key": "1/3", "label": "33cl", "name": "tercio"}]},
+            "19": {"formats": [{"key": "1/2", "label": "50cl", "name": "medio"}, {"key": "1/3", "label": "33cl", "name": "tercio"}, {"key": "2/5", "label": "44cl", "name": "2/5"}]},
+        },
+        "weeklyStops": {"14": [], "17": [], "19": []},
         "yearCompare": {"weekLabel": "Week 1", "lines": {}},
         "executedHistory": {"14": [], "17": [], "19": []},
         "basePlan": {
@@ -84,8 +100,8 @@ class TestPlan:
         assert r.status_code == 200
         data = r.json()
         assert set(data.keys()) == {
-            "urgentOrders", "lineBaseline", "yearCompare",
-            "executedHistory", "basePlan", "lineCentre",
+            "urgentOrders", "lineBaseline", "timeline", "lineRules", "weeklyStops",
+            "yearCompare", "executedHistory", "basePlan", "lineCentre",
             "recommendations", "objectives", "manualSlots",
         }
         assert isinstance(data["lineBaseline"]["19"], float)

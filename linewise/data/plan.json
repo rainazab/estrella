@@ -6,7 +6,7 @@
       "sku": "BEER MOLEN 4,8ºNA 33CL L B24SH P KR6BNML5",
       "units": 18000,
       "hl": 594,
-      "due": "28 May"
+      "due": "29 May"
     },
     {
       "of": "ED12LTW",
@@ -14,13 +14,180 @@
       "sku": "ESTRELLA DAMM 1/2 LATA KR00127",
       "units": 6000,
       "hl": 198,
-      "due": "31 May"
+      "due": "01 Jun"
     }
   ],
   "lineBaseline": {
     "14": 0.422,
     "17": 0.531,
     "19": 0.481
+  },
+  "timeline": {
+    "anchorDate": "2026-05-24",
+    "anchorLabel": "Today",
+    "timeUnit": "hours",
+    "views": {
+      "week": {
+        "daysBack": 7.0,
+        "daysAhead": 14.0
+      },
+      "month": {
+        "daysBack": 14.0,
+        "daysAhead": 35.0
+      },
+      "quarter": {
+        "daysBack": 30.0,
+        "daysAhead": 90.0
+      }
+    }
+  },
+  "lineRules": {
+    "14": {
+      "line": "14",
+      "formats": [
+        {
+          "key": "1/2",
+          "label": "50cl",
+          "name": "medio"
+        },
+        {
+          "key": "1/3",
+          "label": "33cl",
+          "name": "tercio"
+        }
+      ],
+      "summary": "L14 only runs 50cl, 33cl",
+      "locked": true,
+      "source": "Damm operations line-format rules"
+    },
+    "17": {
+      "line": "17",
+      "formats": [
+        {
+          "key": "1/3",
+          "label": "33cl",
+          "name": "tercio"
+        }
+      ],
+      "summary": "L17 only runs 33cl",
+      "locked": true,
+      "source": "Damm operations line-format rules"
+    },
+    "19": {
+      "line": "19",
+      "formats": [
+        {
+          "key": "1/2",
+          "label": "50cl",
+          "name": "medio"
+        },
+        {
+          "key": "1/3",
+          "label": "33cl",
+          "name": "tercio"
+        },
+        {
+          "key": "2/5",
+          "label": "44cl",
+          "name": "2/5"
+        }
+      ],
+      "summary": "L19 only runs 50cl, 33cl, 44cl",
+      "locked": true,
+      "source": "Damm operations line-format rules"
+    }
+  },
+  "weeklyStops": {
+    "14": [
+      {
+        "id": "L14-clean-L-semanal",
+        "line": "14",
+        "kind": "clean",
+        "label": "Weekly cleaning",
+        "start": 24.0,
+        "w": 8.0,
+        "durationHours": 8.0,
+        "day": "L",
+        "cadence": "semanal",
+        "shiftPattern": "3 turnos",
+        "locked": true,
+        "source": "Tabla CF Prat 2026 · Tiempos adicionales"
+      },
+      {
+        "id": "L14-maint-L-quincenal",
+        "line": "14",
+        "kind": "maint",
+        "label": "Fortnightly maintenance",
+        "start": 24.0,
+        "w": 8.0,
+        "durationHours": 8.0,
+        "day": "L",
+        "cadence": "quincenal",
+        "shiftPattern": "5 turnos",
+        "locked": true,
+        "source": "Tabla CF Prat 2026 · Tiempos adicionales"
+      }
+    ],
+    "17": [
+      {
+        "id": "L17-clean-L-semanal",
+        "line": "17",
+        "kind": "clean",
+        "label": "Weekly cleaning",
+        "start": 24.0,
+        "w": 8.0,
+        "durationHours": 8.0,
+        "day": "L",
+        "cadence": "semanal",
+        "shiftPattern": "3 turnos",
+        "locked": true,
+        "source": "Tabla CF Prat 2026 · Tiempos adicionales"
+      },
+      {
+        "id": "L17-maint-J-quincenal",
+        "line": "17",
+        "kind": "maint",
+        "label": "Fortnightly maintenance",
+        "start": 96.0,
+        "w": 8.0,
+        "durationHours": 8.0,
+        "day": "J",
+        "cadence": "quincenal",
+        "shiftPattern": "5 turnos",
+        "locked": true,
+        "source": "Tabla CF Prat 2026 · Tiempos adicionales"
+      }
+    ],
+    "19": [
+      {
+        "id": "L19-clean-L-semanal",
+        "line": "19",
+        "kind": "clean",
+        "label": "Weekly cleaning",
+        "start": 24.0,
+        "w": 8.0,
+        "durationHours": 8.0,
+        "day": "L",
+        "cadence": "semanal",
+        "shiftPattern": "3 turnos",
+        "locked": true,
+        "source": "Tabla CF Prat 2026 · Tiempos adicionales"
+      },
+      {
+        "id": "L19-maint-J-quincenal",
+        "line": "19",
+        "kind": "maint",
+        "label": "Fortnightly maintenance",
+        "start": 96.0,
+        "w": 8.0,
+        "durationHours": 8.0,
+        "day": "J",
+        "cadence": "quincenal",
+        "shiftPattern": "5 turnos",
+        "locked": true,
+        "source": "Tabla CF Prat 2026 · Tiempos adicionales"
+      }
+    ]
   },
   "yearCompare": {
     "weekLabel": "Week 1 · 29 Dec–4 Jan",

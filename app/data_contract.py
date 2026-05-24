@@ -15,12 +15,15 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Tuple
 
-CONTRACT_VERSION = "2.0"
+CONTRACT_VERSION = "2.2"
 
 REQUIRED_TOP_LEVEL: List[str] = [
     "urgentOrders",
     "lineBaseline",
     "lineCentre",
+    "timeline",
+    "lineRules",
+    "weeklyStops",
     "yearCompare",
     "executedHistory",
     "basePlan",
@@ -96,6 +99,57 @@ def validate(payload: Dict[str, Any]) -> Tuple[bool, List[str]]:
         for line_key, segs in block.items():
             if not isinstance(segs, list):
                 problems.append(f"{key}[{line_key}] not a list")
+
+    timeline = payload.get("timeline") or {}
+    if not isinstance(timeline, dict):
+        problems.append("timeline must be a dict")
+    else:
+        if not timeline.get("anchorDate"):
+            problems.append("timeline.anchorDate is required")
+        if timeline.get("timeUnit") not in ("hours", "days"):
+            problems.append("timeline.timeUnit must be 'hours' or 'days'")
+        views = timeline.get("views") or {}
+        if not isinstance(views, dict):
+            problems.append("timeline.views must be a dict")
+        else:
+            for view in ("week", "month", "quarter"):
+                cfg = views.get(view) or {}
+                if not isinstance(cfg, dict):
+                    problems.append(f"timeline.views.{view} must be a dict")
+                    continue
+                if "daysBack" not in cfg or "daysAhead" not in cfg:
+                    problems.append(f"timeline.views.{view} must include daysBack and daysAhead")
+
+    line_rules = payload.get("lineRules") or {}
+    if not isinstance(line_rules, dict):
+        problems.append("lineRules must be a dict keyed by line")
+    else:
+        for line in ("14", "17", "19"):
+            rule = line_rules.get(line)
+            if not isinstance(rule, dict):
+                problems.append(f"lineRules[{line}] must be a dict")
+                continue
+            formats = rule.get("formats")
+            if not isinstance(formats, list) or not formats:
+                problems.append(f"lineRules[{line}].formats must be a non-empty list")
+
+    weekly_stops = payload.get("weeklyStops") or {}
+    if not isinstance(weekly_stops, dict):
+        problems.append("weeklyStops must be a dict keyed by line")
+    else:
+        for line in ("14", "17", "19"):
+            stops = weekly_stops.get(line)
+            if not isinstance(stops, list):
+                problems.append(f"weeklyStops[{line}] must be a list")
+                continue
+            for i, stop in enumerate(stops):
+                if not isinstance(stop, dict):
+                    problems.append(f"weeklyStops[{line}][{i}] must be a dict")
+                    continue
+                if stop.get("kind") not in ("clean", "maint"):
+                    problems.append(f"weeklyStops[{line}][{i}].kind must be 'clean' or 'maint'")
+                if "start" not in stop or "w" not in stop:
+                    problems.append(f"weeklyStops[{line}][{i}] must include start and w")
 
     return (not problems), problems
 

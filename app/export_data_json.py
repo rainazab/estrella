@@ -44,7 +44,7 @@ import pandas as pd
 
 from . import config, data_loader, sample_data
 from .block_classifier import classify_blocks, verify_of_woid_join
-from .cf_matrix import load_cf_matrix
+from .cf_matrix import load_cf_matrix, load_operational_contract
 from .changeover_typing import annotate_master
 from .config import LINES
 from .data_contract import CONTRACT_VERSION, summarize, validate
@@ -76,6 +76,24 @@ def _round_oee(v) -> Optional[float]:
 def _round_min(v) -> Optional[float]:
     f = _fnone(v)
     return round(f, 1) if f is not None else None
+
+
+def _json_safe(value: Any) -> Any:
+    """Recursively convert NaN/Inf and numpy scalars into strict JSON values."""
+    if isinstance(value, dict):
+        return {str(k): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, tuple):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, np.integer):
+        return int(value)
+    if isinstance(value, np.floating):
+        f = float(value)
+        return f if math.isfinite(f) else None
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    return value
 
 
 def _row_duration_hours(row) -> float:
@@ -242,6 +260,44 @@ def build_line_baseline(tt: pd.DataFrame, master_prod: pd.DataFrame) -> Dict[str
             "supports_formats": sorted(list(LINE_FORMAT_CAPABILITIES.get(line, set()))),
         }
     return out
+
+
+def build_timeline_metadata(
+    base_plan: Dict[str, List[Dict[str, Any]]],
+    *,
+    exported_at: datetime,
+) -> Dict[str, Any]:
+    """Describe how timeline offsets should be interpreted by clients.
+
+    Segment `start` and `w` values are measured in hours. The frontend can
+    render day/week/month views by anchoring offset 0 at `anchorDate` and
+    converting hours to days for geometry.
+    """
+    anchor_dt: Optional[datetime] = None
+    for segments in (base_plan or {}).values():
+        for seg in segments or []:
+            raw = seg.get("planned_start_iso") if isinstance(seg, dict) else None
+            if not raw:
+                continue
+            try:
+                dt = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+            except ValueError:
+                continue
+            if anchor_dt is None or dt < anchor_dt:
+                anchor_dt = dt
+
+    return {
+        "anchorDate": exported_at.date().isoformat(),
+        "anchorLabel": "Today",
+        "timeUnit": "hours",
+        "views": {
+            "week": {"daysBack": 7, "daysAhead": 14},
+            "month": {"daysBack": 14, "daysAhead": 35},
+            "quarter": {"daysBack": 30, "daysAhead": 90},
+        },
+        "source": "exported_at",
+        "sourcePlanStartDate": anchor_dt.date().isoformat() if anchor_dt is not None else None,
+    }
 
 
 def transition_type_stats(tt: pd.DataFrame, line_baseline: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
@@ -1878,11 +1934,17 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
 
     line_centre = {str(l): "CF Prat" for l in LINES}
+    exported_at = datetime.now(timezone.utc)
+    timeline = build_timeline_metadata(base_plan, exported_at=exported_at)
+    operational = load_operational_contract(timeline.get("anchorDate"))
 
     payload: Dict[str, Any] = {
         "urgentOrders": urgents,
         "lineBaseline": line_baseline,
         "lineCentre": line_centre,
+        "timeline": timeline,
+        "lineRules": operational["lineRules"],
+        "weeklyStops": operational["weeklyStops"],
         "yearCompare": year_compare,
         "executedHistory": executed_history,
         "basePlan": base_plan,
@@ -1892,7 +1954,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         # additive metadata
         "metadata": {
             "contract_version": CONTRACT_VERSION,
-            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "exported_at": exported_at.isoformat(),
             "using_fallback_data": using_fallback,
             "master_rows": int(len(master_blocks)),
             "production_runs": block_summary["production"],
@@ -1908,10 +1970,13 @@ def main(argv: Optional[List[str]] = None) -> int:
             "basePlanFile": plan_info.get("file"),
             "basePlanRows": plan_info.get("rows", 0),
             "basePlanWarnings": plan_info.get("warnings") or [],
+            "cleaningSchedule": operational["cleaningSchedule"],
         },
         "infeasibleByLine": infeasible_by_line,
         "planReview": plan_review,
     }
+
+    payload = _json_safe(payload)
 
     print("→ Step 12: validating contract", flush=True)
     ok, problems = validate(payload)
@@ -1924,7 +1989,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2, default=str, ensure_ascii=False)
+        json.dump(payload, f, indent=2, default=str, ensure_ascii=False, allow_nan=False)
     report_path = write_validation_report(
         master_blocks=master_blocks,
         block_summary=block_summary,

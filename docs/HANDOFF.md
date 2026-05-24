@@ -46,16 +46,20 @@ frontend can read it directly without a server.
 
 ## What the file contains
 
-Eight required top-level keys:
+Required top-level keys:
 
 - `urgentOrders`        — list of urgent SKUs
 - `lineBaseline`        — per-line OEE / changeover stats from 2025
 - `lineCentre`          — which CF centre owns each line
-- `yearCompare`         — monthly OEE per line / per year
+- `timeline`            — date anchor, segment unit and view windows
+- `lineRules`           — locked L14/L17/L19 format capabilities
+- `weeklyStops`         — locked cleaning/maintenance markers from Tabla CF
+- `yearCompare`         — same ISO week vs prior year comparison
 - `executedHistory`     — past timeline segments per line
 - `basePlan`            — forward plan per line
 - `recommendations`     — one recommendation per feasible line
 - `objectives`          — rankings under OEE / Time / Disruption
+- `manualSlots`         — manual placement verdicts for the frontend
 
 Plus additive: `metadata`, `infeasibleByLine`, `planReview`.
 

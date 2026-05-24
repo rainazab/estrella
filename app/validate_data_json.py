@@ -106,6 +106,57 @@ def _validate_line_segments(problems: list[str], block: Any, path: str) -> None:
             _validate_segment(problems, segment, f"{path}.{line}[{idx}]")
 
 
+def _validate_timeline(problems: list[str], value: Any) -> None:
+    timeline = _require_mapping(problems, value, "timeline")
+    if not timeline:
+        return
+    anchor = timeline.get("anchorDate")
+    if not isinstance(anchor, str) or not anchor:
+        _fail(problems, "timeline.anchorDate must be a non-empty ISO date string")
+    if timeline.get("timeUnit") not in ("hours", "days"):
+        _fail(problems, "timeline.timeUnit must be 'hours' or 'days'")
+    views = _require_mapping(problems, timeline.get("views"), "timeline.views")
+    for view in ("week", "month", "quarter"):
+        cfg = _require_mapping(problems, views.get(view), f"timeline.views.{view}")
+        for field in ("daysBack", "daysAhead"):
+            if not _is_number(cfg.get(field)) or float(cfg[field]) < 0:
+                _fail(problems, f"timeline.views.{view}.{field} must be >= 0")
+
+
+def _validate_line_rules(problems: list[str], value: Any) -> None:
+    rules = _require_mapping(problems, value, "lineRules")
+    for line in LINE_KEYS:
+        rule = _require_mapping(problems, rules.get(line), f"lineRules.{line}")
+        if not rule:
+            continue
+        formats = _require_list(problems, rule.get("formats"), f"lineRules.{line}.formats")
+        if not formats:
+            _fail(problems, f"lineRules.{line}.formats must not be empty")
+        for idx, fmt in enumerate(formats):
+            fmt_path = f"lineRules.{line}.formats[{idx}]"
+            fmt_obj = _require_mapping(problems, fmt, fmt_path)
+            for key in ("key", "label", "name"):
+                if fmt_obj.get(key) in (None, ""):
+                    _fail(problems, f"{fmt_path} missing {key!r}")
+
+
+def _validate_weekly_stops(problems: list[str], value: Any) -> None:
+    stops_by_line = _require_mapping(problems, value, "weeklyStops")
+    for line in LINE_KEYS:
+        stops = _require_list(problems, stops_by_line.get(line), f"weeklyStops.{line}")
+        for idx, stop in enumerate(stops):
+            path = f"weeklyStops.{line}[{idx}]"
+            stop_obj = _require_mapping(problems, stop, path)
+            if stop_obj.get("kind") not in NON_PRODUCTION_KINDS:
+                _fail(problems, f"{path}.kind must be 'clean' or 'maint'")
+            if not _is_number(stop_obj.get("start")) or float(stop_obj["start"]) < 0:
+                _fail(problems, f"{path}.start must be >= 0")
+            if not _is_number(stop_obj.get("w")) or float(stop_obj["w"]) <= 0:
+                _fail(problems, f"{path}.w must be > 0")
+            if stop_obj.get("locked") is not True:
+                _fail(problems, f"{path}.locked must be true")
+
+
 def original_plan_ofs(data: dict[str, Any]) -> set[str]:
     ofs: set[str] = set()
     base_plan = data.get("basePlan") or {}
@@ -136,6 +187,9 @@ def validate_payload(data: dict[str, Any]) -> list[str]:
 
     _validate_line_segments(problems, data.get("executedHistory"), "executedHistory")
     _validate_line_segments(problems, data.get("basePlan"), "basePlan")
+    _validate_timeline(problems, data.get("timeline"))
+    _validate_line_rules(problems, data.get("lineRules"))
+    _validate_weekly_stops(problems, data.get("weeklyStops"))
 
     recs = _require_mapping(problems, data.get("recommendations"), "recommendations")
     infeasible = data.get("infeasibleByLine") or {}
@@ -229,8 +283,11 @@ def validate_payload(data: dict[str, Any]) -> list[str]:
 
 
 def load_payload(path: Path) -> dict[str, Any]:
+    def reject_constant(value: str) -> None:
+        raise ValidationFailure(f"data.json contains non-standard JSON constant {value}")
+
     with path.open("r", encoding="utf-8") as handle:
-        data = json.load(handle)
+        data = json.load(handle, parse_constant=reject_constant)
     if not isinstance(data, dict):
         raise ValidationFailure("data.json root must be an object")
     return data

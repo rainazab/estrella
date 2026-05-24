@@ -2,27 +2,78 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import TimelineCard from './TimelineCard.jsx';
 import InfoPopover from './InfoPopover.jsx';
 import { isLineCompatible, incompatibleReason } from '../lib/movePlan.js';
+import { allowedFormats } from '../lib/lineRules.js';
 
 /* Timeline — three line lanes (14, 17, 19), each a horizontally-scrolling
    row of TimelineCards. Executed-history cards (faded) flow first, then a
    TODAY divider, then planned cards.
 
-   `seg.w` from plan.json is the run's duration in days; we feed it to
-   TimelineCard as `durationHours` so the card's text shows it correctly,
-   and we drive horizontal scale with `widthPx = max(168, w * px-per-day)`
-   so card width is proportional to duration. */
+   `seg.w` from plan.json is the run's duration in backend-declared units
+   (`timeline.timeUnit`, currently hours); Timeline converts that to hours
+   for labels and days for calendar geometry. */
 
 const LINES = ['14', '17', '19'];
 
 const WIDTH_PER_DAY = { week: 200, month: 90, quarter: 40 };
-const MIN_CARD_WIDTH = { week: 168, month: 80, quarter: 36 };
+const MIN_CARD_WIDTH = { week: 36, month: 30, quarter: 24 };
+const DEFAULT_TIMELINE = {
+  anchorDate: new Date().toISOString().slice(0, 10),
+  anchorLabel: 'Today',
+  timeUnit: 'hours',
+  views: {
+    week: { daysBack: 7, daysAhead: 14 },
+    month: { daysBack: 14, daysAhead: 35 },
+    quarter: { daysBack: 30, daysAhead: 90 },
+  },
+};
 
-/* Date helpers — turn seg.start (days from a lane's reference point) and
-   seg.w (duration in days) into a label like "Mon 19" or "Mon 19 → Wed 21".
-   TODAY is hardcoded to match the prototype; later this should come from
-   data.today on the server payload. */
-const TODAY = new Date(2026, 4, 23);
+/* Date helpers — turn seg.start and seg.w into a label like "Mon 19" or
+   "Mon 19 → Wed 21".
+   The backend owns the anchor date and whether segment offsets are hours
+   or days; geometry converts everything to days for the calendar axis. */
 const WK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function timelineConfig(timeline) {
+  const views = {};
+  for (const key of Object.keys(DEFAULT_TIMELINE.views)) {
+    views[key] = {
+      ...DEFAULT_TIMELINE.views[key],
+      ...(timeline?.views?.[key] ?? {}),
+    };
+  }
+  return {
+    ...DEFAULT_TIMELINE,
+    ...(timeline ?? {}),
+    views,
+  };
+}
+
+function parseAnchorDate(value) {
+  const text = typeof value === 'string' ? value.slice(0, 10) : DEFAULT_TIMELINE.anchorDate;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (!match) return new Date();
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+function valueToDays(value, timeline) {
+  const n = Number(value ?? 0);
+  if (!Number.isFinite(n)) return 0;
+  return timeline.timeUnit === 'days' ? n : n / 24;
+}
+
+function valueToHours(value, timeline) {
+  const n = Number(value ?? 0);
+  if (!Number.isFinite(n)) return 0;
+  return timeline.timeUnit === 'days' ? n * 24 : n;
+}
+
+function widthForDuration(value, zoom, timeline) {
+  const durationDays = Math.max(0, valueToDays(value, timeline));
+  return Math.max(
+    MIN_CARD_WIDTH[zoom] ?? 168,
+    Math.round(durationDays * (WIDTH_PER_DAY[zoom] ?? 200)),
+  );
+}
 
 function addDays(base, days) {
   const d = new Date(base);
@@ -34,9 +85,12 @@ function fmtDay(d) {
   return `${WK[d.getDay()]} ${d.getDate()}`;
 }
 
-function dayRange(startOffsetDays, durationDays) {
-  const startD = addDays(TODAY, startOffsetDays);
-  const endD   = addDays(TODAY, startOffsetDays + durationDays);
+function dayRange(startOffset, duration, timeline) {
+  const today = parseAnchorDate(timeline.anchorDate);
+  const startOffsetDays = valueToDays(startOffset, timeline);
+  const durationDays = valueToDays(duration, timeline);
+  const startD = addDays(today, startOffsetDays);
+  const endD   = addDays(today, startOffsetDays + durationDays);
   if (startD.toDateString() === endD.toDateString()) return fmtDay(startD);
   return `${fmtDay(startD)} → ${fmtDay(endD)}`;
 }
@@ -60,11 +114,17 @@ export default function Timeline({
   onRunClick = null,
   moving = null,
   onMoveDrop = null,
+  lineRules = null,
+  weeklyStops = null,
+  urgentDrop = null,
+  onUrgentDrop = null,
+  events = {},
 }) {
   const sync = useSharedScroll();
+  const timeline = timelineConfig(data?.timeline);
   const syncedLineKey = LINES[0];
   const execDays = mode === 'default'
-    ? Math.ceil(executedEnd(data?.executedHistory?.[syncedLineKey] ?? []))
+    ? Math.ceil(valueToDays(executedEnd(data?.executedHistory?.[syncedLineKey] ?? []), timeline))
     : 0;
 
   if (mode !== 'default') {
@@ -78,7 +138,7 @@ export default function Timeline({
 
     return (
       <div className="tl">
-        <TimelineAxis zoom={zoom} sync={sync} executedDays={execDays} />
+        <TimelineAxis zoom={zoom} sync={sync} timeline={timeline} executedDays={execDays} />
         {LINES.map((lineKey, idx) => (
           <RecommendationLane
             key={lineKey}
@@ -86,9 +146,15 @@ export default function Timeline({
             lineKey={lineKey}
             rec={rec}
             zoom={zoom}
+            timeline={timeline}
             showNaive={showNaive}
             sync={sync}
             primary={idx === 0}
+            lineRules={lineRules ?? data?.lineRules}
+            weeklyStops={weeklyStops ?? data?.weeklyStops}
+            urgentDrop={urgentDrop}
+            onUrgentDrop={onUrgentDrop}
+            events={events?.[lineKey] ?? []}
           />
         ))}
       </div>
@@ -97,9 +163,10 @@ export default function Timeline({
 
   return (
     <div className={`tl${moving ? ' tl-moving' : ''}`}>
-      <TimelineAxis zoom={zoom} sync={sync} executedDays={execDays} />
+      <TimelineAxis zoom={zoom} sync={sync} timeline={timeline} executedDays={execDays} />
       {LINES.map((lineKey, idx) => {
         const planned = (effectivePlan ?? data.basePlan)?.[lineKey] ?? [];
+        const displayPlanned = mergeWeeklyStops(planned, (weeklyStops ?? data?.weeklyStops)?.[lineKey] ?? []);
         return (
           <Lane
             key={lineKey}
@@ -108,12 +175,16 @@ export default function Timeline({
             baseline={data.lineBaseline?.[lineKey]}
             executed={data.executedHistory?.[lineKey] ?? []}
             planned={planned}
+            displayPlanned={displayPlanned}
             zoom={zoom}
+            timeline={timeline}
             sync={sync}
             primary={idx === 0}
             onRunClick={onRunClick}
             moving={moving}
             onMoveDrop={onMoveDrop}
+            lineRules={lineRules ?? data?.lineRules}
+            events={events?.[lineKey] ?? []}
           />
         );
       })}
@@ -164,11 +235,13 @@ function useSharedScroll() {
 
 /* TimelineAxis — date strip above the lanes. Mirrors the horizontal scroll
    of the first lane so the dates line up with the cards. */
-function TimelineAxis({ zoom, sync, executedDays = 0 }) {
+function TimelineAxis({ zoom, sync, timeline, executedDays = 0 }) {
   const axisBodyRef = useRef(null);
   const pxPerDay = WIDTH_PER_DAY[zoom] ?? 200;
-  const RANGE_START = -Math.max(0, executedDays);
-  const RANGE_END = 35;
+  const view = timeline.views?.[zoom] ?? DEFAULT_TIMELINE.views.week;
+  const RANGE_START = -Math.max(Number(view.daysBack ?? 0), executedDays);
+  const RANGE_END = Number(view.daysAhead ?? DEFAULT_TIMELINE.views.week.daysAhead);
+  const today = parseAnchorDate(timeline.anchorDate);
 
   useEffect(() => sync?.register(axisBodyRef.current), [sync]);
 
@@ -181,7 +254,7 @@ function TimelineAxis({ zoom, sync, executedDays = 0 }) {
       <div className="tl-axis-body" ref={axisBodyRef}>
         <div className="tl-axis-today" aria-hidden="true" style={{ left: Math.abs(RANGE_START) * pxPerDay }} />
         {days.map((offset) => {
-          const date = addDays(TODAY, offset);
+          const date = addDays(today, offset);
           const isToday = offset === 0;
           const isMonthStart = date.getDate() === 1;
           const isWeekStart = date.getDay() === 1;
@@ -194,7 +267,7 @@ function TimelineAxis({ zoom, sync, executedDays = 0 }) {
             >
               {(labelEveryDay || isWeekStart || isMonthStart) && (
                 <>
-                  <span className="tl-axis-dow">{isToday ? 'Today' : WK[date.getDay()]}</span>
+                  <span className="tl-axis-dow">{isToday ? (timeline.anchorLabel || 'Today') : WK[date.getDay()]}</span>
                   <span className="tl-axis-date">
                     {isMonthStart ? date.toLocaleString('en-US', { month: 'short' }) + ' ' : ''}
                     {date.getDate()}
@@ -209,13 +282,33 @@ function TimelineAxis({ zoom, sync, executedDays = 0 }) {
   );
 }
 
-function RecommendationLane({ data, lineKey, rec, zoom, showNaive, sync, primary = false }) {
-  const proposed = rec.plan?.[lineKey] ?? [];
+function RecommendationLane({
+  data,
+  lineKey,
+  rec,
+  zoom,
+  timeline,
+  showNaive,
+  sync,
+  primary = false,
+  lineRules = null,
+  weeklyStops = null,
+  urgentDrop = null,
+  onUrgentDrop = null,
+  events = [],
+}) {
+  const proposed = mergeWeeklyStops(rec.plan?.[lineKey] ?? [], weeklyStops?.[lineKey] ?? []);
   const ghosts = rec.ghosts?.[lineKey] ?? [];
   const naiveHere = showNaive && rec.naiveBand?.line === lineKey ? rec.naiveBand : null;
   const recoveryHere = rec.recovery?.line === lineKey ? rec.recovery : null;
   const baseline = data.lineBaseline?.[lineKey];
   const lookup = buildOrderLookup(data);
+  const isUrgentDragging = !!urgentDrop?.active;
+  const urgentCompatible = isUrgentDragging ? isLineCompatible(lineKey, urgentDrop.format, lineRules) : true;
+  const urgentReason = isUrgentDragging && !urgentCompatible
+    ? incompatibleReason(lineKey, urgentDrop.format, lineRules)
+    : null;
+  const [activeSlot, setActiveSlot] = useState(null);
   const bodyRef = useRef(null);
   useEffect(() => sync?.register(bodyRef.current, { primary }), [sync, primary]);
   useEffect(() => {
@@ -224,12 +317,40 @@ function RecommendationLane({ data, lineKey, rec, zoom, showNaive, sync, primary
     return () => clearTimeout(t);
   }, [primary, sync, zoom]);
 
+  function onZoneDragOver(e, slotIndex, anchorOf = null) {
+    if (!isUrgentDragging || !urgentCompatible) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setActiveSlot(`${slotIndex}-${anchorOf ?? 'start'}`);
+  }
+
+  function onZoneDrop(e, slotIndex, anchorOf = null) {
+    if (!isUrgentDragging || !urgentCompatible) return;
+    e.preventDefault();
+    setActiveSlot(null);
+    onUrgentDrop?.({ lineKey, slotIndex, anchorOf });
+  }
+
+  const laneClassName = [
+    'tl-lane',
+    rec.line.endsWith(lineKey) ? 'tl-lane-recommended' : '',
+    isUrgentDragging && urgentCompatible ? 'tl-lane-droptarget' : '',
+    isUrgentDragging && !urgentCompatible ? 'tl-lane-incompat' : '',
+  ].filter(Boolean).join(' ');
+
   return (
-    <div className={`tl-lane${rec.line.endsWith(lineKey) ? ' tl-lane-recommended' : ''}`}>
+    <div className={laneClassName} data-reason={urgentReason || undefined}>
+      {isUrgentDragging && !urgentCompatible && (
+        <div className="tl-incompat-overlay" aria-hidden="true">
+          <span className="tl-incompat-reason">{urgentReason}</span>
+        </div>
+      )}
       <div className="tl-lane-head">
         <span className="ln">L{lineKey}</span>
         <span className="ce">{data.lineCentre?.[lineKey] ?? 'CF Prat'}</span>
+        <LineRuleChips lineKey={lineKey} lineRules={lineRules} />
         {baseline != null && <span className="bl">Baseline {baseline.toFixed(2)}</span>}
+        <LineEvents events={events} />
         {rec.line.endsWith(lineKey) && (
           <div className="tl-next-stop tl-rec-badge">
             <span className="ns-h">LineWise</span>
@@ -242,17 +363,45 @@ function RecommendationLane({ data, lineKey, rec, zoom, showNaive, sync, primary
       </div>
       <div className="tl-lane-body" ref={bodyRef} onScroll={() => sync?.broadcast(bodyRef.current)}>
         <div className="tl-today" aria-label="now" />
-        {proposed.map((seg, index) => (
-          <SegmentCard
-            key={`r-${lineKey}-${seg.of ?? seg.kind}-${index}`}
-            seg={hydrateSegment(seg, lookup)}
-            baseline={baseline}
-            state="planned"
-            zoom={zoom}
-            shiftFromHours={shiftHours(rec, seg, lineKey)}
-            dateLabel={dayRange(seg.start ?? 0, seg.w ?? 0)}
+        {isUrgentDragging && urgentCompatible && (
+          <DropZone
+            slotIndex={0}
+            active={activeSlot === '0-start'}
+            isFirst
+            runWidthPx={widthForDuration(urgentDrop?.w ?? 8, zoom, timeline)}
+            onDragOver={(e, slot) => onZoneDragOver(e, slot, null)}
+            onDragLeave={() => setActiveSlot(null)}
+            onDrop={(e, slot) => onZoneDrop(e, slot, null)}
           />
-        ))}
+        )}
+        {proposed.map((seg, index) => {
+          const isService = seg.kind === 'clean' || seg.kind === 'maint';
+          const slotIndex = isService ? seg._slotBefore : (seg._planIndex ?? index) + 1;
+          const anchorOf = isService ? null : seg.of;
+          return (
+            <Fragment key={`r-${lineKey}-${seg.of ?? seg.id ?? seg.kind}-${index}`}>
+              <SegmentCard
+                seg={hydrateSegment(seg, lookup)}
+                baseline={baseline}
+                state="planned"
+                zoom={zoom}
+                timeline={timeline}
+                shiftFromHours={shiftHours(rec, seg, lineKey)}
+                dateLabel={dayRange(seg.start ?? 0, seg.w ?? 0, timeline)}
+              />
+              {!isService && isUrgentDragging && urgentCompatible && (
+                <DropZone
+                  slotIndex={slotIndex}
+                  active={activeSlot === `${slotIndex}-${anchorOf ?? 'start'}`}
+                  runWidthPx={widthForDuration(urgentDrop?.w ?? 8, zoom, timeline)}
+                  onDragOver={(e, slot) => onZoneDragOver(e, slot, anchorOf)}
+                  onDragLeave={() => setActiveSlot(null)}
+                  onDrop={(e, slot) => onZoneDrop(e, slot, anchorOf)}
+                />
+              )}
+            </Fragment>
+          );
+        })}
         {ghosts.map((seg, index) => (
           <SegmentCard
             key={`g-${lineKey}-${seg.of}-${index}`}
@@ -260,13 +409,14 @@ function RecommendationLane({ data, lineKey, rec, zoom, showNaive, sync, primary
             baseline={baseline}
             state="planned"
             zoom={zoom}
+            timeline={timeline}
             dateLabel="previous slot"
           />
         ))}
         {naiveHere && (
           <div className="tl-decision-marker tl-naive-marker">
             <span>Naive slot</span>
-            <b>{Math.round((naiveHere.w ?? 0) * 24)}h exposure</b>
+            <b>{Math.round(valueToHours(naiveHere.w ?? 0, timeline))}h exposure</b>
           </div>
         )}
         {recoveryHere && (
@@ -301,6 +451,34 @@ function buildOrderLookup(data) {
   return lookup;
 }
 
+function mergeWeeklyStops(planned, stops) {
+  const merged = [];
+  for (let i = 0; i < (planned ?? []).length; i += 1) {
+    merged.push({ ...planned[i], _source: 'plan', _planIndex: i });
+  }
+  for (let i = 0; i < (stops ?? []).length; i += 1) {
+    merged.push({
+      ...stops[i],
+      _source: 'weeklyStop',
+      _stopIndex: i,
+      locked: true,
+    });
+  }
+  merged.sort((a, b) => {
+    const byStart = Number(a.start ?? 0) - Number(b.start ?? 0);
+    if (byStart !== 0) return byStart;
+    if (a.kind && !b.kind) return -1;
+    if (!a.kind && b.kind) return 1;
+    return 0;
+  });
+  let planSeen = 0;
+  return merged.map((seg) => {
+    const withSlot = { ...seg, _slotBefore: planSeen };
+    if (seg._source === 'plan' && seg.kind !== 'clean' && seg.kind !== 'maint') planSeen += 1;
+    return withSlot;
+  });
+}
+
 function hydrateSegment(seg, lookup) {
   if (!seg.of) return seg;
   const known = lookup.get(seg.of) ?? {};
@@ -321,10 +499,10 @@ function shiftHours(rec, seg, lineKey) {
 
 /* nextStop — first cleaning or maintenance block in the forward plan.
    Returns { kind, hoursFromNow } or null when there's nothing scheduled. */
-function nextStop(planned) {
+function nextStop(planned, timeline) {
   const seg = planned.find((s) => s.kind === 'clean' || s.kind === 'maint');
   if (!seg) return null;
-  return { kind: seg.kind, hoursFromNow: Math.max(0, Math.round((seg.start ?? 0) * 24)) };
+  return { kind: seg.kind, hoursFromNow: Math.max(0, Math.round(valueToHours(seg.start ?? 0, timeline))) };
 }
 
 function fmtCountdown(hours) {
@@ -351,28 +529,44 @@ function computeTodayScroll(body) {
    while RunDetailModal expects { material, sku, volume, durationHours }.
    Map at the wiring boundary so we don't push shape decisions into either
    the data layer or the modal. Service blocks pass through with their kind. */
-function normalizeRun(seg) {
+function normalizeRun(seg, timeline) {
   if (!seg) return null;
   if (seg.kind === 'clean' || seg.kind === 'maint') {
-    return { kind: seg.kind, durationHours: (seg.w ?? 0) * 24 };
+    return { kind: seg.kind, durationHours: valueToHours(seg.w ?? 0, timeline) };
   }
   return {
     material: seg.of,
     sku: seg.sku,
     volume: seg.vol,
     oee: seg.oee,
-    durationHours: (seg.w ?? 0) * 24,
+    durationHours: valueToHours(seg.w ?? 0, timeline),
     format: seg.format,
   };
 }
 
-function Lane({ lineKey, centre, baseline, executed, planned, zoom, sync, primary = false, onRunClick = null, moving = null, onMoveDrop = null }) {
+function Lane({
+  lineKey,
+  centre,
+  baseline,
+  executed,
+  planned,
+  displayPlanned,
+  zoom,
+  timeline,
+  sync,
+  primary = false,
+  onRunClick = null,
+  moving = null,
+  onMoveDrop = null,
+  lineRules = null,
+  events = [],
+}) {
   /* Moving-mode derived state — null when no move is in flight. We
      compute compatibility and reason once per lane so the drop-zone
      children share the same verdict. */
   const isMoving = !!moving;
-  const compatible = isMoving ? isLineCompatible(lineKey, moving.format) : true;
-  const reason = isMoving && !compatible ? incompatibleReason(lineKey, moving.format) : null;
+  const compatible = isMoving ? isLineCompatible(lineKey, moving.format, lineRules) : true;
+  const reason = isMoving && !compatible ? incompatibleReason(lineKey, moving.format, lineRules) : null;
   const isSourceLane = isMoving && String(moving.fromLine) === String(lineKey);
   const [activeSlot, setActiveSlot] = useState(null);
 
@@ -455,6 +649,7 @@ function Lane({ lineKey, centre, baseline, executed, planned, zoom, sync, primar
       <div className="tl-lane-head">
         <span className="ln">L{lineKey}</span>
         <span className="ce">{centre}</span>
+        <LineRuleChips lineKey={lineKey} lineRules={lineRules} />
         {baseline != null && (
           <span className="bl">
             Baseline {baseline.toFixed(2)}
@@ -481,8 +676,9 @@ function Lane({ lineKey, centre, baseline, executed, planned, zoom, sync, primar
             </InfoPopover>
           </span>
         )}
+        <LineEvents events={events} />
         {(() => {
-          const stop = nextStop(planned);
+          const stop = nextStop(displayPlanned ?? planned, timeline);
           if (!stop) return null;
           return (
             <div className={`tl-next-stop tl-next-stop-${stop.kind}`}>
@@ -509,8 +705,9 @@ function Lane({ lineKey, centre, baseline, executed, planned, zoom, sync, primar
                 baseline={baseline}
                 state="executed"
                 zoom={zoom}
-                dateLabel={dayRange((seg.start ?? 0) - execEnd, seg.w ?? 0)}
-                onClick={onRunClick ? () => onRunClick({ seg: normalizeRun(seg), prev: normalizeRun(prev), next: normalizeRun(next), lineKey, baseline, state: 'executed' }) : null}
+                timeline={timeline}
+                dateLabel={dayRange((seg.start ?? 0) - execEnd, seg.w ?? 0, timeline)}
+                onClick={onRunClick ? () => onRunClick({ seg: normalizeRun(seg, timeline), prev: normalizeRun(prev, timeline), next: normalizeRun(next, timeline), lineKey, baseline, state: 'executed' }) : null}
               />
             );
           });
@@ -525,15 +722,16 @@ function Lane({ lineKey, centre, baseline, executed, planned, zoom, sync, primar
             slotIndex={0}
             active={activeSlot === 0}
             isFirst
-            runWidthPx={Math.max(MIN_CARD_WIDTH[zoom] ?? 168, Math.round((moving.run.w ?? 1) * (WIDTH_PER_DAY[zoom] ?? 200)))}
+            runWidthPx={widthForDuration(moving.run.w ?? 1, zoom, timeline)}
             onDragOver={onZoneDragOver}
             onDragLeave={onZoneDragLeave}
             onDrop={onZoneDrop}
           />
         )}
-        {planned.map((seg, i) => {
-          const prev = i > 0 ? planned[i - 1] : (executed[executed.length - 1] ?? null);
-          const next = i < planned.length - 1 ? planned[i + 1] : null;
+        {(displayPlanned ?? planned).map((seg, i) => {
+          const planIndex = seg._planIndex ?? i;
+          const prev = planIndex > 0 ? planned[planIndex - 1] : (executed[executed.length - 1] ?? null);
+          const next = planIndex < planned.length - 1 ? planned[planIndex + 1] : null;
           const isSourceRun = isMoving && isSourceLane && seg.of && seg.of === moving.run.of;
           /* When this is the source run during a move, we render nothing —
              the gap itself communicates "this slot is up for relocation."
@@ -547,14 +745,15 @@ function Lane({ lineKey, centre, baseline, executed, planned, zoom, sync, primar
                 baseline={baseline}
                 state="planned"
                 zoom={zoom}
-                dateLabel={dayRange(seg.start ?? 0, seg.w ?? 0)}
-                onClick={onRunClick ? () => onRunClick({ seg: normalizeRun(seg), prev: normalizeRun(prev), next: normalizeRun(next), lineKey, baseline, state: 'planned' }) : null}
+                timeline={timeline}
+                dateLabel={dayRange(seg.start ?? 0, seg.w ?? 0, timeline)}
+                onClick={seg.kind === 'clean' || seg.kind === 'maint' ? null : (onRunClick ? () => onRunClick({ seg: normalizeRun(seg, timeline), prev: normalizeRun(prev, timeline), next: normalizeRun(next, timeline), lineKey, baseline, state: 'planned' }) : null)}
               />
-              {isMoving && compatible && (
+              {isMoving && compatible && seg._source === 'plan' && seg.kind !== 'clean' && seg.kind !== 'maint' && (
                 <DropZone
-                  slotIndex={i + 1}
-                  active={activeSlot === i + 1}
-                  runWidthPx={Math.max(MIN_CARD_WIDTH[zoom] ?? 168, Math.round((moving.run.w ?? 1) * (WIDTH_PER_DAY[zoom] ?? 200)))}
+                  slotIndex={(seg._planIndex ?? i) + 1}
+                  active={activeSlot === (seg._planIndex ?? i) + 1}
+                  runWidthPx={widthForDuration(moving.run.w ?? 1, zoom, timeline)}
                   onDragOver={onZoneDragOver}
                   onDragLeave={onZoneDragLeave}
                   onDrop={onZoneDrop}
@@ -578,18 +777,17 @@ function Lane({ lineKey, centre, baseline, executed, planned, zoom, sync, primar
   );
 }
 
-function SegmentCard({ seg, baseline, state, zoom, dateLabel, onClick = null, ghost = false }) {
-  const durationDays = seg.w ?? 1;
-  const widthPx = Math.max(
-    MIN_CARD_WIDTH[zoom] ?? 168,
-    Math.round(durationDays * (WIDTH_PER_DAY[zoom] ?? 200)),
-  );
+function SegmentCard({ seg, baseline, state, zoom, timeline, dateLabel, onClick = null, ghost = false }) {
+  const duration = seg.w ?? 1;
+  const durationHours = valueToHours(duration, timeline);
+  const widthPx = widthForDuration(duration, zoom, timeline);
 
   if (seg.kind === 'clean' || seg.kind === 'maint') {
     return (
       <TimelineCard
         kind={seg.kind}
-        durationHours={durationDays * 24}
+        label={seg.label}
+        durationHours={durationHours}
         widthPx={widthPx}
         dateLabel={dateLabel}
       />
@@ -603,13 +801,38 @@ function SegmentCard({ seg, baseline, state, zoom, dateLabel, onClick = null, gh
       volume={seg.vol}
       oee={seg.oee}
       lineBaseline={baseline}
-      durationHours={durationDays * 24}
+      durationHours={durationHours}
       widthPx={widthPx}
       state={state}
       dateLabel={dateLabel}
+      format={seg.format}
       onClick={ghost ? null : onClick}
       ghost={ghost}
     />
+  );
+}
+
+function LineRuleChips({ lineKey, lineRules }) {
+  const formats = allowedFormats(lineKey, lineRules);
+  if (!formats.length) return null;
+  return (
+    <div className="line-rule-chips" aria-label={`Line ${lineKey} allowed formats`}>
+      {formats.map((fmt) => (
+        <span key={fmt.key} className="line-rule-chip">{fmt.label}</span>
+      ))}
+    </div>
+  );
+}
+
+function LineEvents({ events }) {
+  if (!events?.length) return null;
+  const stoppages = events.filter((event) => event.type === 'stoppage').length;
+  const issues = events.filter((event) => event.type === 'issue').length;
+  return (
+    <div className="line-event-mini">
+      {issues > 0 && <span>{issues} issue{issues > 1 ? 's' : ''}</span>}
+      {stoppages > 0 && <span>{stoppages} stop{stoppages > 1 ? 's' : ''}</span>}
+    </div>
   );
 }
 

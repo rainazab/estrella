@@ -18,18 +18,42 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
 
 from .config import RAW_DIR
+from .line_rules import LINE_FORMAT_CAPABILITIES
 
 CF_FILE = RAW_DIR / "Tabla CF Prat 2026_14_17_19.xlsx"
 
 # Canonical labels used as row/column keys in the parsed matrix
 _FORMAT_KEYS = {"1/3", "1/2", "2/5"}
 _AUX_KEYS = {"Cambio Packaging", "Cambio a Bandeja", "Cambio Paletizado"}
+
+FORMAT_UI = {
+    "1/2": {"key": "1/2", "label": "50cl", "name": "medio"},
+    "1/3": {"key": "1/3", "label": "33cl", "name": "tercio"},
+    "2/5": {"key": "2/5", "label": "44cl", "name": "2/5"},
+}
+FORMAT_ORDER = ("1/2", "1/3", "2/5")
+DAY_CODE_TO_WEEKDAY = {
+    "L": 0,
+    "M": 1,
+    "X": 2,
+    "J": 3,
+    "V": 4,
+    "S": 5,
+    "D": 6,
+}
+SHIFT_PATTERN_COLUMNS = {
+    "1 turno": (3, 4),
+    "2 turnos": (5, 6),
+    "3 turnos": (7, 8),
+    "5 turnos": (9, 10),
+}
 
 
 # Documented fallback transcribed from Tabla CF Prat 2026, sheet LATA_BARRIL.
@@ -72,6 +96,175 @@ def _parse_duration(value) -> Optional[float]:
         except ValueError:
             return None
     return minutes
+
+
+def _duration_hours(value) -> Optional[float]:
+    minutes = _parse_duration(value)
+    return round(minutes / 60.0, 2) if minutes is not None else None
+
+
+def _text(value: Any) -> str:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return ""
+    return str(value).strip()
+
+
+def _weekly_offset_hours(anchor: date, day_code: str) -> Optional[float]:
+    weekday = DAY_CODE_TO_WEEKDAY.get(day_code.upper())
+    if weekday is None:
+        return None
+    delta_days = (weekday - anchor.weekday()) % 7
+    return float(delta_days * 24)
+
+
+def _anchor_date(value: Optional[str | date | datetime]) -> date:
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str) and value:
+        try:
+            return datetime.fromisoformat(value[:10]).date()
+        except ValueError:
+            pass
+    return datetime.now().date()
+
+
+def build_line_rules() -> Dict[str, Dict[str, Any]]:
+    """Frontend-ready line-format capability rules.
+
+    These are the ops constraints from `line_rules.py`, not inferred from
+    history. The Tabla CF workbook is still the source for timing cadences.
+    """
+    rules: Dict[str, Dict[str, Any]] = {}
+    for line, formats in sorted(LINE_FORMAT_CAPABILITIES.items()):
+        allowed = [FORMAT_UI[f] for f in FORMAT_ORDER if f in formats]
+        label = ", ".join(f["label"] for f in allowed)
+        rules[str(line)] = {
+            "line": str(line),
+            "formats": allowed,
+            "summary": f"L{line} only runs {label}",
+            "locked": True,
+            "source": "Damm operations line-format rules",
+        }
+    return rules
+
+
+def _parse_line_cadence_rows(df: pd.DataFrame) -> Dict[str, list[Dict[str, Any]]]:
+    rows: Dict[str, list[Dict[str, Any]]] = {str(line): [] for line in LINE_FORMAT_CAPABILITIES}
+    current_line: Optional[str] = None
+
+    for r in range(len(df)):
+        first = _text(df.iloc[r, 0]).upper()
+        if first.startswith("TREN "):
+            match = re.search(r"\d+", first)
+            current_line = match.group(0) if match else None
+
+        if current_line not in rows:
+            continue
+
+        stop_label = _text(df.iloc[r, 1])
+        if stop_label.lower() not in ("limpieza", "mantenimiento"):
+            continue
+
+        duration_h = _duration_hours(df.iloc[r, 2])
+        if duration_h is None:
+            continue
+
+        kind = "clean" if stop_label.lower() == "limpieza" else "maint"
+        for shift_pattern, (day_col, freq_col) in SHIFT_PATTERN_COLUMNS.items():
+            day_code = _text(df.iloc[r, day_col]).upper()
+            cadence = _text(df.iloc[r, freq_col]).upper()
+            if not day_code or day_code == "-" or not cadence or cadence == "-":
+                continue
+            rows[current_line].append({
+                "kind": kind,
+                "label": "Cleaning" if kind == "clean" else "Maintenance",
+                "durationHours": duration_h,
+                "day": day_code,
+                "cadence": cadence.lower(),
+                "shiftPattern": shift_pattern,
+                "source": "Tabla CF Prat 2026 · Tiempos adicionales",
+            })
+    return rows
+
+
+def _preferred_weekly_marker(
+    rows: list[Dict[str, Any]],
+    *,
+    kind: str,
+    anchor: date,
+) -> Optional[Dict[str, Any]]:
+    candidates = [r for r in rows if r.get("kind") == kind]
+    if not candidates:
+        return None
+
+    if kind == "clean":
+        preferred = next(
+            (r for r in candidates if r.get("shiftPattern") == "3 turnos" and r.get("cadence") == "semanal"),
+            None,
+        )
+    else:
+        preferred = next(
+            (r for r in candidates if r.get("shiftPattern") == "5 turnos"),
+            None,
+        )
+    row = preferred or candidates[0]
+    start = _weekly_offset_hours(anchor, str(row.get("day") or ""))
+    if start is None:
+        return None
+    cadence = str(row.get("cadence") or "").lower()
+    return {
+        "kind": row["kind"],
+        "label": (
+            "Weekly cleaning" if row["kind"] == "clean" and cadence == "semanal"
+            else "Fortnightly maintenance" if row["kind"] == "maint" and cadence == "quincenal"
+            else row["label"]
+        ),
+        "start": round(start, 2),
+        "w": float(row["durationHours"]),
+        "durationHours": float(row["durationHours"]),
+        "day": row["day"],
+        "cadence": row["cadence"],
+        "shiftPattern": row["shiftPattern"],
+        "locked": True,
+        "source": row["source"],
+    }
+
+
+def load_operational_contract(anchor_date: Optional[str | date | datetime] = None) -> Dict[str, Any]:
+    """Load frontend-visible operating rules from hard rules + Tabla CF.
+
+    Returns `lineRules` and `weeklyStops`. Missing workbook data degrades to
+    an empty stop list while preserving the line capability rules.
+    """
+    anchor = _anchor_date(anchor_date)
+    out = {
+        "lineRules": build_line_rules(),
+        "weeklyStops": {str(line): [] for line in LINE_FORMAT_CAPABILITIES},
+        "cleaningSchedule": {str(line): [] for line in LINE_FORMAT_CAPABILITIES},
+    }
+    if not CF_FILE.exists():
+        return out
+
+    try:
+        df = pd.read_excel(CF_FILE, sheet_name="Tiempos adicionales", header=None)
+    except Exception:
+        return out
+
+    cadence_rows = _parse_line_cadence_rows(df)
+    out["cleaningSchedule"] = cadence_rows
+    for line_key, rows in cadence_rows.items():
+        stops = []
+        for kind in ("clean", "maint"):
+            marker = _preferred_weekly_marker(rows, kind=kind, anchor=anchor)
+            if marker:
+                marker["id"] = f"L{line_key}-{kind}-{marker['day']}-{marker['cadence']}"
+                marker["line"] = line_key
+                stops.append(marker)
+        stops.sort(key=lambda s: (float(s.get("start", 0)), s.get("kind") != "clean"))
+        out["weeklyStops"][line_key] = stops
+    return out
 
 
 @dataclass

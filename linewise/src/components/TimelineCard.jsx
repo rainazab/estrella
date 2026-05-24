@@ -28,6 +28,7 @@ export default function TimelineCard({
   selected = false,
   dateLabel = null,
   ghost = false,
+  label = null,
 }) {
   const isService = kind === 'clean' || kind === 'maint';
   const fmt = format || deriveFormat({ sku, material });
@@ -43,7 +44,7 @@ export default function TimelineCard({
         title={kind === 'clean' ? 'Cleaning / CIP' : 'Maintenance'}
       >
         <span className="tc-svc-label">
-          {kind === 'clean' ? 'Cleaning' : 'Maintenance'}
+          {label || (kind === 'clean' ? 'Cleaning' : 'Maintenance')}
         </span>
         {dateLabel && <span className="tc-svc-date">{dateLabel}</span>}
         <span className="tc-svc-dur">{formatDuration(durationHours)}</span>
@@ -73,9 +74,6 @@ export default function TimelineCard({
   return (
     <motion.button
       type="button"
-      layout
-      whileHover={onClick ? { y: -1 } : undefined}
-      whileTap={onClick ? { y: 0 } : undefined}
       className={cls}
       style={{ width: w }}
       onClick={onClick}
@@ -173,7 +171,7 @@ export function deriveFormat({ sku, material }) {
   if (material) {
     if (/13/.test(material)) return '33cl';
     if (/(12|05)/.test(material)) return '50cl';
-    if (/(2[-_]?5|44)/.test(material)) return '44cl';
+    if (/(2\s*\/\s*5|2[-_]5|\b44\b)/.test(material)) return '44cl';
   }
   return null;
 }

@@ -9,7 +9,7 @@ contract.
 The two are kept in lockstep by `app/frontend_payload.py`, which is the
 only legal seam between the canonical shape and the HTTP shape.
 
-Current `CONTRACT_VERSION`: **2.0**.
+Current `CONTRACT_VERSION`: **2.2**.
 
 ## Top-level shape (canonical)
 
@@ -18,6 +18,9 @@ Current `CONTRACT_VERSION`: **2.0**.
   "urgentOrders":     [ ... ],
   "lineBaseline":     { "14": {avg_oee:..., ...}, "17": {...}, "19": {...} },
   "lineCentre":       { "14": "CF Prat", "17": "CF Prat", "19": "CF Prat" },
+  "timeline":         { "anchorDate": "2026-05-24", "timeUnit": "hours", "views": { ... } },
+  "lineRules":        { "14": LineRule, "17": LineRule, "19": LineRule },
+  "weeklyStops":      { "14": [Stop, ...], "17": [...], "19": [...] },
   "yearCompare":      { "weekLabel": "Week 21 · 18–24 May", "lines": { ... } },
   "executedHistory":  { "14": [seg, ...], "17": [...], "19": [...] },
   "basePlan":         { "14": [seg, ...], "17": [...], "19": [...] },
@@ -32,9 +35,9 @@ Current `CONTRACT_VERSION`: **2.0**.
 }
 ```
 
-Segment `start` and `w` values are in **hours** (matching the frontend
-contract). The contract validator (`validate_data_json.py`) enforces the
-nine keys listed in `REQUIRED_TOP_LEVEL`; everything else is additive and
+Segment `start` and `w` values are in **hours** (matching `timeline.timeUnit`).
+The contract validator (`validate_data_json.py`) enforces the required keys
+listed in `REQUIRED_TOP_LEVEL`; everything else is additive and
 may evolve without a version bump.
 
 ## 1. `urgentOrders`
@@ -73,26 +76,96 @@ maintenance excluded).
 }
 ```
 
-## 3. `yearCompare`
+## 3. `timeline`
 
-Monthly average OEE per line, production blocks only:
+Timeline metadata makes the calendar axis backend-authoritative.
 
 ```jsonc
-"2025": {
-  "01": { "14": 0.62, "17": 0.58, "19": 0.64 },
-  "02": { "14": 0.61, "17": 0.59, "19": 0.66 }
+{
+  "anchorDate": "2026-05-24",   // date represented by start=0
+  "anchorLabel": "Today",
+  "timeUnit": "hours",          // segment start/w unit
+  "views": {
+    "week":    { "daysBack": 7,  "daysAhead": 14 },
+    "month":   { "daysBack": 14, "daysAhead": 35 },
+    "quarter": { "daysBack": 30, "daysAhead": 90 }
+  },
+  "source": "exported_at",
+  "sourcePlanStartDate": "2026-05-18"
 }
 ```
 
-## 4. `executedHistory` / `basePlan`
+The frontend still owns pixels/card geometry, but it must use this anchor
+and unit conversion for labels and visible date windows.
+
+## 4. `yearCompare`
+
+Same ISO week comparison against the prior year, production blocks only:
+
+```jsonc
+"weekLabel": "Week 1 · 29 Dec–4 Jan",
+"lines": {
+  "14": {
+    "oeeNow": 0.258,
+    "oeeLast": 0.190,
+    "volNow": 1407.6,
+    "volLast": 1410.7,
+    "changesNow": 3,
+    "changesLast": 2
+  }
+}
+```
+
+## 5. `lineRules`
+
+Locked factory constraints for can formats per line. These are not learned
+from OEE and cannot be overridden in the demo planner.
+
+```jsonc
+"17": {
+  "line": "17",
+  "formats": [{ "key": "1/3", "label": "33cl", "name": "tercio" }],
+  "summary": "L17 only runs 33cl",
+  "locked": true,
+  "source": "Damm operations line-format rules"
+}
+```
+
+Expected capabilities:
+
+- L14: `50cl`, `33cl`
+- L17: `33cl`
+- L19: `50cl`, `33cl`, `44cl`
+
+## 6. `weeklyStops`
+
+Locked cleaning/maintenance markers derived from
+`Tabla CF Prat 2026_14_17_19.xlsx`, sheet `Tiempos adicionales`.
+They are visible on the planner timeline but are not production runs and
+must not enter OEE baselines or analogue means.
+
+```jsonc
+"19": [{
+  "kind": "clean",
+  "label": "Weekly cleaning",
+  "start": 24,
+  "w": 8,
+  "day": "L",
+  "cadence": "semanal",
+  "shiftPattern": "3 turnos",
+  "locked": true
+}]
+```
+
+## 7. `executedHistory` / `basePlan`
 
 Both keyed by line; each value is an ordered list of timeline segments.
 
 ```jsonc
 {
   "of": "ED12LTW",
-  "start": 0.0,        // days from the left edge of the timeline
-  "w": 0.42,           // width in days
+  "start": 0.0,        // hours from the left edge of the lane window
+  "w": 6.0,            // duration in hours
 
   // production segments:
   "sku": "BEER ...",
@@ -115,7 +188,7 @@ Constraints (enforced by validate_data_json.py):
 - Production segments must have `sku` and `vol`.
 - `kind: "clean" | "maint"` segments must NOT include `oee` or `vol`.
 
-## 5. `recommendations`
+## 8. `recommendations`
 
 One entry per feasible line. Lines that are infeasible for the urgent
 format appear in `infeasibleByLine` instead.
@@ -176,7 +249,7 @@ format appear in `infeasibleByLine` instead.
 Required fields are listed in `REQUIRED_RECOMMENDATION_FIELDS` and
 `REQUIRED_EVIDENCE_FIELDS` inside `app/data_contract.py`.
 
-## 6. `objectives`
+## 7. `objectives`
 
 ```jsonc
 {

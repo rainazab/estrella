@@ -59,6 +59,9 @@ Top-level keys (all required unless noted):
 |---|---|---|
 | `urgentOrders` | `Order[]` | Inbox of incoming urgent OFs |
 | `lineBaseline` | `{ [lineId]: number }` | Baseline OEE per line (0–1) |
+| `timeline` | `TimelineMeta` | Backend-owned date anchor, time unit and view windows |
+| `lineRules` | `{ [lineId]: LineRule }` | Locked format capabilities per line |
+| `weeklyStops` | `{ [lineId]: Stop[] }` | Locked weekly cleaning/maintenance markers from Tabla CF |
 | `yearCompare` | `YearCompare` | YoY week strip on top bar |
 | `executedHistory` | `{ [lineId]: Band[] }` | What already ran (left of "now") |
 | `basePlan` | `{ [lineId]: Band[] }` | Current committed plan (right of "now") |
@@ -92,6 +95,53 @@ Top-level keys (all required unless noted):
   }
 }
 ```
+
+### `TimelineMeta`
+```ts
+{
+  anchorDate: string;     // ISO date represented by start=0
+  anchorLabel: string;    // usually "Today"
+  timeUnit: "hours" | "days";
+  views: {
+    week:    { daysBack: number; daysAhead: number };
+    month:   { daysBack: number; daysAhead: number };
+    quarter: { daysBack: number; daysAhead: number };
+  };
+}
+```
+
+### `LineRule`
+```ts
+{
+  line: string;
+  formats: Array<{ key: "1/2"|"1/3"|"2/5"; label: "50cl"|"33cl"|"44cl"; name: string }>;
+  summary: string;
+  locked: boolean;
+  source: string;
+}
+```
+
+### `Stop`
+```ts
+{
+  id: string;
+  line: string;
+  kind: "clean" | "maint";
+  label: string;
+  start: number;
+  w: number;
+  durationHours: number;
+  day: "L" | "M" | "X" | "J" | "V" | "S" | "D";
+  cadence: string;
+  shiftPattern: string;
+  locked: true;
+  source: string;
+}
+```
+
+Week / Month / Quarter use the same `basePlan` and `executedHistory`
+arrays. The toggle changes the rendered window/scale; it does not fetch
+separate datasets.
 
 ### `Band` (executedHistory / basePlan entries)
 A band is **either** a production run **or** a non-production block.

@@ -70,6 +70,57 @@ def _canonical() -> dict:
             "19": {"avg_oee": 0.64, "avg_changeover_minutes": 70.0},
         },
         "lineCentre": {"14": "CF Prat", "17": "CF Prat", "19": "CF Prat"},
+        "timeline": {
+            "anchorDate": "2026-05-24",
+            "anchorLabel": "Today",
+            "timeUnit": "hours",
+            "views": {
+                "week": {"daysBack": 7, "daysAhead": 14},
+                "month": {"daysBack": 14, "daysAhead": 35},
+                "quarter": {"daysBack": 30, "daysAhead": 90},
+            },
+            "source": "test",
+        },
+        "lineRules": {
+            "14": {
+                "line": "14",
+                "formats": [
+                    {"key": "1/2", "label": "50cl", "name": "medio"},
+                    {"key": "1/3", "label": "33cl", "name": "tercio"},
+                ],
+                "summary": "L14 only runs 50cl, 33cl",
+                "locked": True,
+                "source": "ops",
+            },
+            "17": {
+                "line": "17",
+                "formats": [{"key": "1/3", "label": "33cl", "name": "tercio"}],
+                "summary": "L17 only runs 33cl",
+                "locked": True,
+                "source": "ops",
+            },
+            "19": {
+                "line": "19",
+                "formats": [
+                    {"key": "1/2", "label": "50cl", "name": "medio"},
+                    {"key": "1/3", "label": "33cl", "name": "tercio"},
+                    {"key": "2/5", "label": "44cl", "name": "2/5"},
+                ],
+                "summary": "L19 only runs 50cl, 33cl, 44cl",
+                "locked": True,
+                "source": "ops",
+            },
+        },
+        "weeklyStops": {
+            "14": [{
+                "id": "L14-clean-L-semanal", "line": "14", "kind": "clean",
+                "label": "Weekly cleaning", "start": 24.0, "w": 8.0,
+                "durationHours": 8.0, "day": "L", "cadence": "semanal",
+                "shiftPattern": "3 turnos", "locked": True, "source": "Tabla",
+            }],
+            "17": [],
+            "19": [],
+        },
         "yearCompare": {
             "weekLabel": "Week 21 · 18–24 May",
             "lines": {
@@ -93,7 +144,7 @@ def _canonical() -> dict:
                                  "label": "Line 19 · after EDX-001", "banner": "Recommended slot."},
         },
         # Additive top-level that must be dropped:
-        "metadata": {"contract_version": "2.0"},
+        "metadata": {"contract_version": "2.2"},
         "infeasibleByLine": {},
         "planReview": {},
     }
@@ -103,10 +154,36 @@ class TestFrontendShape:
     def test_top_level_keys_match_contract_exactly(self):
         payload = build_frontend_payload(_canonical())
         assert set(payload.keys()) == {
-            "urgentOrders", "lineBaseline", "yearCompare",
-            "executedHistory", "basePlan", "lineCentre",
+            "urgentOrders", "lineBaseline", "timeline", "lineRules",
+            "weeklyStops", "yearCompare", "executedHistory", "basePlan", "lineCentre",
             "recommendations", "objectives", "manualSlots",
         }
+
+    def test_timeline_keeps_frontend_contract_fields(self):
+        payload = build_frontend_payload(_canonical())
+        assert payload["timeline"] == {
+            "anchorDate": "2026-05-24",
+            "anchorLabel": "Today",
+            "timeUnit": "hours",
+            "views": {
+                "week": {"daysBack": 7.0, "daysAhead": 14.0},
+                "month": {"daysBack": 14.0, "daysAhead": 35.0},
+                "quarter": {"daysBack": 30.0, "daysAhead": 90.0},
+            },
+        }
+
+    def test_line_rules_are_kept_for_frontend_constraints(self):
+        payload = build_frontend_payload(_canonical())
+        assert [fmt["label"] for fmt in payload["lineRules"]["17"]["formats"]] == ["33cl"]
+        assert payload["lineRules"]["14"]["summary"] == "L14 only runs 50cl, 33cl"
+
+    def test_weekly_stops_are_trimmed_but_keep_locked_timing(self):
+        payload = build_frontend_payload(_canonical())
+        stop = payload["weeklyStops"]["14"][0]
+        assert stop["kind"] == "clean"
+        assert stop["start"] == 24.0
+        assert stop["w"] == 8.0
+        assert stop["locked"] is True
 
     def test_line_baseline_flattens_to_number_per_line(self):
         payload = build_frontend_payload(_canonical())
