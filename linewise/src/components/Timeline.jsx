@@ -409,13 +409,7 @@ function RecommendationLane({ data, lineKey, rec, zoom, showNaive, sync, primary
         )}
       </div>
       <div className="tl-lane-body" ref={bodyRef} onScroll={() => sync?.broadcast(bodyRef.current)}>
-        <div className="tl-now-inline" aria-label="current divider">
-          {primary && (
-            <span className="tl-now-inline-label">
-              <span className="tl-now-inline-l-now">NOW</span>
-            </span>
-          )}
-        </div>
+        <div className="tl-today" aria-label="current" style={{ left: todayX }} />
         {proposed.map((seg, index) => (
           <SegmentCard
             key={`r-${lineKey}-${seg.of ?? seg.kind}-${index}`}
@@ -529,16 +523,17 @@ function stoppageDurationLabel(key) {
   }[key] || '—';
 }
 
-/* computeTodayScroll — derive the scrollLeft so the NOW divider lands
-   at the leftmost visible position of the lane body. Executed history
-   is reachable by scrolling left from there; forward plan is the
-   default view. Same behaviour for every zoom level.
+/* computeTodayScroll — derive the scrollLeft for the current zoom. Week and
+   month views open on the current calendar week so the viewport reads as one
+   week / five weeks instead of an arbitrary slice starting mid-week. Quarter
+   keeps today at the left edge for longer-horizon scanning.
    Returns null when the lane doesn't actually need scrolling. */
-function computeTodayScroll(body, _zoom, _pxPerDay) {
+function computeTodayScroll(body, zoom, pxPerDay) {
   if (!body) return null;
-  const today = body.querySelector('.tl-now-inline');
+  const today = body.querySelector('.tl-today');
   if (!today || body.scrollWidth <= body.clientWidth) return null;
-  const target = today.offsetLeft;
+  const anchorBackDays = zoom === 'quarter' ? 0 : daysSinceWeekStart(TODAY);
+  const target = today.offsetLeft - (anchorBackDays * pxPerDay);
   const maxScroll = Math.max(0, body.scrollWidth - body.clientWidth);
   return Math.min(maxScroll, Math.max(0, target));
 }
@@ -896,17 +891,7 @@ function Lane({ lineKey, centre, baseline, formats = [], executed, planned, zoom
             );
           });
         })()}
-        {/* Inline NOW divider — always sits between executed and planned
-            cards in DOM order, so the gray→color boundary is enforced
-            even when rendered card widths exceed each card's true
-            hour-footprint (cards have a MIN_CARD_WIDTH floor). */}
-        <div className="tl-now-inline" aria-label="current divider">
-          {primary && (
-            <span className="tl-now-inline-label">
-              <span className="tl-now-inline-l-now">NOW</span>
-            </span>
-          )}
-        </div>
+        <div className="tl-today" aria-label="current" style={{ left: todayX }} />
         {stoppage && (
           <div
             className="tl-stoppage-block tl-stoppage-block-long"
