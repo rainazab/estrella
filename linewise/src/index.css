@@ -335,6 +335,10 @@ html, body, #root { height: 100%; }
   flex: 1; min-height: 0;
 }
 .shell.recs { grid-template-columns: 376px 1fr; }
+/* Calculating view — BrewLoader takes the whole stage, no panel */
+.shell.calc-full { grid-template-columns: 1fr; }
+.shell.calc-full .panel { display: none; }
+.shell.calc-full .stage-pad { padding: 0; }
 .shell.plan-shell { display: block; overflow: auto; }
 .shell.plan-shell .pl-root { min-height: 100%; }
 .panel { display: none; }
