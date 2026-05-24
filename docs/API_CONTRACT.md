@@ -10,19 +10,19 @@ contract change — bump the version and notify the frontend team.
 
 ### What changed in 2.4
 
+- **Shipped:** `GET /signals` + `POST /signals/refresh` backed by Cala
+  (with a hand-curated seed fallback). Adds `Signal` and `Citation`
+  types — see *Endpoints* and *Plan payload* below.
 - `Order.status` taxonomy widened from `urgent | queued` to
   `urgent | queued | scheduled | planned | done`. `planned` is emitted
   only by the frontend's optimistic preview path; the backend never
   needs to return it.
-- Added optional top-level `signals: Signal[]` for Cala-style external
-  watch items rendered on the homepage news strip, in the morning
-  briefing, and inside the Plan Lab provenance card. Backend may return
-  it on `/plan` or expose `GET /signals`; mocked client-side today.
-- Documented the three planned write endpoint groups that currently
-  mutate `localStorage` only: `POST /changes` + `GET /changes`,
+- **Planned (FE-only today):** three planned write endpoint groups that
+  currently mutate `localStorage` only: `POST /changes` + `GET /changes`,
   `POST /shifts/handoff` + `GET /shifts/handoff/latest`, and
   `POST /plan/drafts` + `POST /plan/apply`. Until the backend takes
-  ownership, the frontend treats them as best-effort no-ops.
+  ownership, the frontend treats them as best-effort no-ops. New types:
+  `ChangeLedgerEntry`, `ShiftHandoff`.
 
 ## Conventions
 
@@ -75,6 +75,35 @@ in-process `plan_override` left behind by `/plan/move`, so the next
 | `412` | `{ "error": "raw_missing", ... }` — `data/raw/` is empty/missing. |
 | `500` | `{ "error": "recompute_failed", "detail": "<tail of exporter stderr>" }` |
 | `504` | `{ "error": "recompute_timeout", "detail": "export_data_json exceeded 180s" }` |
+
+### `GET /signals`
+Returns the cached external-context payload (supplier risk, regulatory
+updates, competitor moves, commodity context) sourced via [Cala](https://cala.ai).
+Always answers — empty payload when the seed file is missing.
+
+| Status | Meaning |
+|---|---|
+| `200` | Body shape `{ signals: Signal[], citations: { [id]: Citation }, generatedAt, source, stale, error }`. ETag + `Cache-Control: no-store`. |
+| `304` | Body empty. Client's `If-None-Match` matches the server's current ETag. |
+
+The `source` field is `"cala"` for live data, `"seed"` for the
+hand-curated fallback. `stale: true` means the data hasn't been
+refreshed since startup.
+
+### `POST /signals/refresh`
+Re-runs the Cala calls (one `knowledge_search` per category in
+`signals.DEFAULT_QUERIES`) and overwrites `data/output/signals.json`.
+Free-tier-friendly: never called from the request path; trigger
+manually or on a cron.
+
+| Status | Meaning |
+|---|---|
+| `200` (`ok: true`) | Cala succeeded; new payload returned. |
+| `200` (`ok: false`) | `CALA_API_KEY` unset OR Cala unreachable / rate-limited; seed kept in place. Body carries `error` with the reason. |
+
+Skipped silently to the seed if `CALA_API_KEY` is unset — the demo
+still works offline. On `HTTP 429` or `401/403` from Cala the refresh
+halts; we keep the seed and surface the error code.
 
 ### `POST /issues`
 Log a line-side issue. Does not mutate the plan.
@@ -238,14 +267,6 @@ line; the Close-Shift modal POSTs the new handoff on Send.
 
 **GET /shifts/handoff/latest 200** → `{ handoff: ShiftHandoff | null }`
 
-### `GET /signals` *(new in 2.4 — planned, optional)*
-
-Alternative to embedding `signals` on `/plan`. Same `Signal[]` shape
-documented above. The frontend uses whichever it can find — if `/plan`
-already returns `signals`, it skips a second fetch.
-
-**200** → `{ signals: Signal[] }`
-
 ## Running the server
 
 ```bash
@@ -281,7 +302,6 @@ Top-level keys (all required):
 | `manualSlots` | `{ [slotKey]: ManualSlot }` | UI hint cards for hand-placed slots |
 | `issues` | `Issue[]` | Active issue log surfaced on lane badges |
 | `stoppages` | `Stoppage[]` | Active line stoppages |
-| `signals` *(new in 2.4, optional)* | `Signal[]` | External Cala-style watch items. Mocked client-side today; emit `[]` (or omit) and the homepage falls back to the recent-changes rail. |
 
 ### `Order`
 ```ts
@@ -484,35 +504,47 @@ line; a new entry on the same line supersedes the prior one.
 }
 ```
 
-### `Signal` (new in 2.4 — planned, optional)
+### `Signal` & `Citation`
 
-External world signal surfaced on the homepage news strip
-(`HomepageNewsStrip` in `linewise/src/App.jsx`), in the Inbox morning
-briefing, and inside the Plan Lab provenance card. Today the frontend
-imports a static list from `linewise/src/lib/cala-mock.js`. When the
-backend takes ownership, return them under `plan.signals` (or via a
-sibling `GET /signals`):
+External-context records returned by `/signals`. Powers the world-
+signals panel and the citation chips on AI suggestions.
 
 ```ts
+// Signal — one row in the panel
 {
-  id: string;                              // stable signal id ("sig-barley-futures")
-  vertical: "agriculture"|"finance"|"regulatory"|"weather";
-  headline: string;                        // short human sentence
-  value: string;                           // headline metric, free text ("EUR 238/t")
-  delta: string;                           // signed change since last reading ("+12%")
-  severity: "high"|"medium"|"low";
-  sourceName: string;                      // attribution label
-  sourceUrl: string;                       // outbound link (HTTPS)
-  fetchedAt: string;                       // ISO8601 of last fetch
-  affects: { lines: string[]; ofs: string[]; materials: string[] };
-  fact?: string;                           // long-form body for the ProvenanceModal
-  lineage?: string[];                      // provenance breadcrumb chips
+  id: string;                              // "sig-<hex>" or "sig-seed-..."
+  category: "supplier"|"regulatory"|"competitor"|"commodity"|"other";
+  severity: "info"|"warn"|"critical";
+  title: string;                           // panel section title
+  body: string;                            // operator-facing sentence
+  citationIds: string[];                   // references citations[id]
+  linesAffected: string[];                 // line keys ("14"/"17"/"19")
+  actionHint: "replan"|"watch"|null;       // proactive-banner trigger
+  ts: number;                              // epoch ms
+}
+
+// Citation — the structured fact + provenance behind a claim
+{
+  id: string;                              // "cit-<hex>" or "cit-seed-..."
+  claim: string;                           // the cited sentence
+  source: {
+    name: string|null;                     // publisher (Reuters, EUR-Lex, …)
+    url: string;                           // citable URL
+    date: string|null;                     // ISO date or null
+  };
 }
 ```
 
-The frontend filters to signals whose `affects.lines` or `affects.ofs`
-intersect the current plan, ranks by severity then by `fetchedAt`, and
-shows the top two on the news strip. Expect 0–30 in production.
+Severity is inferred from the claim text on parse:
+- "sanction" / "block" / "ban" / "recall" / "halted" / "shutdown" → `critical`
+- "delay" / "shortage" / "investigation" / "warning" / "fine" / "violation" → `warn`
+- otherwise → the per-category floor
+
+> Frontend note: this branch ships a parallel client-side mock at
+> `linewise/src/lib/cala-mock.js` with a different shape (`vertical`,
+> `headline`/`value`/`delta`, `affects.{lines,ofs,materials}`). The
+> backend-served shape above is canonical going forward; the mock will
+> be retired when the frontend points at `/signals` directly.
 
 ### `ChangeLedgerEntry` (new in 2.4 — planned, optional)
 
@@ -621,7 +653,7 @@ Returned by `/plan/move/preview` and `/plan/move`.
 | `manualSlots` | `manualSlots` | Trim each value to `{recKey, verdict, label, banner}` |
 | `issues` | in-process store (`POST /issues`) | Empty until written; not persisted across server restart |
 | `stoppages` | in-process store (`POST /stoppages`) | Empty until written; not persisted across server restart |
-| `signals` *(2.4)* | not yet served | Frontend imports from `linewise/src/lib/cala-mock.js` until backend emits this field |
+| *(`signals`)* *(2.4)* | seed/cache at `data/output/signals.json` | Served by `GET /signals` (not embedded on `/plan`). `POST /signals/refresh` re-runs Cala. Frontend mock at `linewise/src/lib/cala-mock.js` is a parallel pre-integration surface and will be retired. |
 
 The canonical payload's additive metadata (`metadata.*`,
 `infeasibleByLine`, `planReview`, per-recommendation scoring fields) is

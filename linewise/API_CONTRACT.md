@@ -1,10 +1,11 @@
 # LineWise — Frontend / Backend API Contract
 
 `CONTRACT_VERSION` is **2.4**. v2.4 adds (a) an expanded `Order.status`
-taxonomy, (b) optional `signals` for external Cala-style watch items
-surfaced on the homepage / Plan Lab provenance, and (c) the planned
-audit-log, shift-handoff and plan-draft/apply write endpoints that
-currently mutate `localStorage` only.
+taxonomy, (b) the shipped `GET /signals` + `POST /signals/refresh`
+endpoints with `Signal` and `Citation` types (backend served via Cala
+with a hand-curated seed fallback), and (c) the planned audit-log,
+shift-handoff and plan-draft/apply write endpoints that currently
+mutate `localStorage` only.
 
 This is the shape the frontend currently consumes. Today it is served by
 the Vite dev middleware in `vite.config.js` out of `data/plan.json`. The
@@ -57,6 +58,48 @@ If you need to split this later (e.g. `/plan/recommendations`,
 
 ---
 
+### `GET /signals`
+Returns the external-context payload (supplier risk, regulatory,
+competitor, commodity) — see `Signal` & `Citation` below.
+
+**200**
+```ts
+{
+  signals: Signal[];
+  citations: { [citationId: string]: Citation };
+  generatedAt: number;                       // epoch ms; 0 when seed only
+  source: "cala" | "seed";
+  stale: boolean;                            // true = not refreshed since startup
+  error: string | null;                      // reason for last refresh failure, if any
+}
+```
+
+ETag + `Cache-Control: no-store`. Always answers — when the live Cala
+client is unconfigured or the cache is empty, the seed file at
+`data/output/signals.json` is returned with `source: "seed"`.
+
+### `POST /signals/refresh`
+Re-runs the Cala calls and overwrites the cache. Free-tier-friendly —
+never called from the request path; trigger manually or on a cron.
+
+**200**
+```ts
+{
+  ok: boolean;                               // true if Cala succeeded
+  signals: Signal[];
+  citations: { [citationId: string]: Citation };
+  source: "cala" | "seed";
+  generatedAt: number;
+  stale: boolean;
+  error: string | null;                      // present when ok=false
+}
+```
+
+On `HTTP 429`/`401`/`403` from Cala the refresh halts; the seed stays
+in place and `error` carries the upstream code.
+
+---
+
 ## Plan payload
 
 Top-level keys (all required unless noted):
@@ -78,13 +121,15 @@ Top-level keys (all required unless noted):
 | `lineFormats` | `{ [lineId]: string[] }` | Can formats each line supports — see `LineFormats` below |
 | `issues` | `Issue[]` | Active line-issue log surfaced on lane badges — see `Issue` below |
 | `stoppages` | `Stoppage[]` | Currently active line stoppages — see `Stoppage` below |
-| `signals` *(planned, optional)* | `Signal[]` | External Cala-style watch items rendered as "Cala priorities" on the homepage news strip, in the morning briefing, and in the Plan Lab provenance card. See `Signal` below. Mocked client-side today in `src/lib/cala-mock.js`. Frontend treats missing as `[]`. |
 
-> **Status of "planned" field `signals`**: today the frontend imports a
-> hardcoded list from `src/lib/cala-mock.js`. The contract entry below
-> describes the shape we want when the backend takes ownership. Until
-> then the frontend treats it as an empty array if absent — the
-> homepage falls back to the "Recent changes" rail.
+> **Signals note:** `signals` is **not** a top-level key on `/plan`. It
+> is served by the sibling `GET /signals` endpoint documented above —
+> backend cache + Cala refresh, returning `Signal` + `Citation` records.
+> This branch ships a parallel client-side mock at `src/lib/cala-mock.js`
+> with a different shape (`vertical`, `headline`/`value`/`delta`) used
+> by the homepage news strip and Plan Lab provenance card today. The
+> mock retires once the frontend points its components at the
+> `/signals` endpoint.
 
 ### `Order`
 ```ts
@@ -393,45 +438,49 @@ Resume clears the entry server-side (see `POST /stoppages/{id}/resume`
 below). Any plan changes already committed via a replan stay in place
 — resuming a line does **not** revert the schedule.
 
-### `Signal` (new in v2.4 — planned, optional)
+### `Signal` & `Citation` (new in v2.4 — shipped)
 
-External "world signal" surfaced on the homepage news strip
-([`src/App.jsx`](src/App.jsx) `HomepageNewsStrip`), in the Inbox morning
-briefing, and inside the Plan Lab provenance card. Today the frontend
-loads these from the static mock at [`src/lib/cala-mock.js`](src/lib/cala-mock.js);
-when the backend takes ownership, return them on `/plan` (or via a
-dedicated `GET /signals`) using this shape:
+Returned by `GET /signals`. Powers the World Signals strip / homepage
+news cards and the citation chips on AI suggestions.
 
 ```ts
+// Signal — one row in the panel
 {
-  id: string;                              // stable signal id ("sig-barley-futures")
-  vertical:
-    | "agriculture"                        // crops, malt, hops, barley
-    | "finance"                            // FX, commodity premia, spot prices
-    | "regulatory"                         // excise filing, deposit labels, water restrictions
-    | "weather";                           // wind, heat, rain that affects shifts/dispatch
-  headline: string;                        // short human sentence ("EU malting barley futures jumped")
-  value: string;                           // headline metric, free text ("EUR 238/t", "1.079")
-  delta: string;                           // signed change since last reading ("+12%", "-0.7%")
-  severity: "high" | "medium" | "low";     // drives sort order & card tone
-  sourceName: string;                      // attribution label ("Euronext MATIF", "ECB")
-  sourceUrl: string;                       // outbound link — opened from the modal in a new tab
-  fetchedAt: string;                       // ISO8601 timestamp of the last fetch
-  affects: {
-    lines: string[];                       // line keys impacted ("14", "17", "19")
-    ofs: string[];                         // order codes impacted
-    materials: string[];                   // free-tag materials ("barley", "cans", "carbonation")
+  id: string;                              // "sig-<hex>" or "sig-seed-..."
+  category: "supplier" | "regulatory" | "competitor" | "commodity" | "other";
+  severity: "info" | "warn" | "critical";
+  title: string;                           // panel section title
+  body: string;                            // operator-facing sentence
+  citationIds: string[];                   // references citations[id]
+  linesAffected: string[];                 // line keys ("14"/"17"/"19")
+  actionHint: "replan" | "watch" | null;   // proactive-banner trigger
+  ts: number;                              // epoch ms
+}
+
+// Citation — the structured fact + provenance behind a claim
+{
+  id: string;                              // "cit-<hex>" or "cit-seed-..."
+  claim: string;                           // the cited sentence
+  source: {
+    name: string | null;                   // publisher (Reuters, EUR-Lex, …)
+    url: string;                           // citable URL
+    date: string | null;                   // ISO date or null
   };
-  fact?: string;                           // optional, longer-form explanation used in the
-                                           // ProvenanceModal body. Defaults to `headline`.
-  lineage?: string[];                      // optional provenance breadcrumb rendered as
-                                           // chevron-separated chips in the modal.
 }
 ```
 
-The frontend ranks by `severity`, then by `fetchedAt` desc; only signals
-whose `affects.ofs` or `affects.lines` intersect the current plan are
-shown. The mock today emits twelve signals; expect 0–30 in production.
+Severity is inferred from the claim text on parse:
+- "sanction" / "block" / "ban" / "recall" / "halted" / "shutdown" → `critical`
+- "delay" / "shortage" / "investigation" / "warning" / "fine" / "violation" → `warn`
+- otherwise → the per-category floor
+
+> **Migration note:** this branch ships a parallel client-side mock at
+> [`src/lib/cala-mock.js`](src/lib/cala-mock.js) with a different shape
+> (`vertical`, `headline`/`value`/`delta`, `severity: high|medium|low`,
+> `affects.{lines,ofs,materials}`). The `HomepageNewsStrip`, Inbox
+> briefing impact cards, and Plan Lab provenance modal still consume
+> the mock pending a follow-up that rewires them onto `useSignals` /
+> the backend shape above.
 
 ### `ChangeLedgerEntry` (new in v2.4 — planned, optional)
 
