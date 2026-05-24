@@ -143,7 +143,7 @@ def refresh_signals(
         for spec in queries:
             try:
                 resp = client.post(
-                    f"{CALA_BASE_URL}/knowledge_search",
+                    f"{CALA_BASE_URL}/knowledge/search",
                     headers={"X-API-KEY": api_key, "Content-Type": "application/json"},
                     json={"input": spec["query"], "return_entities": False},
                 )
