@@ -20,6 +20,7 @@ import ReplanBanner from './components/ReplanBanner.jsx';
 import LogToast from './components/LogToast.jsx';
 import SettingsDrawer from './components/SettingsDrawer.jsx';
 import ProvenanceModal from './components/ProvenanceModal.jsx';
+import QueuedOrderModal from './components/QueuedOrderModal.jsx';
 import { useSettings } from './hooks/useSettings.js';
 import { computeStoppageReplan } from './lib/stoppagePlan.js';
 import { buildOptimizationContext } from './lib/optimizationContext.js';
@@ -38,8 +39,19 @@ import BrewLoader from './components/BrewLoader.jsx';
 function App() {
   const { data, loading, error, reload } = usePlan();
   const forceLoading = new URLSearchParams(location.search).get('demo') === 'loading';
+  /* Minimum loading-screen duration. The BrewLoader has a 6s narrative loop
+     (read → route → optimise → KPIs); flashing it for 200ms feels broken.
+     2s guarantees the user sees at least one full step transition even
+     when the cache returns instantly. */
+  const [minDelayElapsed, setMinDelayElapsed] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setMinDelayElapsed(true), 2000);
+    return () => clearTimeout(t);
+  }, []);
 
-  if (loading || forceLoading) return <BootShell><LoadingState /></BootShell>;
+  /* Loading takes over the entire viewport — no TopBar, no shell — so the
+     BrewLoader is the full first impression before the planner mounts. */
+  if (loading || forceLoading || !minDelayElapsed) return <LoadingState />;
   if (error)   return <BootShell><ErrorState error={error} onRetry={reload} /></BootShell>;
   return <Workspace data={data} />;
 }
@@ -63,6 +75,7 @@ function Workspace({ data }) {
   const [draftOpen, setDraftOpen] = useState(false);
   const [orders, setOrders] = useState(data.urgentOrders);
   const [activeOrder, setActiveOrder] = useState(data.urgentOrders[0]);
+  const [queuedDetail, setQueuedDetail] = useState(null);
   /* Quick-action flow state:
      - `issueModalOpen` / `stoppageModalOpen` — which Fab-launched modal
        is on screen (only one at a time).
@@ -191,6 +204,28 @@ function Workspace({ data }) {
 
   function replanAllUrgents(urgentOrders = orders.filter((o) => o.status === 'urgent')) {
     selectUrgent(urgentOrders[0]);
+  }
+
+  /* selectQueued — clicking a Queued inbox card no longer routes through
+     the urgent-replan flow. Close the inbox and surface the order in a
+     read-only popup instead, leaving the current view untouched. */
+  function selectQueued(order) {
+    if (!order) return;
+    setInboxOpen(false);
+    setQueuedDetail(order);
+    appendChange({
+      action: 'openQueued',
+      type: 'queued_order_opened',
+      summary: `Opened queued order ${order.of}`,
+      order: {
+        of: order.of,
+        sku: order.sku,
+        units: order.units,
+        hl: order.hl,
+        due: order.due,
+        status: order.status,
+      },
+    });
   }
 
   /* previewDraftRun — fired from the RunDetailModal's "Recalculate &
@@ -416,15 +451,15 @@ function Workspace({ data }) {
               }}
               onSendReport={({ title, metrics }) => {
                 appendChange({
-                  action: 'sendPlanReport',
-                  type: 'plan_report_sent',
-                  summary: `Report sent: ${title}`,
+                  action: 'downloadPlanReport',
+                  type: 'plan_report_downloaded',
+                  summary: `Report downloaded: ${title}`,
                   title,
                   metrics,
                 });
                 setToast({
                   id: `report-${Date.now()}`,
-                  title: 'Report sent',
+                  title: 'Report downloaded',
                   detail: title,
                   tone: 'neutral',
                 });
@@ -493,6 +528,7 @@ function Workspace({ data }) {
               lastHandoff={lastHandoff}
               onClose={() => setInboxOpen(false)}
               onSelectUrgent={selectUrgent}
+              onSelectQueued={selectQueued}
               onReplanAll={replanAllUrgents}
               onCreateOrder={createManualOrder}
             />
@@ -606,6 +642,15 @@ function Workspace({ data }) {
         )}
 
         {overlays}
+
+        <QueuedOrderModal
+          order={queuedDetail}
+          onClose={() => setQueuedDetail(null)}
+          onOpenInPlanner={(order) => {
+            setQueuedDetail(null);
+            selectUrgent(order);
+          }}
+        />
       </div>
     </div>
   );
@@ -627,8 +672,18 @@ function BootShell({ children }) {
 }
 
 function LoadingState() {
+  // Full-viewport takeover — no TopBar, no chrome. The BrewLoader IS the page.
   return (
-    <div className="center-state" style={{ background: '#fff', minHeight: '70vh', borderRadius: 12 }}>
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      background: '#fff',
+      zIndex: 9999,
+      display: 'flex',
+      alignItems: 'stretch',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    }}>
       <BrewLoader />
     </div>
   );

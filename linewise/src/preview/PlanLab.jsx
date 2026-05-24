@@ -28,6 +28,7 @@ export default function PlanLab({
   onSaveDraft,
   onApplyPlan,
   onSendReport,
+  reportUrl = '/reports/planning-report-one-pager.pdf',
 } = {}) {
   /* Standalone (?lab=plan) fetches its own data; when embedded in App
      we receive data/order as props and skip the fetch. */
@@ -225,7 +226,8 @@ export default function PlanLab({
     }
     if (actionDialog === 'report') {
       onSendReport?.(payload);
-      setFooterStatus('Report sent just now');
+      downloadReport(reportUrl);
+      setFooterStatus('Report PDF downloaded just now');
       closeActionDialog();
       return;
     }
@@ -664,7 +666,7 @@ export default function PlanLab({
         <span className="pl-live">● {footerStatus}</span>
         <div className="pl-foot-actions">
           <button className="pl-btn-secondary" type="button" onClick={() => setActionDialog('draft')}>Save draft</button>
-          <button className="pl-btn-secondary" type="button" onClick={() => setActionDialog('report')}>Send report</button>
+          <button className="pl-btn-secondary" type="button" onClick={() => setActionDialog('report')}>Download report</button>
           <button className="pl-btn-primary" type="button" onClick={() => setActionDialog('apply')}>Apply this plan</button>
         </div>
       </footer>
@@ -754,10 +756,10 @@ function PlanActionDialog({ type, title, metrics, onCancel, onConfirm }) {
       tone: 'good',
     },
     report: {
-      eyebrow: 'Send report',
-      heading: 'Send this planning report?',
-      body: 'Share the selected plan, key KPIs, and planning tradeoffs without changing the live schedule.',
-      confirm: 'Send report',
+      eyebrow: 'Download report',
+      heading: 'Download this planning report?',
+      body: 'Create a one-page PDF with the selected plan, key KPIs, risk checks, and tradeoffs. The live schedule stays unchanged.',
+      confirm: 'Download PDF',
       tone: 'good',
     },
     apply: {
@@ -824,6 +826,16 @@ function PlanActionDialog({ type, title, metrics, onCancel, onConfirm }) {
       </motion.section>
     </motion.div>
   );
+}
+
+function downloadReport(reportUrl) {
+  if (!reportUrl || typeof document === 'undefined') return;
+  const link = document.createElement('a');
+  link.href = reportUrl;
+  link.download = 'LineWise-planning-report.pdf';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 }
 
 function ChoiceSummary({ active, rec, manualEntry, mode, recommended, recoveryHours }) {
