@@ -5,7 +5,7 @@ designed for the React/Vite client; the canonical Python payload in
 `data/output/data.json` is richer and is transformed at request time by
 `app/frontend_payload.py`.
 
-`CONTRACT_VERSION` is **2.3**. Adding or removing a top-level key is a
+`CONTRACT_VERSION` is **2.4**. Adding or removing a top-level key is a
 contract change — bump the version and notify the frontend team.
 
 ## Conventions
@@ -59,6 +59,35 @@ in-process `plan_override` left behind by `/plan/move`, so the next
 | `412` | `{ "error": "raw_missing", ... }` — `data/raw/` is empty/missing. |
 | `500` | `{ "error": "recompute_failed", "detail": "<tail of exporter stderr>" }` |
 | `504` | `{ "error": "recompute_timeout", "detail": "export_data_json exceeded 180s" }` |
+
+### `GET /signals`
+Returns the cached external-context payload (supplier risk, regulatory
+updates, competitor moves, commodity context) sourced via [Cala](https://cala.ai).
+Always answers — empty payload when the seed file is missing.
+
+| Status | Meaning |
+|---|---|
+| `200` | Body shape `{ signals: Signal[], citations: { [id]: Citation }, generatedAt, source, stale, error }`. ETag + `Cache-Control: no-store`. |
+| `304` | Body empty. Client's `If-None-Match` matches the server's current ETag. |
+
+The `source` field is `"cala"` for live data, `"seed"` for the
+hand-curated fallback. `stale: true` means the data hasn't been
+refreshed since startup.
+
+### `POST /signals/refresh`
+Re-runs the Cala calls (one `knowledge_search` per category in
+`signals.DEFAULT_QUERIES`) and overwrites `data/output/signals.json`.
+Free-tier-friendly: never called from the request path; trigger
+manually or on a cron.
+
+| Status | Meaning |
+|---|---|
+| `200` (`ok: true`) | Cala succeeded; new payload returned. |
+| `200` (`ok: false`) | `CALA_API_KEY` unset OR Cala unreachable / rate-limited; seed kept in place. Body carries `error` with the reason. |
+
+Skipped silently to the seed if `CALA_API_KEY` is unset — the demo
+still works offline. On `HTTP 429` or `401/403` from Cala the refresh
+halts; we keep the seed and surface the error code.
 
 ### `POST /issues`
 Log a line-side issue. Does not mutate the plan.
@@ -388,6 +417,42 @@ line; a new entry on the same line supersedes the prior one.
   ts: number;                              // epoch ms (server-assigned)
 }
 ```
+
+### `Signal` & `Citation`
+
+External-context records returned by `/signals`. Powers the world-
+signals panel and the citation chips on AI suggestions.
+
+```ts
+// Signal — one row in the panel
+{
+  id: string;                              // "sig-<hex>" or "sig-seed-..."
+  category: "supplier"|"regulatory"|"competitor"|"commodity"|"other";
+  severity: "info"|"warn"|"critical";
+  title: string;                           // panel section title
+  body: string;                            // operator-facing sentence
+  citationIds: string[];                   // references citations[id]
+  linesAffected: string[];                 // line keys ("14"/"17"/"19")
+  actionHint: "replan"|"watch"|null;       // proactive-banner trigger
+  ts: number;                              // epoch ms
+}
+
+// Citation — the structured fact + provenance behind a claim
+{
+  id: string;                              // "cit-<hex>" or "cit-seed-..."
+  claim: string;                           // the cited sentence
+  source: {
+    name: string|null;                     // publisher (Reuters, EUR-Lex, …)
+    url: string;                           // citable URL
+    date: string|null;                     // ISO date or null
+  };
+}
+```
+
+Severity is inferred from the claim text on parse:
+- "sanction" / "block" / "ban" / "recall" / "halted" / "shutdown" → `critical`
+- "delay" / "shortage" / "investigation" / "warning" / "fine" / "violation" → `warn`
+- otherwise → the per-category floor
 
 ### `MovePreview`
 

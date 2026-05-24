@@ -1,0 +1,108 @@
+{
+  "signals": [
+    {
+      "id": "sig-seed-supplier-1",
+      "category": "supplier",
+      "severity": "critical",
+      "title": "Supplier-risk signals",
+      "body": "Two regional malt suppliers added to the EU consolidated sanctions list — both serve Iberian brewers and ship malt through Tarragona. Recommended action: confirm Damm's current procurement channel is unaffected before next OF allocation.",
+      "citationIds": ["cit-seed-eu-sanctions", "cit-seed-reuters-malt"],
+      "linesAffected": ["14", "17", "19"],
+      "actionHint": "watch",
+      "ts": 1748000000000
+    },
+    {
+      "id": "sig-seed-regulatory-1",
+      "category": "regulatory",
+      "severity": "warn",
+      "title": "Regulatory signals",
+      "body": "Spain's amended Real Decreto on single-use packaging takes effect Q3 2026 and tightens deposit-return obligations for non-refillable cans. The 33cl format is in scope; expect labelling rework on L17 within the next three months.",
+      "citationIds": ["cit-seed-boe-rd293", "cit-seed-ft-spain-drs"],
+      "linesAffected": ["17"],
+      "actionHint": "watch",
+      "ts": 1748000000000
+    },
+    {
+      "id": "sig-seed-competitor-1",
+      "category": "competitor",
+      "severity": "info",
+      "title": "Competitor signals",
+      "body": "Mahou San Miguel announced a 90M€ expansion of its Alovera plant with an additional 50cl canning line scheduled for commissioning in late 2026 — adds capacity into the same SKU mix Damm runs on L14 and L19.",
+      "citationIds": ["cit-seed-cinco-dias-mahou"],
+      "linesAffected": ["14", "19"],
+      "actionHint": null,
+      "ts": 1748000000000
+    },
+    {
+      "id": "sig-seed-commodity-1",
+      "category": "commodity",
+      "severity": "warn",
+      "title": "Commodity signals",
+      "body": "Barley futures (LIFFE Nov-26 contract) up +12% over the trailing 30 days on lower French harvest forecasts. Direct input-cost exposure to Damm via the malt supply chain; treasury hedge ratio currently 60%.",
+      "citationIds": ["cit-seed-cboe-barley"],
+      "linesAffected": [],
+      "actionHint": null,
+      "ts": 1748000000000
+    }
+  ],
+  "citations": {
+    "cit-seed-eu-sanctions": {
+      "id": "cit-seed-eu-sanctions",
+      "claim": "EU Council Regulation 2025/417 added entities engaged in malt distribution to the consolidated list of designated persons, effective 14 March 2025.",
+      "source": {
+        "name": "Official Journal of the European Union",
+        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R0417",
+        "date": "2025-03-14"
+      }
+    },
+    "cit-seed-reuters-malt": {
+      "id": "cit-seed-reuters-malt",
+      "claim": "Iberian brewers face supply re-routing after sanctions on Black Sea malt distributors, with Tarragona-bound shipments most exposed.",
+      "source": {
+        "name": "Reuters",
+        "url": "https://www.reuters.com/markets/commodities/iberian-brewers-malt-routing-2025-03-21/",
+        "date": "2025-03-21"
+      }
+    },
+    "cit-seed-boe-rd293": {
+      "id": "cit-seed-boe-rd293",
+      "claim": "Real Decreto 293/2025 amends RD 1055/2022, requiring an operational deposit-return scheme for non-refillable beverage containers under 3 litres by Q3 2026.",
+      "source": {
+        "name": "Boletín Oficial del Estado",
+        "url": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2025-4081",
+        "date": "2025-02-28"
+      }
+    },
+    "cit-seed-ft-spain-drs": {
+      "id": "cit-seed-ft-spain-drs",
+      "claim": "Spain's tightened deposit-return scheme targets 90% collection of single-use beverage containers by 2027; canners face labelling rework deadlines.",
+      "source": {
+        "name": "Financial Times",
+        "url": "https://www.ft.com/content/spain-drs-tightening-2025",
+        "date": "2025-04-02"
+      }
+    },
+    "cit-seed-cinco-dias-mahou": {
+      "id": "cit-seed-cinco-dias-mahou",
+      "claim": "Mahou San Miguel anuncia una inversión de 90 millones de euros en su planta de Alovera, incluida una nueva línea de envasado de latas de 50cl prevista para finales de 2026.",
+      "source": {
+        "name": "Cinco Días",
+        "url": "https://cincodias.elpais.com/companias/mahou-alovera-2025",
+        "date": "2025-04-18"
+      }
+    },
+    "cit-seed-cboe-barley": {
+      "id": "cit-seed-cboe-barley",
+      "claim": "Front-month barley futures (LIFFE) closed +12.4% over the trailing 30-day period on revised French harvest estimates from FranceAgriMer.",
+      "source": {
+        "name": "CBOE / LIFFE settlement data",
+        "url": "https://www.theice.com/products/82578466/Feed-Barley-Futures",
+        "date": "2025-05-12"
+      }
+    }
+  },
+  "generatedAt": 1748000000000,
+  "source": "seed",
+  "stale": true,
+  "error": null
+}

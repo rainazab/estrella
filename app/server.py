@@ -1,10 +1,12 @@
 """LineWise HTTP server.
 
-Endpoints (matching docs/API_CONTRACT.md, contract v2.3):
+Endpoints (matching docs/API_CONTRACT.md, contract v2.4):
 
   GET  /health                     — liveness probe
   GET  /plan                       — frontend-shape payload (ETag + no-store)
   POST /plan/recompute             — regenerate data/output/data.json
+  GET  /signals                    — external context signals + citations (Cala)
+  POST /signals/refresh            — re-fetch from Cala (free-tier-friendly)
   POST /issues                     — log a line-side issue
   POST /stoppages                  — log a line stoppage (one active per line)
   POST /stoppages/{id}/resume      — clear an active stoppage
@@ -41,6 +43,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from . import config
+from . import signals as signals_mod
 from .frontend_payload import (
     ISSUE_CATEGORIES,
     ISSUE_SEVERITIES,
@@ -96,8 +99,8 @@ def _load_canonical(path: Path) -> tuple[dict, str]:
 def create_app(data_path: Optional[Path] = None, *, allow_cors: bool = True) -> FastAPI:
     app = FastAPI(
         title="LineWise",
-        version="2.3",
-        description="LineWise backend HTTP API (frontend contract v2.3).",
+        version="2.4",
+        description="LineWise backend HTTP API (frontend contract v2.4).",
     )
 
     if allow_cors:
@@ -193,6 +196,51 @@ def create_app(data_path: Optional[Path] = None, *, allow_cors: bool = True) -> 
         # file is fresh, so the operator should see the new committed plan.
         request.app.state.plan_override = None
         return {"ok": True, "message": "data.json regenerated.", "output": str(path)}
+
+    # ----------------------------- signals ----------------------------
+
+    @app.get("/signals")
+    def get_signals(request: Request, response: Response):
+        """Serve the cached signals payload from disk. Always responds —
+        empty payload when the seed file is missing."""
+        payload = signals_mod.load_signals()
+        body = json.dumps(payload, sort_keys=True, default=str)
+        etag = '"' + hashlib.sha256(body.encode("utf-8")).hexdigest()[:24] + '"'
+
+        client_etag = request.headers.get("if-none-match")
+        if client_etag and client_etag == etag:
+            return Response(status_code=304, headers={"ETag": etag})
+
+        response.headers["ETag"] = etag
+        response.headers["Cache-Control"] = "no-store"
+        return payload
+
+    @app.post("/signals/refresh")
+    def refresh_signals() -> dict:
+        """Re-fetch from Cala (or no-op against the seed when CALA_API_KEY
+        is unset). Burns ~N credits, where N = len(DEFAULT_QUERIES). The
+        response carries `source` ("cala" | "seed") so the caller knows
+        whether the cache moved."""
+        payload = signals_mod.refresh_signals()
+        if payload.get("source") == "seed" and payload.get("error"):
+            # Refresh attempted but Cala failed end-to-end; surface the
+            # error code so the operator notices, but still 200 — the
+            # cached seed is the legitimate fallback.
+            return {
+                "ok": False,
+                "source": "seed",
+                "error": payload["error"],
+                "generatedAt": payload.get("generatedAt"),
+            }
+        return {
+            "ok": True,
+            "source": payload.get("source", "seed"),
+            "signals": payload.get("signals", []),
+            "citations": payload.get("citations", {}),
+            "generatedAt": payload.get("generatedAt"),
+            "stale": payload.get("stale", False),
+            "error": payload.get("error"),
+        }
 
     # ----------------------------- writes -----------------------------
 
