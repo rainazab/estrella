@@ -280,8 +280,6 @@ body {
 }
 .sb-foot .live-status .lbl { color: #f1f0ec; }
 .sb-foot .live-status .freshness { color: #9fb3a8; }
-.sb-foot .live-status .info-btn { color: #9fb3a8; }
-.sb-foot .live-status .info-btn:hover { color: #f1f0ec; }
 
 /* ---------- live status pill ---------- */
 .live-status {
@@ -307,14 +305,6 @@ body {
 }
 .live-status .lbl { color: var(--ink); font-weight: 600; }
 .live-status .freshness { color: var(--ink-3); }
-.live-status .info-btn {
-  border: none; background: none; padding: 2px 0 2px 2px;
-  margin-left: 1px; cursor: pointer; color: var(--ink-3);
-  display: inline-flex; align-items: center; font-size: 12px;
-  font: inherit;
-}
-.live-status .info-btn:hover { color: var(--ink); }
-
 /* ---------- popover ---------- */
 .popover {
   position: absolute; z-index: 50;
