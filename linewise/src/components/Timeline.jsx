@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import TimelineCard from './TimelineCard.jsx';
 import InfoPopover from './InfoPopover.jsx';
+import { isLineCompatible, incompatibleReason } from '../lib/movePlan.js';
 
 /* Timeline — three line lanes (14, 17, 19), each a horizontally-scrolling
    row of TimelineCards. Executed-history cards (faded) flow first, then a
@@ -13,8 +14,8 @@ import InfoPopover from './InfoPopover.jsx';
 
 const LINES = ['14', '17', '19'];
 
-const WIDTH_PER_DAY = { day: 200, week: 90, month: 40 };
-const MIN_CARD_WIDTH = { day: 168, week: 80, month: 36 };
+const WIDTH_PER_DAY = { week: 200, month: 90, quarter: 40 };
+const MIN_CARD_WIDTH = { week: 168, month: 80, quarter: 36 };
 
 /* Date helpers — turn seg.start (days from a lane's reference point) and
    seg.w (duration in days) into a label like "Mon 19" or "Mon 19 → Wed 21".
@@ -49,31 +50,273 @@ function executedEnd(executed) {
   return Math.max(...executed.map((s) => (s.start ?? 0) + (s.w ?? 0)));
 }
 
-export default function Timeline({ data, mode = 'default', zoom = 'day' }) {
-  /* Scenarios 3-5 will replace these placeholders. */
+export default function Timeline({
+  data,
+  effectivePlan = null,
+  mode = 'default',
+  zoom = 'week',
+  rec = null,
+  showNaive = false,
+  onRunClick = null,
+  moving = null,
+  onMoveDrop = null,
+}) {
+  const sync = useSharedScroll();
+  const syncedLineKey = LINES[0];
+  const execDays = mode === 'default'
+    ? Math.ceil(executedEnd(data?.executedHistory?.[syncedLineKey] ?? []))
+    : 0;
+
   if (mode !== 'default') {
+    if (!rec) {
+      return (
+        <div className="tl-placeholder">
+          Timeline ({mode} mode) — choose a recommendation first.
+        </div>
+      );
+    }
+
     return (
-      <div className="tl-placeholder">
-        Timeline ({mode} mode) — coming next.
+      <div className="tl">
+        <TimelineAxis zoom={zoom} sync={sync} executedDays={execDays} />
+        {LINES.map((lineKey, idx) => (
+          <RecommendationLane
+            key={lineKey}
+            data={data}
+            lineKey={lineKey}
+            rec={rec}
+            zoom={zoom}
+            showNaive={showNaive}
+            sync={sync}
+            primary={idx === 0}
+          />
+        ))}
       </div>
     );
   }
 
   return (
-    <div className="tl">
-      {LINES.map((lineKey) => (
-        <Lane
-          key={lineKey}
-          lineKey={lineKey}
-          centre={data.lineCentre?.[lineKey] ?? 'CF Prat'}
-          baseline={data.lineBaseline?.[lineKey]}
-          executed={data.executedHistory?.[lineKey] ?? []}
-          planned={data.basePlan?.[lineKey] ?? []}
-          zoom={zoom}
-        />
-      ))}
+    <div className={`tl${moving ? ' tl-moving' : ''}`}>
+      <TimelineAxis zoom={zoom} sync={sync} executedDays={execDays} />
+      {LINES.map((lineKey, idx) => {
+        const planned = (effectivePlan ?? data.basePlan)?.[lineKey] ?? [];
+        return (
+          <Lane
+            key={lineKey}
+            lineKey={lineKey}
+            centre={data.lineCentre?.[lineKey] ?? 'CF Prat'}
+            baseline={data.lineBaseline?.[lineKey]}
+            executed={data.executedHistory?.[lineKey] ?? []}
+            planned={planned}
+            zoom={zoom}
+            sync={sync}
+            primary={idx === 0}
+            onRunClick={onRunClick}
+            moving={moving}
+            onMoveDrop={onMoveDrop}
+          />
+        );
+      })}
     </div>
   );
+}
+
+/* useSharedScroll — central scroll-sync controller. Lanes and the axis
+   register their scroll containers and call `broadcast` whenever they
+   scroll; broadcast propagates the new scrollLeft to all other members.
+   The primary member's scrollLeft is the source of truth: late registrants
+   sync to it on register (which closes the StrictMode timing hole where
+   the primary's first broadcast fires before its siblings are registered).
+   A suppress guard prevents the propagated assignments from echoing. */
+function useSharedScroll() {
+  const state = useRef({ members: new Set(), suppress: false, primary: null, primaryX: 0 });
+  return useRef({
+    register(el, { primary = false } = {}) {
+      if (!el) return () => {};
+      const s = state.current;
+      s.members.add(el);
+      if (primary) s.primary = el;
+      // Pull this element to the current primary scroll, in case the
+      // primary's auto-scroll already broadcast before this member mounted.
+      if (s.primary && s.primary !== el && s.primaryX) {
+        s.suppress = true;
+        el.scrollLeft = s.primaryX;
+        requestAnimationFrame(() => { s.suppress = false; });
+      }
+      return () => {
+        s.members.delete(el);
+        if (s.primary === el) { s.primary = null; s.primaryX = 0; }
+      };
+    },
+    broadcast(source) {
+      const s = state.current;
+      if (s.suppress || !source) return;
+      s.suppress = true;
+      const x = source.scrollLeft;
+      if (source === s.primary) s.primaryX = x;
+      for (const other of s.members) {
+        if (other !== source && other.scrollLeft !== x) other.scrollLeft = x;
+      }
+      requestAnimationFrame(() => { s.suppress = false; });
+    },
+  }).current;
+}
+
+/* TimelineAxis — date strip above the lanes. Mirrors the horizontal scroll
+   of the first lane so the dates line up with the cards. */
+function TimelineAxis({ zoom, sync, executedDays = 0 }) {
+  const axisBodyRef = useRef(null);
+  const pxPerDay = WIDTH_PER_DAY[zoom] ?? 200;
+  const RANGE_START = -Math.max(0, executedDays);
+  const RANGE_END = 35;
+
+  useEffect(() => sync?.register(axisBodyRef.current), [sync]);
+
+  const days = [];
+  for (let i = RANGE_START; i <= RANGE_END; i++) days.push(i);
+
+  return (
+    <div className="tl-axis">
+      <div className="tl-axis-head" aria-hidden="true" />
+      <div className="tl-axis-body" ref={axisBodyRef}>
+        <div className="tl-axis-today" aria-hidden="true" style={{ left: Math.abs(RANGE_START) * pxPerDay }} />
+        {days.map((offset) => {
+          const date = addDays(TODAY, offset);
+          const isToday = offset === 0;
+          const isMonthStart = date.getDate() === 1;
+          const isWeekStart = date.getDay() === 1;
+          const labelEveryDay = zoom !== 'quarter';
+          return (
+            <div
+              key={offset}
+              className={`tl-axis-day${isToday ? ' is-today' : ''}${isWeekStart ? ' is-week-start' : ''}${isMonthStart ? ' is-month-start' : ''}`}
+              style={{ width: pxPerDay }}
+            >
+              {(labelEveryDay || isWeekStart || isMonthStart) && (
+                <>
+                  <span className="tl-axis-dow">{isToday ? 'Today' : WK[date.getDay()]}</span>
+                  <span className="tl-axis-date">
+                    {isMonthStart ? date.toLocaleString('en-US', { month: 'short' }) + ' ' : ''}
+                    {date.getDate()}
+                  </span>
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function RecommendationLane({ data, lineKey, rec, zoom, showNaive, sync, primary = false }) {
+  const proposed = rec.plan?.[lineKey] ?? [];
+  const ghosts = rec.ghosts?.[lineKey] ?? [];
+  const naiveHere = showNaive && rec.naiveBand?.line === lineKey ? rec.naiveBand : null;
+  const recoveryHere = rec.recovery?.line === lineKey ? rec.recovery : null;
+  const baseline = data.lineBaseline?.[lineKey];
+  const lookup = buildOrderLookup(data);
+  const bodyRef = useRef(null);
+  useEffect(() => sync?.register(bodyRef.current, { primary }), [sync, primary]);
+  useEffect(() => {
+    if (!primary) return;
+    const t = setTimeout(() => { sync?.broadcast(bodyRef.current); }, 60);
+    return () => clearTimeout(t);
+  }, [primary, sync, zoom]);
+
+  return (
+    <div className={`tl-lane${rec.line.endsWith(lineKey) ? ' tl-lane-recommended' : ''}`}>
+      <div className="tl-lane-head">
+        <span className="ln">L{lineKey}</span>
+        <span className="ce">{data.lineCentre?.[lineKey] ?? 'CF Prat'}</span>
+        {baseline != null && <span className="bl">Baseline {baseline.toFixed(2)}</span>}
+        {rec.line.endsWith(lineKey) && (
+          <div className="tl-next-stop tl-rec-badge">
+            <span className="ns-h">LineWise</span>
+            <div className="ns-row">
+              <span className="ns-lbl">Recommended</span>
+            </div>
+            <span className="ns-when">{rec.oeeDelta} OEE</span>
+          </div>
+        )}
+      </div>
+      <div className="tl-lane-body" ref={bodyRef} onScroll={() => sync?.broadcast(bodyRef.current)}>
+        <div className="tl-today" aria-label="now" />
+        {proposed.map((seg, index) => (
+          <SegmentCard
+            key={`r-${lineKey}-${seg.of ?? seg.kind}-${index}`}
+            seg={hydrateSegment(seg, lookup)}
+            baseline={baseline}
+            state="planned"
+            zoom={zoom}
+            shiftFromHours={shiftHours(rec, seg, lineKey)}
+            dateLabel={dayRange(seg.start ?? 0, seg.w ?? 0)}
+          />
+        ))}
+        {ghosts.map((seg, index) => (
+          <SegmentCard
+            key={`g-${lineKey}-${seg.of}-${index}`}
+            seg={{ ...hydrateSegment(seg, lookup), kind: 'ghost' }}
+            baseline={baseline}
+            state="planned"
+            zoom={zoom}
+            dateLabel="previous slot"
+          />
+        ))}
+        {naiveHere && (
+          <div className="tl-decision-marker tl-naive-marker">
+            <span>Naive slot</span>
+            <b>{Math.round((naiveHere.w ?? 0) * 24)}h exposure</b>
+          </div>
+        )}
+        {recoveryHere && (
+          <div className="tl-decision-marker tl-recovery-marker">
+            <span>Recovery</span>
+            <b>{recoveryHere.hours}h to baseline</b>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function buildOrderLookup(data) {
+  const lookup = new Map();
+  for (const order of data.urgentOrders ?? []) {
+    lookup.set(order.of, {
+      sku: order.sku,
+      vol: order.units,
+    });
+  }
+  for (const lane of Object.values(data.basePlan ?? {})) {
+    for (const seg of lane) {
+      if (seg.of && !lookup.has(seg.of)) {
+        lookup.set(seg.of, {
+          sku: seg.sku,
+          vol: seg.vol,
+        });
+      }
+    }
+  }
+  return lookup;
+}
+
+function hydrateSegment(seg, lookup) {
+  if (!seg.of) return seg;
+  const known = lookup.get(seg.of) ?? {};
+  return {
+    ...seg,
+    sku: seg.sku ?? known.sku,
+    vol: seg.vol ?? known.vol,
+  };
+}
+
+function shiftHours(rec, seg, lineKey) {
+  if (seg.kind !== 'shift') return null;
+  const move = rec.moves?.find((m) => m.of === seg.of && m.line === lineKey);
+  if (!move?.shift) return null;
+  const hours = Number(String(move.shift).replace(/[^\d.-]/g, ''));
+  return Number.isFinite(hours) ? hours : null;
 }
 
 /* nextStop — first cleaning or maintenance block in the forward plan.
@@ -104,29 +347,81 @@ function computeTodayScroll(body) {
   return Math.max(0, today.offsetLeft);
 }
 
-function Lane({ lineKey, centre, baseline, executed, planned, zoom }) {
+/* normalizeRun — basePlan/executedHistory segments use { of, sku, vol, w }
+   while RunDetailModal expects { material, sku, volume, durationHours }.
+   Map at the wiring boundary so we don't push shape decisions into either
+   the data layer or the modal. Service blocks pass through with their kind. */
+function normalizeRun(seg) {
+  if (!seg) return null;
+  if (seg.kind === 'clean' || seg.kind === 'maint') {
+    return { kind: seg.kind, durationHours: (seg.w ?? 0) * 24 };
+  }
+  return {
+    material: seg.of,
+    sku: seg.sku,
+    volume: seg.vol,
+    oee: seg.oee,
+    durationHours: (seg.w ?? 0) * 24,
+    format: seg.format,
+  };
+}
+
+function Lane({ lineKey, centre, baseline, executed, planned, zoom, sync, primary = false, onRunClick = null, moving = null, onMoveDrop = null }) {
+  /* Moving-mode derived state — null when no move is in flight. We
+     compute compatibility and reason once per lane so the drop-zone
+     children share the same verdict. */
+  const isMoving = !!moving;
+  const compatible = isMoving ? isLineCompatible(lineKey, moving.format) : true;
+  const reason = isMoving && !compatible ? incompatibleReason(lineKey, moving.format) : null;
+  const isSourceLane = isMoving && String(moving.fromLine) === String(lineKey);
+  const [activeSlot, setActiveSlot] = useState(null);
+
+  /* Drop handlers — shared by every drop zone in this lane. The slot
+     index is what differs; pass it via the closure below. */
+  function onZoneDragOver(e, slotIndex) {
+    if (!isMoving || !compatible) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setActiveSlot(slotIndex);
+  }
+  function onZoneDragLeave() {
+    setActiveSlot(null);
+  }
+  function onZoneDrop(e, slotIndex) {
+    if (!isMoving || !compatible) return;
+    e.preventDefault();
+    setActiveSlot(null);
+    onMoveDrop?.({ lineKey, slotIndex });
+  }
+
   const bodyRef = useRef(null);
+  useEffect(() => sync?.register(bodyRef.current, { primary }), [sync, primary]);
   const [drift, setDrift] = useState(0);
 
-  /* On mount and whenever zoom changes, scroll the lane so today is in
-     view. Run once immediately and once after a 60ms tick to catch late
-     font/layout loads. */
+  /* Primary lane drives initial scroll position; secondary lanes follow via
+     sync.broadcast. Run on mount and whenever zoom changes, and again after
+     a 60ms tick to catch late font/layout loads. */
   useEffect(() => {
+    if (!primary) return;
     const body = bodyRef.current;
     if (!body) return;
     const place = () => {
       const target = computeTodayScroll(body);
-      if (target != null) body.scrollLeft = target;
+      if (target != null) {
+        body.scrollLeft = target;
+        sync?.broadcast(body);
+      }
       setDrift(0);
     };
     place();
     const t = setTimeout(place, 60);
     return () => clearTimeout(t);
-  }, [zoom]);
+  }, [zoom, sync, primary]);
 
   function handleScroll() {
     const body = bodyRef.current;
     if (!body) return;
+    sync?.broadcast(body);
     const target = computeTodayScroll(body);
     if (target == null) { setDrift(0); return; }
     setDrift(Math.abs(body.scrollLeft - target));
@@ -138,12 +433,25 @@ function Lane({ lineKey, centre, baseline, executed, planned, zoom }) {
     const target = computeTodayScroll(body);
     if (target == null) return;
     body.scrollLeft = target;
+    sync?.broadcast(body);
   }
 
-  const showBack = drift > 40;
+  const showBack = primary && drift > 40;
+
+  const laneClassName = [
+    'tl-lane',
+    isMoving && compatible ? 'tl-lane-droptarget' : '',
+    isMoving && !compatible ? 'tl-lane-incompat' : '',
+    isMoving && isSourceLane ? 'tl-lane-source' : '',
+  ].filter(Boolean).join(' ');
 
   return (
-    <div className="tl-lane">
+    <div className={laneClassName} data-reason={reason || undefined}>
+      {isMoving && !compatible && (
+        <div className="tl-incompat-overlay" aria-hidden="true">
+          <span className="tl-incompat-reason">{reason}</span>
+        </div>
+      )}
       <div className="tl-lane-head">
         <span className="ln">L{lineKey}</span>
         <span className="ce">{centre}</span>
@@ -191,28 +499,70 @@ function Lane({ lineKey, centre, baseline, executed, planned, zoom }) {
       <div className="tl-lane-body" ref={bodyRef} onScroll={handleScroll}>
         {(() => {
           const execEnd = executedEnd(executed);
-          return executed.map((seg, i) => (
-            <SegmentCard
-              key={`e-${lineKey}-${i}`}
-              seg={seg}
-              baseline={baseline}
-              state="executed"
-              zoom={zoom}
-              dateLabel={dayRange((seg.start ?? 0) - execEnd, seg.w ?? 0)}
-            />
-          ));
+          return executed.map((seg, i) => {
+            const prev = i > 0 ? executed[i - 1] : null;
+            const next = i < executed.length - 1 ? executed[i + 1] : (planned[0] ?? null);
+            return (
+              <SegmentCard
+                key={`e-${lineKey}-${i}`}
+                seg={seg}
+                baseline={baseline}
+                state="executed"
+                zoom={zoom}
+                dateLabel={dayRange((seg.start ?? 0) - execEnd, seg.w ?? 0)}
+                onClick={onRunClick ? () => onRunClick({ seg: normalizeRun(seg), prev: normalizeRun(prev), next: normalizeRun(next), lineKey, baseline, state: 'executed' }) : null}
+              />
+            );
+          });
         })()}
         <div className="tl-today" aria-label="today" />
-        {planned.map((seg, i) => (
-          <SegmentCard
-            key={`p-${lineKey}-${i}`}
-            seg={seg}
-            baseline={baseline}
-            state="planned"
-            zoom={zoom}
-            dateLabel={dayRange(seg.start ?? 0, seg.w ?? 0)}
+        {/* In moving mode + compatible lane, render a drop zone before
+            each segment and one trailing zone at the end. We use simple
+            sibling elements (not absolutely positioned) so the lane's
+            horizontal flow naturally separates the slots. */}
+        {isMoving && compatible && (
+          <DropZone
+            slotIndex={0}
+            active={activeSlot === 0}
+            isFirst
+            runWidthPx={Math.max(MIN_CARD_WIDTH[zoom] ?? 168, Math.round((moving.run.w ?? 1) * (WIDTH_PER_DAY[zoom] ?? 200)))}
+            onDragOver={onZoneDragOver}
+            onDragLeave={onZoneDragLeave}
+            onDrop={onZoneDrop}
           />
-        ))}
+        )}
+        {planned.map((seg, i) => {
+          const prev = i > 0 ? planned[i - 1] : (executed[executed.length - 1] ?? null);
+          const next = i < planned.length - 1 ? planned[i + 1] : null;
+          const isSourceRun = isMoving && isSourceLane && seg.of && seg.of === moving.run.of;
+          /* When this is the source run during a move, we render nothing —
+             the gap itself communicates "this slot is up for relocation."
+             A ghost card was tested but added visual noise (Maria asked
+             for "remove the old one"). */
+          if (isSourceRun) return null;
+          return (
+            <Fragment key={`p-${lineKey}-${i}`}>
+              <SegmentCard
+                seg={seg}
+                baseline={baseline}
+                state="planned"
+                zoom={zoom}
+                dateLabel={dayRange(seg.start ?? 0, seg.w ?? 0)}
+                onClick={onRunClick ? () => onRunClick({ seg: normalizeRun(seg), prev: normalizeRun(prev), next: normalizeRun(next), lineKey, baseline, state: 'planned' }) : null}
+              />
+              {isMoving && compatible && (
+                <DropZone
+                  slotIndex={i + 1}
+                  active={activeSlot === i + 1}
+                  runWidthPx={Math.max(MIN_CARD_WIDTH[zoom] ?? 168, Math.round((moving.run.w ?? 1) * (WIDTH_PER_DAY[zoom] ?? 200)))}
+                  onDragOver={onZoneDragOver}
+                  onDragLeave={onZoneDragLeave}
+                  onDrop={onZoneDrop}
+                />
+              )}
+            </Fragment>
+          );
+        })}
       </div>
       {showBack && (
         <button
@@ -228,7 +578,7 @@ function Lane({ lineKey, centre, baseline, executed, planned, zoom }) {
   );
 }
 
-function SegmentCard({ seg, baseline, state, zoom, dateLabel }) {
+function SegmentCard({ seg, baseline, state, zoom, dateLabel, onClick = null, ghost = false }) {
   const durationDays = seg.w ?? 1;
   const widthPx = Math.max(
     MIN_CARD_WIDTH[zoom] ?? 168,
@@ -257,6 +607,28 @@ function SegmentCard({ seg, baseline, state, zoom, dateLabel }) {
       widthPx={widthPx}
       state={state}
       dateLabel={dateLabel}
+      onClick={ghost ? null : onClick}
+      ghost={ghost}
     />
+  );
+}
+
+/* DropZone — a target rendered between segments in moving mode. At rest
+   shows as a slim dashed bar; when active, expands to the full pixel
+   width the moved run would occupy on this lane (so Maria sees the
+   actual footprint of where it'd land before she releases). */
+function DropZone({ slotIndex, active, isFirst = false, runWidthPx = 96, onDragOver, onDragLeave, onDrop }) {
+  return (
+    <div
+      className={`tl-dropzone${active ? ' tl-dropzone-active' : ''}${isFirst ? ' tl-dropzone-first' : ''}`}
+      style={active ? { flexBasis: `${runWidthPx}px` } : undefined}
+      onDragOver={(e) => onDragOver(e, slotIndex)}
+      onDragLeave={onDragLeave}
+      onDrop={(e) => onDrop(e, slotIndex)}
+      aria-label={`Drop here at position ${slotIndex}`}
+    >
+      <div className="tl-dropzone-bar" />
+      {active && <div className="tl-dropzone-label">Drop here</div>}
+    </div>
   );
 }

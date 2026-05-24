@@ -1,9 +1,29 @@
-/* KPIStrip — five compact KPI cards above the timeline.
-   Placeholder values for now; wire to real plan metrics later. */
+import InfoPopover from './InfoPopover.jsx';
+
+/* KPIStrip - daily OEE opportunities plus compact operating KPIs. */
 export default function KPIStrip({ data }) {
   const lines = data?.lineCentre ? Object.keys(data.lineCentre).length : 3;
   const urgentCount = data?.urgentOrders?.filter((o) => o.status === 'urgent').length ?? 0;
   const queuedCount = data?.urgentOrders?.filter((o) => o.status === 'queued' || o.status === 'scheduled').length ?? 0;
+
+  const scenarios = [
+    {
+      key: 'changeover',
+      label: 'Changeover loss',
+      delta: '+6.2',
+      title: 'Reduce changeover loss',
+      description: 'Group format and brand transitions.',
+      tone: 'good',
+    },
+    {
+      key: 'runtime',
+      label: 'Runtime loss',
+      delta: '+2.9',
+      title: 'Recover runtime loss',
+      description: 'Cut short stops and restart delays.',
+      tone: 'neutral',
+    },
+  ];
 
   const cards = [
     {
@@ -13,6 +33,7 @@ export default function KPIStrip({ data }) {
       delta: '+2.1',
       deltaKind: 'good',
       foot: 'vs. 7-day avg',
+      info: 'Plant-wide Overall Equipment Effectiveness for today, weighted by line. Compared to the rolling 7-day average.',
     },
     {
       key: 'lines',
@@ -20,6 +41,7 @@ export default function KPIStrip({ data }) {
       value: `${lines}/${lines}`,
       foot: 'no unplanned stops',
       tone: 'good',
+      info: 'Lines currently producing versus lines scheduled. Excludes planned downtime.',
     },
     {
       key: 'throughput',
@@ -27,15 +49,7 @@ export default function KPIStrip({ data }) {
       value: '12.4',
       unit: 'k hl',
       foot: 'paced for 14.0k',
-    },
-    {
-      key: 'ontime',
-      label: 'On-time delivery',
-      value: '96',
-      unit: '%',
-      delta: '−1.2',
-      deltaKind: 'bad',
-      foot: 'last 7 days',
+      info: 'Hectolitres bottled so far today. "Paced for" projects end-of-shift volume at current rate.',
     },
     {
       key: 'orders',
@@ -43,24 +57,45 @@ export default function KPIStrip({ data }) {
       value: `${urgentCount + queuedCount}`,
       foot: `${urgentCount} urgent · ${queuedCount} queued`,
       tone: urgentCount > 0 ? 'warn' : 'neutral',
+      info: 'Orders not yet placed on the plan. "Urgent" flags requests routed by operations that need a decision today.',
     },
   ];
 
   return (
-    <div className="kpi-strip">
+    <div className="kpi-strip" role="group" aria-label="Daily summary">
+      {scenarios.map((s) => (
+        <button key={s.key} type="button" className={`opportunity-card t-${s.tone}`}>
+          <span className="opportunity-stat">
+            <span className="opportunity-label">{s.label}</span>
+            <span className="opportunity-value-row">
+              <span className="opportunity-value">{s.delta}</span>
+              <span className="opportunity-description">{s.description}</span>
+            </span>
+          </span>
+          <span className="opportunity-action">
+            <span className="opportunity-action-arrow" aria-hidden="true">→</span>
+            <span className="opportunity-action-label">Optimize</span>
+          </span>
+        </button>
+      ))}
       {cards.map((c) => (
-        <div key={c.key} className={`kpi-card${c.tone ? ` t-${c.tone}` : ''}`}>
-          <div className="kpi-label">{c.label}</div>
-          <div className="kpi-value-row">
-            <span className="kpi-value">{c.value}</span>
-            {c.unit && <span className="kpi-unit">{c.unit}</span>}
+        <div key={c.key} className={`kpi-stat${c.tone ? ` t-${c.tone}` : ''}`}>
+          {c.info && (
+            <span className="kpi-stat-info">
+              <InfoPopover title={c.label}>{c.info}</InfoPopover>
+            </span>
+          )}
+          <span className="kpi-stat-label">{c.label}</span>
+          <span className="kpi-stat-value">
+            {c.value}
+            {c.unit && <span className="kpi-stat-unit">{c.unit}</span>}
             {c.delta && (
-              <span className={`kpi-delta ${c.deltaKind === 'good' ? 'good' : 'bad'}`}>
-                {c.deltaKind === 'good' ? '▲' : '▼'} {c.delta}
+              <span className={`kpi-stat-delta ${c.deltaKind === 'good' ? 'good' : 'bad'}`}>
+                {c.deltaKind === 'good' ? '▲' : '▼'}{c.delta}
               </span>
             )}
-          </div>
-          <div className="kpi-foot">{c.foot}</div>
+          </span>
+          <span className="kpi-stat-foot">{c.foot}</span>
         </div>
       ))}
     </div>

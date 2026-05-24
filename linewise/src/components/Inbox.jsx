@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { deriveFormat, formatVol } from './TimelineCard.jsx';
 
@@ -26,7 +27,11 @@ const FORMAT_TONE = {
   '44cl': 'cuarenta',
 };
 
-export default function Inbox({ orders, onClose, onSelectUrgent }) {
+const BRAND_OPTIONS = ['Estrella Damm', 'Voll-Damm', 'Free Damm', 'AmiBock'];
+const FORMAT_OPTIONS = ['33cl', '50cl', '44cl'];
+
+export default function Inbox({ orders, onClose, onSelectUrgent, onCreateOrder }) {
+  const [creating, setCreating] = useState(false);
   const grouped = SECTIONS.map((sec) => ({
     ...sec,
     items: orders.filter((o) => sec.match(o.status)),
@@ -57,7 +62,7 @@ export default function Inbox({ orders, onClose, onSelectUrgent }) {
         </div>
         <div className="panel-desc">Requests routed from the operations manager.</div>
 
-        <button className="btn btn-ghost inbox-create" onClick={onSelectUrgent}>
+        <button className="btn btn-ghost inbox-create" onClick={() => setCreating(true)}>
           <span>+</span> Create order manually
         </button>
 
@@ -76,7 +81,7 @@ export default function Inbox({ orders, onClose, onSelectUrgent }) {
                     <InboxCard
                       key={o.of}
                       order={o}
-                      onClick={o.status === 'urgent' ? onSelectUrgent : undefined}
+                      onClick={o.status === 'urgent' ? () => onSelectUrgent(o) : undefined}
                     />
                   ))}
                 </div>
@@ -90,6 +95,17 @@ export default function Inbox({ orders, onClose, onSelectUrgent }) {
           against 2025's executed changeover history.
         </div>
       </motion.div>
+
+      {creating && (
+        <ManualOrderModal
+          existingOrders={orders}
+          onClose={() => setCreating(false)}
+          onSubmit={(order) => {
+            onCreateOrder?.(order);
+            setCreating(false);
+          }}
+        />
+      )}
     </motion.div>
   );
 }
@@ -135,4 +151,160 @@ function InboxCard({ order, onClick }) {
       </div>
     </motion.button>
   );
+}
+
+function ManualOrderModal({ existingOrders, onClose, onSubmit }) {
+  const [form, setForm] = useState({
+    of: nextOrderCode(existingOrders),
+    brand: BRAND_OPTIONS[0],
+    format: FORMAT_OPTIONS[0],
+    units: '18000',
+    hl: '',
+    due: '',
+  });
+
+  const estimatedHl = useMemo(() => estimateHl(form.units, form.format), [form.units, form.format]);
+  const canSubmit = form.of.trim() && Number(form.units) > 0;
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  function update(name, value) {
+    setForm((current) => ({ ...current, [name]: value }));
+  }
+
+  function submit(e) {
+    e.preventDefault();
+    if (!canSubmit) return;
+
+    const units = Math.round(Number(form.units));
+    onSubmit({
+      of: form.of.trim().toUpperCase(),
+      status: 'urgent',
+      sku: `${form.brand} · lata ${form.format}`,
+      units,
+      hl: Number(form.hl) > 0 ? Number(form.hl) : estimatedHl,
+      due: formatDueDate(form.due),
+    });
+  }
+
+  return (
+    <motion.div
+      className="order-modal-scrim"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
+      <motion.form
+        className="order-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="manual-order-title"
+        onSubmit={submit}
+        onClick={(e) => e.stopPropagation()}
+        initial={{ opacity: 0, y: 10, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 8, scale: 0.99 }}
+        transition={{ duration: 0.16, ease: 'easeOut' }}
+      >
+        <header className="order-modal-head">
+          <div>
+            <div className="eyebrow">Manual order</div>
+            <h2 id="manual-order-title">Create request</h2>
+          </div>
+          <button type="button" className="rd-close" onClick={onClose} aria-label="Close">×</button>
+        </header>
+
+        <div className="order-form-grid">
+          <label className="order-field order-field-wide">
+            <span>Order</span>
+            <input
+              value={form.of}
+              onChange={(e) => update('of', e.target.value)}
+              placeholder="ED13LTNN"
+              autoFocus
+            />
+          </label>
+
+          <label className="order-field">
+            <span>Brand</span>
+            <select value={form.brand} onChange={(e) => update('brand', e.target.value)}>
+              {BRAND_OPTIONS.map((brand) => <option key={brand}>{brand}</option>)}
+            </select>
+          </label>
+
+          <label className="order-field">
+            <span>Format</span>
+            <select value={form.format} onChange={(e) => update('format', e.target.value)}>
+              {FORMAT_OPTIONS.map((format) => <option key={format}>{format}</option>)}
+            </select>
+          </label>
+
+          <label className="order-field">
+            <span>Units</span>
+            <input
+              type="number"
+              min="0"
+              step="100"
+              value={form.units}
+              onChange={(e) => update('units', e.target.value)}
+            />
+          </label>
+
+          <label className="order-field">
+            <span>hl</span>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={form.hl}
+              onChange={(e) => update('hl', e.target.value)}
+              placeholder={String(estimatedHl)}
+            />
+          </label>
+
+          <label className="order-field order-field-wide">
+            <span>Due date</span>
+            <input
+              type="date"
+              value={form.due}
+              onChange={(e) => update('due', e.target.value)}
+            />
+          </label>
+        </div>
+
+        <div className="order-preview" aria-live="polite">
+          <span className={`tc-fmt tc-fmt-${FORMAT_TONE[form.format] ?? 'other'}`}>{form.format}</span>
+          <b>{form.of.trim().toUpperCase() || 'ORDER'}</b>
+          <span>{form.brand} · {Number(form.units || 0).toLocaleString()} un</span>
+        </div>
+
+        <footer className="order-modal-foot">
+          <button type="button" className="rd-btn rd-btn-ghost" onClick={onClose}>Cancel</button>
+          <button type="submit" className="rd-btn rd-btn-primary" disabled={!canSubmit}>Add to inbox</button>
+        </footer>
+      </motion.form>
+    </motion.div>
+  );
+}
+
+function nextOrderCode(orders) {
+  const n = orders.length + 1;
+  return `MANUAL-${String(n).padStart(2, '0')}`;
+}
+
+function estimateHl(units, format) {
+  const cl = Number.parseInt(format, 10) || 33;
+  const total = Math.round((Number(units) || 0) * cl / 1000);
+  return total || 1;
+}
+
+function formatDueDate(value) {
+  if (!value) return 'asap';
+  const date = new Date(`${value}T00:00:00`);
+  return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(date);
 }

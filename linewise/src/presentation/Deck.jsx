@@ -7,6 +7,33 @@ function Deck() {
     <DecisionMomentSlide key="decision" />,
     <FeedbackLoopSlide key="feedback-loop" />,
     <PromiseSlide key="promise" />,
+    <FeatureSlide
+      key="diagnose"
+      number="04"
+      label="Feature 1"
+      title="Diagnose where sequencing hurt OEE."
+      subtitle="LineWise starts by investigating executed history, not by asking the planner to trust a prediction."
+      mode="diagnose"
+    />,
+    <FeatureSlide
+      key="simulate"
+      number="05"
+      label="Feature 2"
+      title="Simulate the urgent order before committing."
+      subtitle="The planner can compare the obvious move against alternative line and slot choices."
+      mode="simulate"
+    />,
+    <FeatureSlide
+      key="recommend"
+      number="06"
+      label="Feature 3"
+      title="Recommend the best line and position."
+      subtitle="The answer comes with expected OEE impact and the historical cases behind it."
+      mode="recommend"
+    />,
+    <ApproachSlide key="approach" />,
+    <ImpactSlide key="impact" />,
+    <CloseSlide key="close" />,
   ]
   const [slide, setSlide] = useState(() => {
     const requested = Number(new URLSearchParams(location.search).get('slide'))
@@ -251,6 +278,153 @@ function PromiseSlide() {
             <small>what to do next</small>
           </div>
         </div>
+      </div>
+    </section>
+  )
+}
+
+function FeatureSlide({ number, label, title, subtitle, mode }) {
+  return (
+    <section className={`slide feature-slide ${mode}-slide`} aria-label={`Slide ${number}: ${label}`}>
+      <div className="slide-kicker">
+        <span>{number}</span>
+        <b>{label}</b>
+      </div>
+
+      <div className="feature-copy">
+        <h2>{title}</h2>
+        <p>{subtitle}</p>
+      </div>
+
+      <div className="demo-frame" aria-hidden="true">
+        <div className="demo-topbar">
+          <span>LineWise product UI</span>
+          <b>{mode}</b>
+        </div>
+        <ProductUiExample mode={mode} />
+      </div>
+    </section>
+  )
+}
+
+const UI_EXAMPLES = {
+  diagnose: {
+    src: '/deck/ui-diagnose.png',
+    eyebrow: 'Planning board + executed timeline',
+    headline: 'The urgent decision is framed against real line history.',
+    stats: ['Line baselines', 'Executed runs', 'OEE context'],
+  },
+  simulate: {
+    src: '/deck/ui-simulate.png',
+    eyebrow: 'Naive slot comparison',
+    headline: 'The obvious move is made visible before it costs us.',
+    stats: ['Naive slot', 'Moved orders', 'Recovery time'],
+  },
+  recommend: {
+    src: '/deck/ui-recommend.png',
+    eyebrow: 'Recommendation with evidence',
+    headline: 'LineWise ranks the move and shows the cases behind it.',
+    stats: ['+6.2 OEE', '38 analogues', 'Line 17'],
+  },
+}
+
+function ProductUiExample({ mode }) {
+  const example = UI_EXAMPLES[mode]
+
+  return (
+    <div className="product-ui-example">
+      <div className="product-shot-wrap">
+        <img src={example.src} alt="" className="product-shot" />
+        <div className="product-scanline" />
+      </div>
+      <div className="product-caption">
+        <span>{example.eyebrow}</span>
+        <b>{example.headline}</b>
+        <div className="product-pills">
+          {example.stats.map((stat) => (
+            <i key={stat}>{stat}</i>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ApproachSlide() {
+  return (
+    <section className="slide approach-slide" aria-label="Slide 8: How LineWise works">
+      <div className="slide-kicker">
+        <span>07</span>
+        <b>How LineWise Works</b>
+      </div>
+      <div className="approach-title">
+        <h2>A decision pipeline, not just a dashboard.</h2>
+      </div>
+      <div className="pipeline">
+        {[
+          ['Integrate', 'orders · OEE · volumes · time categories · changeovers'],
+          ['Model', 'order-level expected OEE impact'],
+          ['Generate', 'candidate insertions across lines 14 / 17 / 19'],
+          ['Score', 'compare each scenario against the naive plan'],
+          ['Explain', 'return historical cases as evidence'],
+        ].map(([step, detail], index) => (
+          <div className="pipeline-step" key={step}>
+            <span>{String(index + 1).padStart(2, '0')}</span>
+            <b>{step}</b>
+            <small>{detail}</small>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function ImpactSlide() {
+  return (
+    <section className="slide impact-slide" aria-label="Slide 9: Why it matters">
+      <div className="slide-kicker">
+        <span>08</span>
+        <b>Why It Matters</b>
+      </div>
+      <div className="impact-title">
+        <h2>Built to match the way Damm will judge it.</h2>
+      </div>
+      <div className="rubric-grid">
+        {[
+          ['Business impact', 'less avoidable OEE loss'],
+          ['Data use', 'execution history becomes planning evidence'],
+          ['Technical solution', 'prediction + simulation + recommendation'],
+          ['Explainability', 'recommendations with receipts'],
+          ['Demo', 'one urgent-order flow end to end'],
+        ].map(([name, proof]) => (
+          <div className="rubric-card" key={name}>
+            <span>{name}</span>
+            <b>{proof}</b>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function CloseSlide() {
+  return (
+    <section className="slide close-slide" aria-label="Slide 10: Close">
+      <div className="close-content">
+        <p className="challenge-label">Current scope</p>
+        <h2>When the plan breaks, decide with what the factory has already learned.</h2>
+        <div className="scope-row">
+          <span>Lines 14 / 17 / 19</span>
+          <span>single urgent-order insertion</span>
+          <span>order-level model</span>
+          <span>Blue Yonder enrichment</span>
+        </div>
+      </div>
+      <div className="next-panel" aria-hidden="true">
+        <b>Next</b>
+        <span>multi-order optimization</span>
+        <span>richer constraints</span>
+        <span>planning workflow integration</span>
       </div>
     </section>
   )

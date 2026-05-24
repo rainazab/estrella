@@ -27,6 +27,7 @@ export default function TimelineCard({
   onClick,
   selected = false,
   dateLabel = null,
+  ghost = false,
 }) {
   const isService = kind === 'clean' || kind === 'maint';
   const fmt = format || deriveFormat({ sku, material });
@@ -65,6 +66,7 @@ export default function TimelineCard({
     kind === 'ins' ? 'tc-ins' : '',
     kind === 'shift' ? 'tc-shift' : '',
     selected ? 'tc-selected' : '',
+    ghost ? 'tc-moving-ghost' : '',
     onClick ? 'tc-clickable' : '',
   ].filter(Boolean).join(' ');
 

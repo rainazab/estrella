@@ -5,15 +5,6 @@ import {
 } from './TimelineCard.jsx';
 import InfoPopover from './InfoPopover.jsx';
 
-/* Which trenes can run a given format. Mirrors the production rules:
-     L14: 50cl, 33cl
-     L17: 33cl only
-     L19: 50cl, 33cl, 44cl                                       */
-const LINE_FORMATS = {
-  '14': new Set(['50cl', '33cl']),
-  '17': new Set(['33cl']),
-  '19': new Set(['50cl', '33cl', '44cl']),
-};
 const LINE_LABELS = { '14': 'Line 14', '17': 'Line 17', '19': 'Line 19' };
 
 /* RunDetailModal — click a TimelineCard, get this.
@@ -22,8 +13,7 @@ const LINE_LABELS = { '14': 'Line 14', '17': 'Line 17', '19': 'Line 19' };
      2. Stat row (volume, OEE, delta, duration)
      3. Sequence strip (prev → this → next, with changeover classification)
      4. Why-this-OEE narrative
-     5. Compatible lines per the production rules
-     6. Actions (Move, Lock)                                  */
+     5. Action (Move to another line) — planned runs only           */
 export default function RunDetailModal({
   open,
   run,
@@ -31,9 +21,9 @@ export default function RunDetailModal({
   next,
   lineKey,
   lineBaseline,
+  state = 'planned',
   onClose,
   onMove,
-  onLock,
 }) {
   useEffect(() => {
     if (!open) return;
@@ -43,13 +33,15 @@ export default function RunDetailModal({
   }, [open, onClose]);
 
   return (
-    <AnimatePresence>
+    <AnimatePresence initial={false}>
       {open && run && (
         <motion.div
+          key="rd-overlay"
           className="rd-overlay"
-          initial={{ opacity: 0 }}
+          initial={{ opacity: 1 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.12 }}
           onClick={onClose}
         >
           <motion.div
@@ -58,10 +50,10 @@ export default function RunDetailModal({
             aria-modal="true"
             aria-label={`Run detail for ${run.material}`}
             onClick={(e) => e.stopPropagation()}
-            initial={{ opacity: 0, y: 8, scale: 0.985 }}
+            initial={{ opacity: 1, y: 4, scale: 0.995 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6, scale: 0.99 }}
-            transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
+            transition={{ duration: 0.14, ease: [0.2, 0.8, 0.2, 1] }}
           >
             <Body
               run={run}
@@ -69,9 +61,9 @@ export default function RunDetailModal({
               next={next}
               lineKey={lineKey}
               lineBaseline={lineBaseline}
+              state={state}
               onClose={onClose}
               onMove={onMove}
-              onLock={onLock}
             />
           </motion.div>
         </motion.div>
@@ -80,7 +72,8 @@ export default function RunDetailModal({
   );
 }
 
-function Body({ run, prev, next, lineKey, lineBaseline, onClose, onMove, onLock }) {
+function Body({ run, prev, next, lineKey, lineBaseline, state, onClose, onMove }) {
+  const isExecuted = state === 'executed';
   const fmt = run.format || deriveFormat({ sku: run.sku, material: run.material });
   const delta = lineBaseline != null && run.oee != null ? run.oee - lineBaseline : null;
   const band = oeeBand(delta);
@@ -161,46 +154,22 @@ function Body({ run, prev, next, lineKey, lineBaseline, onClose, onMove, onLock 
 
       {/* Why this OEE */}
       <section className="rd-section">
-        <div className="rd-section-h">Why this OEE estimate</div>
+        <div className="rd-section-h">Why this OEE {isExecuted ? 'result' : 'estimate'}</div>
         <p className="rd-prose">
-          {whyProse({ run, prev, inCost, band, delta })}
+          {whyProse({ run, prev, inCost, band, delta, isExecuted })}
         </p>
       </section>
 
-      {/* Compatible lines */}
-      <section className="rd-section">
-        <div className="rd-section-h">Compatible lines for {fmt ?? 'this format'}</div>
-        <div className="rd-lines">
-          {['14', '17', '19'].map((k) => {
-            const allowed = fmt ? LINE_FORMATS[k].has(fmt) : true;
-            const current = String(lineKey) === k;
-            return (
-              <div
-                key={k}
-                className={`rd-lpill ${allowed ? 'ok' : 'no'} ${current ? 'cur' : ''}`}
-                title={
-                  current ? 'Currently here' :
-                  allowed ? 'Could run this format' :
-                  `Cannot run ${fmt} on this line`
-                }
-              >
-                <span className="rd-lpill-k">L{k}</span>
-                <span className="rd-lpill-fmts">
-                  {[...LINE_FORMATS[k]].join(' · ')}
-                </span>
-                {current && <span className="rd-lpill-tag">current</span>}
-                {!allowed && <span className="rd-lpill-tag bad">not compatible</span>}
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
       {/* Actions */}
-      <footer className="rd-foot">
-        <button className="rd-btn rd-btn-ghost" onClick={onLock}>Lock this run</button>
-        <button className="rd-btn rd-btn-primary" onClick={onMove}>Move to another line</button>
-      </footer>
+      {isExecuted ? (
+        <footer className="rd-foot rd-foot-readonly">
+          <span className="rd-foot-note">Executed run · read-only</span>
+        </footer>
+      ) : (
+        <footer className="rd-foot">
+          <button className="rd-btn rd-btn-primary" onClick={onMove}>Move to another line</button>
+        </footer>
+      )}
     </>
   );
 }
@@ -285,29 +254,32 @@ function brandKey(material) {
   return material.slice(0, 2).toUpperCase();
 }
 
-function whyProse({ run, prev, inCost, band, delta }) {
+function whyProse({ run, prev, inCost, band, delta, isExecuted = false }) {
   const parts = [];
+  const prevLabel = prev?.material ?? (prev?.kind === 'clean' ? 'a cleaning block' : prev?.kind === 'maint' ? 'a maintenance block' : 'previous');
+
   if (inCost) {
     if (inCost.band === 'good') {
-      parts.push(`Follows a same-format, same-brand run (${prev?.material ?? 'previous'}) — the cheapest transition available.`);
+      parts.push(`Follows a same-format, same-brand run (${prevLabel}) — the cheapest transition available.`);
     } else if (inCost.band === 'mid' && inCost.label.startsWith('same envase')) {
-      parts.push(`Same can format as the previous run (${prev?.material ?? 'previous'}), but a brand switch — expect a small OEE drag.`);
+      parts.push(`Same can format as the previous run (${prevLabel}), but a brand switch — ${isExecuted ? 'small OEE drag historically' : 'expect a small OEE drag'}.`);
     } else if (inCost.band === 'bad') {
-      parts.push(`Different format from ${prev?.material ?? 'previous'} — a CIP/tooling change weighs on the first hour of OEE.`);
+      parts.push(`Different format from ${prevLabel} — a CIP/tooling change weighs on the first hour of OEE.`);
     } else {
       parts.push(`Restart after a service block — first-hour ramp pulls the run average down.`);
     }
   } else {
-    parts.push('First run of the plan — no predecessor cost.');
+    parts.push(isExecuted ? 'First run of the executed window — no predecessor cost.' : 'First run of the plan — no predecessor cost.');
   }
 
   if (delta != null) {
+    const noun = isExecuted ? 'Run landed' : 'Estimate lands';
     if (band === 'good') {
-      parts.push(`Estimate lands ${Math.abs(delta * 100).toFixed(1)} pts above the line baseline — favourable.`);
+      parts.push(`${noun} ${Math.abs(delta * 100).toFixed(1)} pts above the line baseline — favourable.`);
     } else if (band === 'bad') {
-      parts.push(`Estimate lands ${Math.abs(delta * 100).toFixed(1)} pts below the line baseline — flagged for review.`);
+      parts.push(`${noun} ${Math.abs(delta * 100).toFixed(1)} pts below the line baseline — flagged for review.`);
     } else {
-      parts.push(`Estimate is within ±2 pts of the line baseline.`);
+      parts.push(`${isExecuted ? 'Result' : 'Estimate'} is within ±2 pts of the line baseline.`);
     }
   }
 

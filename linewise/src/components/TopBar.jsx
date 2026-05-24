@@ -11,6 +11,7 @@ export default function TopBar({
   onBellClick,
   onSettings,
   onLogout,
+  onDraftPlan,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
@@ -83,6 +84,13 @@ export default function TopBar({
                 <b>Maria Rovira</b>
                 <span>maria.rovira@damm.com</span>
               </div>
+              <button
+                className="user-menu-item"
+                role="menuitem"
+                onClick={() => { setMenuOpen(false); onDraftPlan?.(); }}
+              >
+                <span className="ic">✎</span> Draft Plan
+              </button>
               <button
                 className="user-menu-item"
                 role="menuitem"
