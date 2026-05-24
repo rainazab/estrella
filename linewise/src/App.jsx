@@ -20,7 +20,15 @@ import ReplanBanner from './components/ReplanBanner.jsx';
 import LogToast from './components/LogToast.jsx';
 import SettingsDrawer from './components/SettingsDrawer.jsx';
 import ProvenanceModal from './components/ProvenanceModal.jsx';
+import YearCompare from './components/YearCompare.jsx';
 import { useSettings } from './hooks/useSettings.js';
+import {
+  postIssue,
+  postStoppage,
+  resumeStoppage as apiResumeStoppage,
+  postStoppageReplan,
+  postResequence,
+} from './api/client.js';
 import { computeStoppageReplan } from './lib/stoppagePlan.js';
 import { buildOptimizationContext } from './lib/optimizationContext.js';
 import { deriveFormat } from './components/TimelineCard.jsx';
@@ -41,12 +49,12 @@ function App() {
 
   if (loading || forceLoading) return <BootShell><LoadingState /></BootShell>;
   if (error)   return <BootShell><ErrorState error={error} onRetry={reload} /></BootShell>;
-  return <Workspace data={data} />;
+  return <Workspace data={data} reload={reload} />;
 }
 
 /* Workspace — only mounts once data has arrived, so every child can
    safely assume `data` is the full plan contract. */
-function Workspace({ data }) {
+function Workspace({ data, reload }) {
   const demo = new URLSearchParams(location.search).get('demo');
   const demoRecs = demo === 'recs' || demo === 'simulate' || demo === 'recommend';
   const demoCalc = demo === 'calculating';
@@ -246,7 +254,10 @@ function Workspace({ data }) {
   }
 
   function logIssue(payload) {
-    const entry = { id: `iss-${Date.now()}`, ...payload };
+    /* Optimistic local update first (so the chip + ledger feel instant),
+       then reconcile from the server's view if /issues is reachable.
+       Backend offline = local-only behaviour; the demo keeps working. */
+    const entry = { id: `iss-local-${Date.now()}`, ts: Date.now(), ...payload };
     setIssues((prev) => [entry, ...prev]);
     appendChange({
       action: 'logIssue',
@@ -266,13 +277,20 @@ function Workspace({ data }) {
       detail: `${labelCategory(entry.category)} · ${labelSeverity(entry.severity)}`,
       tone: entry.severity === 'critical' ? 'warn' : 'neutral',
     });
+    postIssue({ ...payload, ts: entry.ts })
+      .then(({ issue }) => {
+        setIssues((prev) => prev.map((i) => (i.id === entry.id ? issue : i)));
+      })
+      .catch((err) => {
+        if (import.meta.env.DEV) console.warn('[issues] backend unavailable, keeping local entry', err);
+      });
   }
 
   function logStoppage(payload) {
-    /* One active stoppage per line — replace any prior. Keeps the KPI
-       and lane badge unambiguous; if a planner re-logs the same line
-       they probably mean to update it. */
-    const entry = { id: `stp-${Date.now()}`, ...payload };
+    /* One active stoppage per line — replace any prior. Optimistic
+       local update mirrors the server's invariant; reconcile from the
+       response so id/ts match what the server stored when available. */
+    const entry = { id: `stp-local-${Date.now()}`, ts: Date.now(), ...payload };
     setStoppages((prev) => [
       entry,
       ...prev.filter((s) => s.line !== entry.line),
@@ -297,6 +315,16 @@ function Workspace({ data }) {
       detail: `${labelReason(entry.reason)} · est. ${labelDuration(entry.duration)}`,
       tone: 'bad',
     });
+    postStoppage({ ...payload, ts: entry.ts })
+      .then(({ stoppages: serverList, stoppage }) => {
+        if (Array.isArray(serverList)) setStoppages(serverList);
+        if (stoppage) {
+          setReplanPrompt((prev) => (prev?.id === entry.id ? { ...stoppage, source: 'internal' } : prev));
+        }
+      })
+      .catch((err) => {
+        if (import.meta.env.DEV) console.warn('[stoppages] backend unavailable, keeping local entry', err);
+      });
   }
 
   function startReplan() {
@@ -312,13 +340,8 @@ function Workspace({ data }) {
     setReplanPrompt(null);
     setView('calculating');
 
-    setTimeout(() => {
-      const replan = computeStoppageReplan({
-        basePlan: effectivePlan,
-        line,
-        durationKey: prompt.duration,
-      });
-      setCommittedPlan(replan.plan);
+    const finish = (shiftedCount, shiftedHours, nextPlan) => {
+      if (nextPlan) setCommittedPlan(nextPlan);
       appendChange({
         action: 'startReplan',
         type: 'stoppage_replan_committed',
@@ -327,17 +350,43 @@ function Workspace({ data }) {
         stoppageId: prompt.id,
         reason: prompt.reason,
         duration: prompt.duration,
-        shiftedCount: replan.shiftedCount,
-        shiftedHours: replan.shiftedHours,
+        shiftedCount,
+        shiftedHours,
       });
       setView('queue');
       setToast({
         id: `rpl-${Date.now()}`,
         title: `L${line} replanned`,
-        detail: `Shifted ${replan.shiftedCount} ${replan.shiftedCount === 1 ? 'run' : 'runs'} by ${fmtShiftHours(replan.shiftedHours)}`,
+        detail: `Shifted ${shiftedCount} ${shiftedCount === 1 ? 'run' : 'runs'} by ${fmtShiftHours(shiftedHours)}`,
         tone: 'neutral',
       });
-    }, 1300);
+    };
+
+    /* Try the backend first; the calculating flash plays in parallel so
+       the UI feels instant either way. If /plan/stoppage-replan answers
+       we use the server's recomputed plan, otherwise we fall back to
+       the client-side shift in stoppagePlan.js. */
+    const apiCall = postStoppageReplan({
+      stoppageId: prompt.id,
+      line,
+      durationKey: prompt.duration,
+    }).catch((err) => {
+      if (import.meta.env.DEV) console.warn('[replan] backend unavailable, using client-side shift', err);
+      return null;
+    });
+
+    Promise.all([apiCall, new Promise((r) => setTimeout(r, 1300))]).then(([resp]) => {
+      if (resp?.plan?.basePlan) {
+        finish(resp.shiftedCount ?? 0, resp.shiftedHours ?? 0, resp.plan.basePlan);
+      } else {
+        const replan = computeStoppageReplan({
+          basePlan: effectivePlan,
+          line,
+          durationKey: prompt.duration,
+        });
+        finish(replan.shiftedCount, replan.shiftedHours, replan.plan);
+      }
+    });
   }
 
   function resumeLine(line) {
@@ -345,6 +394,7 @@ function Workspace({ data }) {
        returns to N/N and the lane badge clears. Any plan changes from
        a Replan are intentionally left in place — the planner already
        committed to that new sequence. */
+    const active = stoppages.find((s) => s.line === line);
     setStoppages((prev) => prev.filter((s) => s.line !== line));
     /* If a replan banner is still up for the same line (planner hadn't
        acted yet), clear it too. */
@@ -355,6 +405,53 @@ function Workspace({ data }) {
       detail: 'Line back in production',
       tone: 'neutral',
     });
+    if (active?.id && !active.id.startsWith('stp-local-')) {
+      apiResumeStoppage(active.id)
+        .then(({ stoppages: serverList }) => {
+          if (Array.isArray(serverList)) setStoppages(serverList);
+        })
+        .catch((err) => {
+          if (import.meta.env.DEV) console.warn('[resume] backend unavailable', err);
+        });
+    }
+  }
+
+  function resequenceWeek() {
+    /* Global re-sequencer trigger. Backend persists the new basePlan
+       as a plan_override; we surface savings as a toast and reload to
+       pick up the new schedule. Graceful "backend offline" toast when
+       the API isn't reachable so the demo doesn't dead-end. */
+    postResequence()
+      .then((resp) => {
+        const s = resp?.summary ?? {};
+        const delta = Number(s.totalCostDelta ?? 0);
+        const reordered = Number(s.totalReordered ?? 0);
+        setToast({
+          id: `rsq-${Date.now()}`,
+          title: reordered > 0 ? 'Week re-sequenced' : 'Already optimal',
+          detail: reordered > 0
+            ? `Saved ${delta.toFixed(2)} changeover cost · ${reordered} runs moved`
+            : 'No moves improved the total — schedule kept as-is',
+          tone: reordered > 0 ? 'good' : 'neutral',
+        });
+        appendChange({
+          action: 'resequenceWeek',
+          type: 'plan_applied',
+          summary: reordered > 0
+            ? `Week re-sequenced (Δ ${delta.toFixed(2)} cost, ${reordered} runs moved)`
+            : 'Re-sequence ran — no improvement, plan untouched',
+        });
+        reload?.();
+      })
+      .catch((err) => {
+        if (import.meta.env.DEV) console.warn('[resequence] failed', err);
+        setToast({
+          id: `rsq-err-${Date.now()}`,
+          title: 'Re-sequence unavailable',
+          detail: 'Backend not reachable — start ./scripts/run_server.sh',
+          tone: 'warn',
+        });
+      });
   }
 
   function dropOnLine(line) {
@@ -473,6 +570,7 @@ function Workspace({ data }) {
                     onSelectUrgent={selectUrgent}
                     onDismissReplan={() => setReplanPrompt(null)}
                     onResumeLine={resumeLine}
+                    onResequence={resequenceWeek}
                   />
                 )}
                 {view === 'calculating' && <CalculatingStage />}
@@ -670,6 +768,7 @@ function PanelCalculating({ order }) {
 function DefaultStage({
   data, orders = data?.urgentOrders ?? [], timelineProps, zoom, onZoom,
   stoppages = [], issues = [], changes = [], replanPrompt = null, onReplan, onSelectUrgent, onDismissReplan, onResumeLine,
+  onResequence = null,
 }) {
   const stoppedLines = stoppages.map((s) => s.line);
   return (
@@ -680,6 +779,7 @@ function DefaultStage({
         urgentOrders={orders}
         onSelectUrgent={onSelectUrgent}
       />
+      <YearCompare data={data} />
       <ReplanBanner
         prompt={replanPrompt}
         onReplan={onReplan}
@@ -692,6 +792,16 @@ function DefaultStage({
         </div>
         <HomepageNewsStrip data={data} plan={timelineProps.effectivePlan} changes={changes} />
         <div className="stage-head-right">
+          {onResequence && (
+            <button
+              type="button"
+              className="resequence-btn"
+              onClick={onResequence}
+              title="Reorder the forward queue to minimise total changeover cost"
+            >
+              ↻ Re-sequence week
+            </button>
+          )}
           <ZoomCtl zoom={zoom} onZoom={onZoom} />
         </div>
       </div>
