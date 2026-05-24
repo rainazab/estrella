@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import './BrewLoader.css';
 
 /* BrewLoader v2 — DAMM brewery loading animation.
@@ -71,11 +70,12 @@ function DammStar({ size = 24, color = '#fff' }) {
   );
 }
 
-/* Line config — each parallel belt in the SVG */
+/* Line config — each parallel belt in the SVG.
+   y-positions spaced 180px apart so the layout fills a 720-tall viewBox. */
 const LINES = [
-  { key: 'L1', y: 210, sku: 'estrella',  output: 247, color: '#e30613' },
-  { key: 'L2', y: 320, sku: 'daura',     output: 189, color: '#c8941a' },
-  { key: 'L3', y: 430, sku: 'vollDamm',  output: 163, color: '#1a1a1a' },
+  { key: 'L1', y: 200, sku: 'estrella',  output: 247, color: '#e30613' },
+  { key: 'L2', y: 380, sku: 'daura',     output: 189, color: '#c8941a' },
+  { key: 'L3', y: 560, sku: 'vollDamm',  output: 163, color: '#1a1a1a' },
 ];
 
 /* In-flight routed bottles — staggered cycles so each line stays busy.
@@ -89,53 +89,7 @@ const ROUTED = [
   { idx: 6, sku: 'vollDamm' },
 ];
 
-/* Calendar — Mon–Fri × 4 slots per day = 20 production blocks for the week.
-   Each block is coloured by the SKU scheduled in that slot. */
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-const CAL_PLAN = [
-  ['est', 'est', 'dau', 'vol'], // Mon
-  ['est', 'dau', 'dau', 'vol'], // Tue
-  ['dau', 'vol', 'vol', 'est'], // Wed
-  ['vol', 'est', 'est', 'dau'], // Thu
-  ['est', 'est', 'dau', 'vol'], // Fri
-];
-
-/* useTick — single rAF loop returning 0..1 phase across the 6s cycle. */
-function useTick(period = 6000) {
-  const [phase, setPhase] = useState(0);
-  useEffect(() => {
-    let raf;
-    const start = performance.now();
-    const loop = (t) => {
-      setPhase(((t - start) % period) / period);
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, [period]);
-  return phase;
-}
-
-/* interp — animate from→to during the "optimising" window (40%-85% of cycle),
-   so the KPIs visibly tick up in sync with step 3. */
-function interp(from, to, phase, decimals = 0) {
-  let v;
-  if (phase < 0.4) v = from;
-  else if (phase > 0.85) v = to;
-  else {
-    const p = (phase - 0.4) / 0.45;
-    const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
-    v = from + (to - from) * eased;
-  }
-  return decimals === 0 ? Math.round(v).toString() : v.toFixed(decimals);
-}
-
 export default function BrewLoader() {
-  const phase = useTick();
-  const oee  = interp(87.2, 90.4, phase, 1);
-  const co   = interp(47,   31,   phase, 0);
-  const ot   = interp(94,   98,   phase, 0);
-
   return (
     <div className="brew-loader" role="status" aria-live="polite">
       {/* ============ DAMM HEADER ============ */}
@@ -181,34 +135,10 @@ export default function BrewLoader() {
         </div>
       </div>
 
-      {/* ============ CALENDAR STRIP ============ */}
-      <div className="brew-loader__calendar">
-        <div className="brew-loader__cal-label">
-          Schedule
-          <b>This week</b>
-        </div>
-        <div className="brew-loader__cal-grid">
-          {CAL_PLAN.map((blocks, dayI) => (
-            <div key={dayI} className="cal-day">
-              <div className="cal-day__name">{DAYS[dayI]}</div>
-              <div className="cal-day__blocks">
-                {blocks.map((c, bI) => (
-                  <span
-                    key={bI}
-                    className={`cal-block cal-block--${c}`}
-                    style={{ animationDelay: `${(dayI * 4 + bI) * 0.2}s` }}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* ============ ANIMATED STAGE ============ */}
       <svg
         className="brew-loader__stage"
-        viewBox="0 0 1180 560"
+        viewBox="0 0 1180 720"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
       >
@@ -257,36 +187,32 @@ export default function BrewLoader() {
         </defs>
 
         {/* WHITE BG */}
-        <rect width="1180" height="560" fill="#ffffff" />
+        <rect width="1180" height="720" fill="#ffffff" />
 
         {/* ============ HOPPER (incoming order queue) ============ */}
         <g>
-          <text x="140" y="60" textAnchor="middle" fontSize="11" fontWeight="700" letterSpacing="2" fill="#5b5a53">
+          <text x="140" y="80" textAnchor="middle" fontSize="12" fontWeight="700" letterSpacing="2" fill="#5b5a53">
             ORDER QUEUE
           </text>
-          {/* funnel container */}
           <path
-            d="M 80 80 L 200 80 L 180 160 L 100 160 Z"
+            d="M 70 100 L 210 100 L 185 200 L 95 200 Z"
             fill="#f7f6f3" stroke="#c2c9d4" strokeWidth="1.5"
           />
-          {/* stacked incoming bottles (visual queue) */}
-          <Bottle x={120} y={130} scale={0.85} sku="estrella" className="hopper-bottle hopper-bottle--1" />
-          <Bottle x={160} y={130} scale={0.85} sku="daura"    className="hopper-bottle hopper-bottle--2" />
-          <Bottle x={140} y={100} scale={0.85} sku="vollDamm" className="hopper-bottle hopper-bottle--3" />
-          {/* "247 orders" counter */}
-          <rect x="105" y="175" width="70" height="22" rx="11" fill="#e30613" />
-          <text x="140" y="190" textAnchor="middle" fontSize="11" fontWeight="800" fill="#fff" letterSpacing="0.5">
+          <Bottle x={120} y={165} scale={1.0} sku="estrella" className="hopper-bottle hopper-bottle--1" />
+          <Bottle x={160} y={165} scale={1.0} sku="daura"    className="hopper-bottle hopper-bottle--2" />
+          <Bottle x={140} y={130} scale={1.0} sku="vollDamm" className="hopper-bottle hopper-bottle--3" />
+          <rect x="100" y="215" width="80" height="26" rx="13" fill="#e30613" />
+          <text x="140" y="232" textAnchor="middle" fontSize="12" fontWeight="800" fill="#fff" letterSpacing="0.5">
             247 ORDERS
           </text>
-          {/* Curved flowing path from hopper to mascot's left side */}
+          {/* Curved flowing path from hopper to mascot */}
           <path
             className="flow-path"
-            d="M 140 205 Q 140 280 220 340 T 290 380"
+            d="M 140 250 Q 140 340 230 400 T 300 440"
             stroke="#5b5a53" strokeWidth="2.5" fill="none"
             strokeDasharray="6 4" strokeLinecap="round" opacity="0.6"
           />
-          {/* arrow head landing at mascot */}
-          <path d="M 282 372 L 292 382 L 280 388" stroke="#5b5a53" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
+          <path d="M 292 432 L 302 442 L 290 448" stroke="#5b5a53" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
         </g>
 
         {/* ============ 3 PARALLEL LINES ============ */}
@@ -323,66 +249,68 @@ export default function BrewLoader() {
         ))}
 
         {/* ============ ROUTING BOTTLES (in flight) ============
-            Each bottle starts near the mascot (340, 320) and the route-*
-            keyframes carry it to its destination line + output. */}
+            Each bottle starts near the mascot at L2 height (340, 380),
+            and the route-* keyframes carry it to its destination line. */}
         {ROUTED.map((b) => (
           <Bottle
             key={b.idx}
-            x={340} y={320} scale={1.4} sku={b.sku}
+            x={340} y={380} scale={1.6} sku={b.sku}
             className={`route-bottle route--${b.idx}`}
           />
         ))}
 
-        {/* ============ MASCOT (the conductor) ============ */}
-        {/* shadow under the mascot, pulses with hop */}
-        <ellipse className="floor-shadow" cx="340" cy="515" rx="58" ry="6" fill="#0f172a" opacity="0.22" />
-        <g className="mascot">
-          <g className="mascot-leg mascot-leg--l">
-            <rect x="320" y={460} width="10" height="30" rx="4" fill="#e30613" />
-            <ellipse cx="325" cy="495" rx="14" ry="6" fill="#1a1a1a" />
-          </g>
-          <g className="mascot-leg mascot-leg--r">
-            <rect x="350" y={460} width="10" height="30" rx="4" fill="#e30613" />
-            <ellipse cx="355" cy="495" rx="14" ry="6" fill="#1a1a1a" />
-          </g>
-          <g className="mascot-body">
-            {Array.from({ length: 14 }).map((_, i) => {
-              const a = (i / 14) * Math.PI * 2 - Math.PI / 2;
-              const r = 55;
-              const cx = 340 + Math.cos(a) * r;
-              const cy = 400 + Math.sin(a) * r;
-              return <circle key={i} cx={cx} cy={cy} r="6" fill="#a3000d" />;
-            })}
-            <circle cx="340" cy="400" r="52" fill="url(#capRed)" />
-            <circle cx="340" cy="400" r="52" fill="none" stroke="#5a000a" strokeWidth="1" opacity="0.5" />
-            <ellipse cx="322" cy="378" rx="18" ry="9" fill="rgba(255,255,255,0.25)" />
-            <g transform="translate(340 370)">
-              <path d="M 0 -8 L 2.4 -2.4 L 8 -2.4 L 3.6 0.8 L 5.6 7.2 L 0 3.2 L -5.6 7.2 L -3.6 0.8 L -8 -2.4 L -2.4 -2.4 Z" fill="#fff" opacity="0.9" />
+        {/* ============ MASCOT (the conductor) ============
+            Wrapped in a translate so we can shift him as a unit. Internal
+            coordinates kept the same as before so animations still aim
+            at the right pivot points. */}
+        <ellipse className="floor-shadow" cx="340" cy="635" rx="68" ry="8" fill="#0f172a" opacity="0.22" />
+        <g transform="translate(0 120)">
+          <g className="mascot">
+            <g className="mascot-leg mascot-leg--l">
+              <rect x="320" y={460} width="10" height="30" rx="4" fill="#e30613" />
+              <ellipse cx="325" cy="495" rx="14" ry="6" fill="#1a1a1a" />
             </g>
-            <ellipse cx="322" cy="402" rx="10" ry="12" fill="#fff" />
-            <ellipse cx="358" cy="402" rx="10" ry="12" fill="#fff" />
-            <ellipse className="mascot-eye" cx="324" cy="404" rx="4.5" ry="5.5" fill="#1a1a1a" />
-            <ellipse className="mascot-eye" cx="360" cy="404" rx="4.5" ry="5.5" fill="#1a1a1a" />
-            <circle cx="326" cy="402" r="1.5" fill="#fff" />
-            <circle cx="362" cy="402" r="1.5" fill="#fff" />
-            <path d="M 327 422 Q 340 434 353 422" stroke="#3a0008" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-          </g>
-          {/* Left arm */}
-          <g className="mascot-arm-left">
-            <path d="M 286 415 Q 270 430 280 450" stroke="#e30613" strokeWidth="9" fill="none" strokeLinecap="round" />
-            <circle cx="280" cy="452" r="5.5" fill="#1a1a1a" />
-          </g>
-          {/* Right arm with baton — points to each line in sequence */}
-          <g className="mascot-arm">
-            <path d="M 394 415 Q 410 410 420 395" stroke="#e30613" strokeWidth="9" fill="none" strokeLinecap="round" />
-            <circle cx="420" cy="394" r="5.5" fill="#1a1a1a" />
-            <line x1="422" y1="392" x2="465" y2="370" stroke="#1a1a1a" strokeWidth="3" strokeLinecap="round" />
-            <circle cx="465" cy="370" r="3" fill="#e30613" />
+            <g className="mascot-leg mascot-leg--r">
+              <rect x="350" y={460} width="10" height="30" rx="4" fill="#e30613" />
+              <ellipse cx="355" cy="495" rx="14" ry="6" fill="#1a1a1a" />
+            </g>
+            <g className="mascot-body">
+              {Array.from({ length: 14 }).map((_, i) => {
+                const a = (i / 14) * Math.PI * 2 - Math.PI / 2;
+                const r = 60;
+                const cx = 340 + Math.cos(a) * r;
+                const cy = 400 + Math.sin(a) * r;
+                return <circle key={i} cx={cx} cy={cy} r="7" fill="#a3000d" />;
+              })}
+              <circle cx="340" cy="400" r="56" fill="url(#capRed)" />
+              <circle cx="340" cy="400" r="56" fill="none" stroke="#5a000a" strokeWidth="1" opacity="0.5" />
+              <ellipse cx="322" cy="378" rx="20" ry="10" fill="rgba(255,255,255,0.25)" />
+              <g transform="translate(340 370)">
+                <path d="M 0 -9 L 2.7 -2.7 L 9 -2.7 L 4 0.9 L 6.3 8.1 L 0 3.6 L -6.3 8.1 L -4 0.9 L -9 -2.7 L -2.7 -2.7 Z" fill="#fff" opacity="0.9" />
+              </g>
+              <ellipse cx="322" cy="402" rx="11" ry="13" fill="#fff" />
+              <ellipse cx="358" cy="402" rx="11" ry="13" fill="#fff" />
+              <ellipse className="mascot-eye" cx="324" cy="404" rx="5" ry="6" fill="#1a1a1a" />
+              <ellipse className="mascot-eye" cx="360" cy="404" rx="5" ry="6" fill="#1a1a1a" />
+              <circle cx="326" cy="402" r="1.6" fill="#fff" />
+              <circle cx="362" cy="402" r="1.6" fill="#fff" />
+              <path d="M 326 424 Q 340 437 354 424" stroke="#3a0008" strokeWidth="3" fill="none" strokeLinecap="round" />
+            </g>
+            <g className="mascot-arm-left">
+              <path d="M 284 415 Q 266 432 277 454" stroke="#e30613" strokeWidth="10" fill="none" strokeLinecap="round" />
+              <circle cx="277" cy="456" r="6" fill="#1a1a1a" />
+            </g>
+            <g className="mascot-arm">
+              <path d="M 396 415 Q 414 410 425 393" stroke="#e30613" strokeWidth="10" fill="none" strokeLinecap="round" />
+              <circle cx="425" cy="393" r="6" fill="#1a1a1a" />
+              <line x1="427" y1="391" x2="475" y2="365" stroke="#1a1a1a" strokeWidth="3.5" strokeLinecap="round" />
+              <circle cx="475" cy="365" r="3.5" fill="#e30613" />
+            </g>
           </g>
         </g>
 
         {/* "Conductor" label under mascot */}
-        <text x="340" y="540" textAnchor="middle" fontSize="9" fontWeight="700" fill="#918f86" letterSpacing="2">
+        <text x="340" y="680" textAnchor="middle" fontSize="10" fontWeight="700" fill="#918f86" letterSpacing="2">
           PLANNER
         </text>
 
@@ -391,7 +319,7 @@ export default function BrewLoader() {
             the planner caught a wasteful SKU swap.
             Outer <g> = positioning (SVG transform attribute, stable).
             Inner <g> = animation (CSS transform, doesn't fight position). */}
-        <g transform="translate(720 280)">
+        <g transform="translate(720 320)">
           <g className="changeover-flash">
             <rect x="-72" y="-18" width="144" height="36" rx="18" fill="#fff" stroke="#1b8a4e" strokeWidth="1.5" />
             {/* check icon */}
@@ -409,36 +337,6 @@ export default function BrewLoader() {
         </g>
       </svg>
 
-      {/* ============ KPI COUNTER ROW (live-ticking values) ============ */}
-      <div className="brew-loader__kpis">
-        <div className="kpi kpi--1">
-          <span className="kpi__label">OEE</span>
-          <div className="kpi__values">
-            <span className="kpi__before">87.2%</span>
-            <span className="kpi__arrow">→</span>
-            <span className="kpi__after kpi__after--good">{oee}%</span>
-          </div>
-          <span className="kpi__delta">+3.2 pts</span>
-        </div>
-        <div className="kpi kpi--2">
-          <span className="kpi__label">Changeovers / wk</span>
-          <div className="kpi__values">
-            <span className="kpi__before">47</span>
-            <span className="kpi__arrow">→</span>
-            <span className="kpi__after kpi__after--good">{co}</span>
-          </div>
-          <span className="kpi__delta">−34%</span>
-        </div>
-        <div className="kpi kpi--3">
-          <span className="kpi__label">On-time delivery</span>
-          <div className="kpi__values">
-            <span className="kpi__before">94%</span>
-            <span className="kpi__arrow">→</span>
-            <span className="kpi__after kpi__after--good">{ot}%</span>
-          </div>
-          <span className="kpi__delta">+4 pts</span>
-        </div>
-      </div>
     </div>
   );
 }

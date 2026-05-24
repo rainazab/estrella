@@ -33,6 +33,7 @@ function Deck() {
     />,
     <ApproachSlide key="approach" />,
     <ImpactSlide key="impact" />,
+    <FutureSlide key="future" />,
     <CloseSlide key="close" />,
   ]
   const [slide, setSlide] = useState(() => {
@@ -312,19 +313,19 @@ const UI_EXAMPLES = {
     src: '/deck/ui-diagnose.png',
     eyebrow: 'Planning board + executed timeline',
     headline: 'The urgent decision is framed against real line history.',
-    stats: ['Line baselines', 'Executed runs', 'OEE context'],
+    stats: ['Urgent order', 'External signals', 'Line baselines'],
   },
   simulate: {
     src: '/deck/ui-simulate.png',
-    eyebrow: 'Naive slot comparison',
-    headline: 'The obvious move is made visible before it costs us.',
-    stats: ['Naive slot', 'Moved orders', 'Recovery time'],
+    eyebrow: 'Scenario comparison',
+    headline: 'The planner compares impact before committing.',
+    stats: ['Objectives', 'Cala AI', 'Draft action'],
   },
   recommend: {
     src: '/deck/ui-recommend.png',
     eyebrow: 'Recommendation with evidence',
     headline: 'LineWise ranks the move and shows the cases behind it.',
-    stats: ['+6.2 OEE', '38 analogues', 'Line 17'],
+    stats: ['+16.9 OEE', '6 analogues', 'Line 19'],
   },
 }
 
@@ -407,9 +408,45 @@ function ImpactSlide() {
   )
 }
 
+function FutureSlide() {
+  const features = [
+    ['Daily agents', 'Scan yesterday’s execution, detect OEE leaks, and push recommendations before the morning planning meeting.'],
+    ['Cala AI signals', 'Bring commodity, packaging, and market signals into planning so external constraints are visible before they hit the line.'],
+    ['Multi-order replanning', 'Optimize several urgent and queued orders together, not one order at a time.'],
+    ['Shift handoff intelligence', 'Turn planner decisions, stoppages, and overrides into a clear next-shift briefing.'],
+    ['Continuous learning', 'Use accepted, rejected, and manually adjusted recommendations as feedback for the next run.'],
+    ['System integration', 'Sit beside Blue Yonder and MES as an evidence layer, not a replacement workflow.'],
+  ]
+
+  return (
+    <section className="slide future-slide" aria-label="Slide 10: Beyond the demo">
+      <div className="slide-kicker">
+        <span>09</span>
+        <b>Beyond The Demo</b>
+      </div>
+
+      <div className="future-title">
+        <p className="challenge-label">What we proved today</p>
+        <h2>One urgent decision is the wedge.</h2>
+        <p>Once the factory has a memory, the same loop can run every day, across more orders, with richer signals.</p>
+      </div>
+
+      <div className="future-grid" aria-hidden="true">
+        {features.map(([title, detail], index) => (
+          <div className="future-card" key={title}>
+            <span>{String(index + 1).padStart(2, '0')}</span>
+            <b>{title}</b>
+            <small>{detail}</small>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 function CloseSlide() {
   return (
-    <section className="slide close-slide" aria-label="Slide 10: Close">
+    <section className="slide close-slide" aria-label="Slide 11: Close">
       <div className="close-content">
         <p className="challenge-label">Current scope</p>
         <h2>When the plan breaks, decide with what the factory has already learned.</h2>

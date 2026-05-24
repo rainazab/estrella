@@ -43,6 +43,7 @@ export default function Inbox({
   lastHandoff = null,
   onClose,
   onSelectUrgent,
+  onSelectQueued,
   onReplanAll,
   onCreateOrder,
 }) {
@@ -139,12 +140,16 @@ export default function Inbox({
                 ) : (
                   <div className="inbox-cards">
                     {sec.items.map((o) => {
-                      const actionable = o.status === 'urgent' || o.status === 'queued' || o.status === 'scheduled';
+                      const isQueued = o.status === 'queued' || o.status === 'scheduled';
+                      const actionable = o.status === 'urgent' || isQueued;
+                      const handleClick = isQueued
+                        ? (onSelectQueued ?? onSelectUrgent)
+                        : onSelectUrgent;
                       return (
                         <InboxCard
                           key={o.of}
                           order={o}
-                          onClick={actionable ? () => onSelectUrgent(o) : undefined}
+                          onClick={actionable ? () => handleClick(o) : undefined}
                         />
                       );
                     })}
