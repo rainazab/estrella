@@ -381,26 +381,6 @@
         "start": 24.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 24.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 24.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -555,16 +535,6 @@
         "w": 7.0,
         "oee": 0.317,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 192.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -881,16 +851,6 @@
         "w": 8.17,
         "oee": 0.193,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 360.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -1569,16 +1529,6 @@
         "w": 28.75,
         "oee": 0.458,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 696.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -2281,26 +2231,6 @@
         "start": 1032.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 1032.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 1032.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -2901,16 +2831,6 @@
         "w": 15.73,
         "oee": 0.532,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 1368.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -3550,26 +3470,6 @@
         "start": 1704.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 1704.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 1704.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -4044,16 +3944,6 @@
         "w": 22.55,
         "oee": 0.577,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 2040.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -4558,16 +4448,6 @@
         "start": 2376.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 2376.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -4831,16 +4711,6 @@
         "start": 2544.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 2544.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -5061,16 +4931,6 @@
         "w": 3.52,
         "oee": 0.451,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 2712.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -5620,16 +5480,6 @@
         "start": 3048.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 3048.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -5824,16 +5674,6 @@
         "w": 17.57,
         "oee": 0.614,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 3216.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -6078,16 +5918,6 @@
         "w": 11.1,
         "oee": 0.396,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 3384.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -6511,16 +6341,6 @@
         "start": 3720.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 3720.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -6697,16 +6517,6 @@
         "w": 3.76,
         "oee": 0.483,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 3888.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -6933,16 +6743,6 @@
         "w": 24.31,
         "oee": 0.475,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 4056.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -7234,16 +7034,6 @@
         "w": 32.91,
         "oee": 0.517,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 4392.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -7787,26 +7577,6 @@
         "w": 3.2,
         "oee": 0.543,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 4728.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 4728.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -8464,16 +8234,6 @@
         "start": 5064.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 5064.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -9003,26 +8763,6 @@
         "start": 24.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 24.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 24.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -9268,16 +9008,6 @@
         "w": 2.21,
         "oee": 0.507,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 192.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -9864,16 +9594,6 @@
         "w": 2.8,
         "oee": 0.387,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 360.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -11119,16 +10839,6 @@
         "w": 11.07,
         "oee": 0.533,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 696.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -12383,26 +12093,6 @@
         "w": 5.82,
         "oee": 0.319,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 1032.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 1032.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -13720,16 +13410,6 @@
         "w": 0.91,
         "oee": 0.805,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 1368.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -15065,26 +14745,6 @@
         "w": 3.54,
         "oee": 0.612,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 1704.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 1704.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -16453,16 +16113,6 @@
         "start": 2040.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 2040.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -17816,16 +17466,6 @@
         "start": 2376.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 2376.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -18479,16 +18119,6 @@
         "w": 3.21,
         "oee": 0.705,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 2544.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -19165,16 +18795,6 @@
         "w": 2.18,
         "oee": 0.721,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 2712.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -20480,16 +20100,6 @@
         "start": 3048.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 3048.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -21170,16 +20780,6 @@
         "w": 1.85,
         "oee": 0.503,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 3216.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -21883,16 +21483,6 @@
         "w": 8.43,
         "oee": 0.69,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 3384.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -23396,16 +22986,6 @@
         "start": 3720.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 3720.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -24200,16 +23780,6 @@
         "start": 3888.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 3888.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -24997,16 +24567,6 @@
         "w": 1.27,
         "oee": 0.575,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 4056.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -26504,16 +26064,6 @@
         "w": 3.47,
         "oee": 0.444,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 4392.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -28071,26 +27621,6 @@
         "start": 4728.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 4728.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 4728.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -29507,16 +29037,6 @@
         "start": 5064.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 5064.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -30561,26 +30081,6 @@
         "start": 24.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 24.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 24.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -30878,16 +30378,6 @@
         "w": 9.07,
         "oee": 0.402,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 192.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -31618,16 +31108,6 @@
         "w": 2.28,
         "oee": 0.336,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 360.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -33221,16 +32701,6 @@
         "start": 696.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 696.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -34791,26 +34261,6 @@
         "start": 1032.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 1032.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 1032.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -36338,16 +35788,6 @@
         "w": 0.93,
         "oee": 0.529,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 1368.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -37914,26 +37354,6 @@
         "start": 1704.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 1704.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 1704.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -39341,16 +38761,6 @@
         "start": 2040.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 2040.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -40704,16 +40114,6 @@
         "start": 2376.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 2376.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -41400,16 +40800,6 @@
         "start": 2544.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 2544.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -42062,16 +41452,6 @@
         "w": 2.26,
         "oee": 0.528,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 2712.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -43350,16 +42730,6 @@
         "start": 3048.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 3048.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -44019,16 +43389,6 @@
         "start": 3216.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 3216.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -44654,16 +44014,6 @@
         "w": 2.65,
         "oee": 0.272,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 3384.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -45996,16 +45346,6 @@
         "start": 3720.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 3720.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -46629,16 +45969,6 @@
         "start": 3888.0,
         "w": 8.0,
         "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 3888.0,
-        "w": 8.0,
-        "locked": true,
         "lockReason": "Semanal clean (3 turnos) from Tabla CF Prat 2026",
         "cadence": "semanal",
         "shiftPattern": "3 turnos",
@@ -47210,16 +46540,6 @@
         "w": 4.03,
         "oee": 0.185,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 4056.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -48438,16 +47758,6 @@
         "w": 2.68,
         "oee": 0.725,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 4392.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -49711,26 +49021,6 @@
         "w": 10.96,
         "oee": 0.801,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 4728.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Mensual clean (1 turno) from Tabla CF Prat 2026",
-        "cadence": "mensual",
-        "shiftPattern": "1 turno",
-        "day": "L"
-      },
-      {
-        "kind": "clean",
-        "start": 4728.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",
@@ -51048,16 +50338,6 @@
         "w": 2.62,
         "oee": 0.463,
         "inferredWidth": true
-      },
-      {
-        "kind": "clean",
-        "start": 5064.0,
-        "w": 8.0,
-        "locked": true,
-        "lockReason": "Quincenal clean (2 turnos) from Tabla CF Prat 2026",
-        "cadence": "quincenal",
-        "shiftPattern": "2 turnos",
-        "day": "L"
       },
       {
         "kind": "clean",

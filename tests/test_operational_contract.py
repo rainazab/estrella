@@ -99,3 +99,34 @@ class TestProjectServiceBlocks:
         # source is preserved verbatim from the Tabla CF row; defaults are
         # supplied only if the row didn't carry one.
         assert block["source"] == "test"
+
+    def test_alternative_cadences_collapse_to_one_per_kind(self):
+        """Tabla CF lists mensual / quincenal / semanal cleans for
+        different shift patterns. They are alternatives, not additive
+        events — only one shift pattern is active at a time. The
+        projection should fire ONE cleaning cadence per Monday, not
+        three stacked at the same hour."""
+        rows = {"14": [
+            _row("clean", "mensual",   "L", shift="1 turno"),
+            _row("clean", "quincenal", "L", shift="2 turnos"),
+            _row("clean", "semanal",   "L", shift="3 turnos"),
+            _row("clean", "semanal",   "V", shift="5 turnos"),
+            _row("maint", "quincenal", "L", shift="5 turnos"),
+        ]}
+        out = project_service_blocks(rows, anchor=date(2026, 5, 24), horizon_days=14)
+        # Expect ONE cleaning cadence × occurrences + ONE maint cadence.
+        clean_cadences = {b["cadence"] for b in out["14"] if b["kind"] == "clean"}
+        maint_cadences = {b["cadence"] for b in out["14"] if b["kind"] == "maint"}
+        assert clean_cadences == {"semanal"}, "should keep only the semanal clean"
+        assert maint_cadences == {"quincenal"}
+        # No two clean events should land at the same start hour.
+        clean_starts = [b["start"] for b in out["14"] if b["kind"] == "clean"]
+        assert len(clean_starts) == len(set(clean_starts)), "no stacking"
+
+    def test_kind_with_only_non_preferred_cadence_still_kept(self):
+        """A line whose only maintenance row is mensual (not the
+        preferred quincenal) should still emit maintenance events —
+        not silently lose the entire kind."""
+        rows = {"14": [_row("maint", "mensual", "L", shift="1 turno")]}
+        out = project_service_blocks(rows, anchor=date(2026, 5, 24), horizon_days=90)
+        assert any(b["kind"] == "maint" for b in out["14"])

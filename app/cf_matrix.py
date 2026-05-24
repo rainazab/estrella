@@ -186,9 +186,8 @@ def _project_row_instances(row: Dict[str, Any], anchor: date, horizon_days: int)
 # Order of preference when a line has multiple rows for the same
 # (kind, cadence) under different shift patterns. The line only runs
 # one pattern at a time, so we keep the most operationally typical one
-# (matching the prior _preferred_weekly_marker behaviour: 3 turnos for
-# the everyday baseline, 5 turnos for the maintenance shift). Anything
-# unknown sorts last.
+# (3 turnos for the everyday baseline, 5 turnos for the maintenance
+# shift). Anything unknown sorts last.
 _SHIFT_PATTERN_PRIORITY = {
     "3 turnos": 0,
     "5 turnos": 1,
@@ -196,21 +195,57 @@ _SHIFT_PATTERN_PRIORITY = {
     "1 turno": 3,
 }
 
+# Within a kind, Tabla CF lists several cadences (mensual / quincenal /
+# semanal) keyed by shift pattern — these are *alternatives* for the
+# active shift pattern, not additive events. A line on 3 turnos runs a
+# weekly clean; on 1 turno it'd run a monthly clean instead. We pick
+# the operationally typical cadence per kind so the same Monday isn't
+# stacked with mensual + quincenal + semanal cleans (the previous
+# behaviour put 3 cleanings on top of each other every week with a
+# mensual Monday).
+_KIND_PREFERRED_CADENCE = {
+    "clean": "semanal",     # weekly baseline cleaning
+    "maint": "quincenal",   # bi-weekly maintenance
+}
 
-def _dedupe_by_cadence(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Pick one row per (kind, cadence) pair. The line runs a single
-    shift pattern at a time, so emitting every shift-pattern variant of
-    the same cadence stacks duplicate cards on the timeline."""
-    by_key: Dict[tuple, Dict[str, Any]] = {}
+
+def _dedupe_by_kind(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Pick exactly one row per kind, preferring the configured cadence
+    (semanal for clean, quincenal for maint) and breaking ties on the
+    highest-priority shift pattern.
+
+    The earlier (kind, cadence) keying treated mensual/quincenal/semanal
+    as additive events — they're not. The Tabla CF rows represent the
+    cleaning cadence for *different operating modes*; only the active
+    one fires."""
+    by_kind: Dict[str, Dict[str, Any]] = {}
     for row in rows:
-        key = (row.get("kind"), str(row.get("cadence") or "").lower())
+        kind = row.get("kind")
+        if not kind:
+            continue
+        preferred = _KIND_PREFERRED_CADENCE.get(kind)
+        if preferred and str(row.get("cadence") or "").lower() != preferred:
+            continue
         pri = _SHIFT_PATTERN_PRIORITY.get(str(row.get("shiftPattern") or ""), 99)
-        existing = by_key.get(key)
+        existing = by_kind.get(kind)
         if existing is None or pri < _SHIFT_PATTERN_PRIORITY.get(
             str(existing.get("shiftPattern") or ""), 99,
         ):
-            by_key[key] = row
-    return list(by_key.values())
+            by_kind[kind] = row
+    # Fallback: if a kind has no row matching the preferred cadence
+    # (e.g. a line whose only maintenance cadence is mensual), keep the
+    # best available row of that kind so we don't silently drop it.
+    for row in rows:
+        kind = row.get("kind")
+        if not kind or kind in by_kind:
+            continue
+        pri = _SHIFT_PATTERN_PRIORITY.get(str(row.get("shiftPattern") or ""), 99)
+        existing = by_kind.get(kind)
+        if existing is None or pri < _SHIFT_PATTERN_PRIORITY.get(
+            str(existing.get("shiftPattern") or ""), 99,
+        ):
+            by_kind[kind] = row
+    return list(by_kind.values())
 
 
 def project_service_blocks(
@@ -234,7 +269,7 @@ def project_service_blocks(
     exporter is responsible for injecting them into both."""
     out: Dict[str, List[Dict[str, Any]]] = {}
     for line, rows in (cadence_rows or {}).items():
-        deduped = _dedupe_by_cadence(list(rows or []))
+        deduped = _dedupe_by_kind(list(rows or []))
         events: List[Dict[str, Any]] = []
         for row in deduped:
             for occurrence in _project_row_instances(row, anchor, horizon_days):
