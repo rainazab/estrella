@@ -157,7 +157,20 @@ class TestFrontendShape:
             "urgentOrders", "lineBaseline", "timeline", "lineRules",
             "weeklyStops", "yearCompare", "executedHistory", "basePlan", "lineCentre",
             "recommendations", "objectives", "manualSlots",
+            # contract v2.3 additions:
+            "lineFormats", "issues", "stoppages",
         }
+
+    def test_line_formats_derived_from_line_rules(self):
+        payload = build_frontend_payload(_canonical())
+        assert payload["lineFormats"]["14"] == ["50cl", "33cl"]
+        assert payload["lineFormats"]["17"] == ["33cl"]
+        assert payload["lineFormats"]["19"] == ["50cl", "33cl", "44cl"]
+
+    def test_issues_and_stoppages_default_to_empty(self):
+        payload = build_frontend_payload(_canonical())
+        assert payload["issues"] == []
+        assert payload["stoppages"] == []
 
     def test_timeline_keeps_frontend_contract_fields(self):
         payload = build_frontend_payload(_canonical())

@@ -31,10 +31,10 @@ _EVIDENCE_FIELDS = (
 
 _OBJECTIVE_FIELDS = ("label", "icon", "order", "notes")
 
-_BAND_PROD_FIELDS = ("of", "sku", "vol", "start", "w", "oee")
-_BAND_NONPROD_FIELDS = ("kind", "start", "w")
+_BAND_PROD_FIELDS = ("of", "sku", "vol", "start", "w", "oee", "due")
+_BAND_NONPROD_FIELDS = ("kind", "start", "w", "locked", "lockReason")
 
-_RECBAND_FIELDS = ("of", "sku", "vol", "start", "w", "oee", "kind")
+_RECBAND_FIELDS = ("of", "sku", "vol", "start", "w", "oee", "kind", "due")
 
 _DEFAULT_TIMELINE = {
     "anchorDate": "1970-01-01",
@@ -85,12 +85,22 @@ def _pick(obj: Dict[str, Any], fields) -> Dict[str, Any]:
 def _clean_band(seg: Dict[str, Any]) -> Dict[str, Any]:
     kind = seg.get("kind")
     if kind in ("clean", "maint"):
-        return _pick(seg, _BAND_NONPROD_FIELDS)
+        out = _pick(seg, _BAND_NONPROD_FIELDS)
+        # Default locked → False (the contract's "internal, soft-locked" state).
+        # Only emit lockReason if non-empty so absent stays absent.
+        if "locked" in out and out["locked"] is not None:
+            out["locked"] = bool(out["locked"])
+        if out.get("lockReason") in (None, ""):
+            out.pop("lockReason", None)
+        return out
     out = _pick(seg, _BAND_PROD_FIELDS)
     # If oee was synthesised in basePlan (e.g. Planificado), keep a sensible
     # baseline so the frontend's [0,1] check passes.
     if "oee" in out and out["oee"] is None:
         out["oee"] = 0.55
+    # Only emit due if it parses as a non-empty string (ISO8601 expected).
+    if out.get("due") in (None, ""):
+        out.pop("due", None)
     return out
 
 
@@ -269,6 +279,89 @@ def _clean_line_rules(value: Any) -> Dict[str, Any]:
     return out
 
 
+def _derive_line_formats(line_rules: Dict[str, Any]) -> Dict[str, List[str]]:
+    """Project lineRules.formats → {lineKey: [label, ...]} for the move flow.
+
+    Replaces the LINE_FORMATS hardcode in linewise/src/lib/movePlan.js. Format
+    labels stay strings to match what `deriveFormat()` emits on the client.
+    """
+    out: Dict[str, List[str]] = {}
+    for line, rule in (line_rules or {}).items():
+        labels: List[str] = []
+        for fmt in (rule.get("formats") or []):
+            label = fmt.get("label") if isinstance(fmt, dict) else None
+            if label:
+                labels.append(str(label))
+        out[str(line)] = labels
+    return out
+
+
+ISSUE_CATEGORIES = ("mech", "elec", "quality", "material")
+ISSUE_SEVERITIES = ("warn", "critical")
+STOPPAGE_REASONS = ("breakdown", "no-material", "no-operator", "quality-hold", "other")
+STOPPAGE_DURATIONS = ("15m", "30m", "1h", "2h+", "unknown")
+STOPPAGE_AGOS = (0, 5, 10, 15)
+KNOWN_LINES = ("14", "17", "19")
+
+# Back-compat aliases for the in-module helpers below.
+_ISSUE_CATEGORIES = ISSUE_CATEGORIES
+_ISSUE_SEVERITIES = ISSUE_SEVERITIES
+_STOPPAGE_REASONS = STOPPAGE_REASONS
+_STOPPAGE_DURATIONS = STOPPAGE_DURATIONS
+_STOPPAGE_AGOS = STOPPAGE_AGOS
+
+
+def _clean_issue(value: Any) -> Optional[Dict[str, Any]]:
+    if not isinstance(value, dict):
+        return None
+    line = str(value.get("line") or "")
+    category = value.get("category")
+    severity = value.get("severity")
+    if category not in _ISSUE_CATEGORIES or severity not in _ISSUE_SEVERITIES:
+        return None
+    return {
+        "id": str(value.get("id") or ""),
+        "line": line,
+        "category": category,
+        "severity": severity,
+        "note": str(value.get("note") or ""),
+        "ts": int(value.get("ts") or 0),
+    }
+
+
+def _clean_stoppage(value: Any) -> Optional[Dict[str, Any]]:
+    if not isinstance(value, dict):
+        return None
+    reason = value.get("reason")
+    duration = value.get("duration")
+    start_ago = value.get("startAgoMin")
+    if reason not in _STOPPAGE_REASONS or duration not in _STOPPAGE_DURATIONS:
+        return None
+    if start_ago not in _STOPPAGE_AGOS:
+        start_ago = 0
+    return {
+        "id": str(value.get("id") or ""),
+        "line": str(value.get("line") or ""),
+        "reason": reason,
+        "startedAt": int(value.get("startedAt") or 0),
+        "startAgoMin": int(start_ago),
+        "duration": duration,
+        "ts": int(value.get("ts") or 0),
+    }
+
+
+def _clean_issues(value: Any) -> List[Dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [iss for iss in (_clean_issue(v) for v in value) if iss is not None]
+
+
+def _clean_stoppages(value: Any) -> List[Dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [s for s in (_clean_stoppage(v) for v in value) if s is not None]
+
+
 def _clean_weekly_stops(value: Any) -> Dict[str, List[Dict[str, Any]]]:
     out: Dict[str, List[Dict[str, Any]]] = {"14": [], "17": [], "19": []}
     if not isinstance(value, dict):
@@ -305,11 +398,12 @@ def build_frontend_payload(canonical: Dict[str, Any]) -> Dict[str, Any]:
     server can return *something* even mid-export.
     """
     if not isinstance(canonical, dict):
+        default_rules = _clean_line_rules(None)
         return {
             "urgentOrders": [],
             "lineBaseline": {},
             "timeline": _clean_timeline(None),
-            "lineRules": _clean_line_rules(None),
+            "lineRules": default_rules,
             "weeklyStops": _clean_weekly_stops(None),
             "yearCompare": {"weekLabel": "—", "lines": {}},
             "executedHistory": {},
@@ -318,6 +412,9 @@ def build_frontend_payload(canonical: Dict[str, Any]) -> Dict[str, Any]:
             "recommendations": {},
             "objectives": {},
             "manualSlots": {},
+            "lineFormats": _derive_line_formats(default_rules),
+            "issues": [],
+            "stoppages": [],
         }
 
     recs_in = canonical.get("recommendations") or {}
@@ -327,11 +424,21 @@ def build_frontend_payload(canonical: Dict[str, Any]) -> Dict[str, Any]:
             if isinstance(rec, dict):
                 recs_out[str(line)] = _clean_recommendation(rec)
 
+    line_rules = _clean_line_rules(canonical.get("lineRules"))
+    canonical_line_formats = canonical.get("lineFormats")
+    if isinstance(canonical_line_formats, dict) and canonical_line_formats:
+        line_formats = {
+            str(line): [str(label) for label in (labels or []) if label]
+            for line, labels in canonical_line_formats.items()
+        }
+    else:
+        line_formats = _derive_line_formats(line_rules)
+
     return {
         "urgentOrders": _trim_orders(canonical.get("urgentOrders")),
         "lineBaseline": _flatten_line_baseline(canonical.get("lineBaseline")),
         "timeline": _clean_timeline(canonical.get("timeline")),
-        "lineRules": _clean_line_rules(canonical.get("lineRules")),
+        "lineRules": line_rules,
         "weeklyStops": _clean_weekly_stops(canonical.get("weeklyStops")),
         "yearCompare": canonical.get("yearCompare") or {"weekLabel": "—", "lines": {}},
         "executedHistory": _line_segments(canonical.get("executedHistory") or {}),
@@ -340,6 +447,9 @@ def build_frontend_payload(canonical: Dict[str, Any]) -> Dict[str, Any]:
         "recommendations": recs_out,
         "objectives": _clean_objectives(canonical.get("objectives")),
         "manualSlots": _clean_manual_slots(canonical.get("manualSlots")),
+        "lineFormats": line_formats,
+        "issues": _clean_issues(canonical.get("issues")),
+        "stoppages": _clean_stoppages(canonical.get("stoppages")),
     }
 
 

@@ -103,8 +103,12 @@ class TestPlan:
             "urgentOrders", "lineBaseline", "timeline", "lineRules", "weeklyStops",
             "yearCompare", "executedHistory", "basePlan", "lineCentre",
             "recommendations", "objectives", "manualSlots",
+            "lineFormats", "issues", "stoppages",
         }
         assert isinstance(data["lineBaseline"]["19"], float)
+        assert data["issues"] == []
+        assert data["stoppages"] == []
+        assert data["lineFormats"]["17"] == ["33cl"]
 
     def test_sets_etag_and_no_store(self, client):
         c, _ = client
@@ -139,3 +143,115 @@ class TestPlan:
         assert r.status_code == 500
         body = r.json()
         assert body.get("error") == "data_corrupt"
+
+
+class TestIssues:
+    def test_post_issue_returns_assigned_id_and_appears_on_plan(self, client):
+        c, _ = client
+        r = c.post("/issues", json={
+            "line": "17", "category": "mech", "severity": "warn",
+            "note": "vibration on capper", "ts": 1700000000000,
+        })
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["issue"]["id"].startswith("iss-")
+        assert body["issue"]["line"] == "17"
+        assert body["issue"]["category"] == "mech"
+        # Plan now carries the new issue.
+        plan = c.get("/plan").json()
+        assert any(i["id"] == body["issue"]["id"] for i in plan["issues"])
+
+    def test_post_issue_rejects_bad_category(self, client):
+        c, _ = client
+        r = c.post("/issues", json={
+            "line": "17", "category": "lol", "severity": "warn",
+            "note": "", "ts": 0,
+        })
+        assert r.status_code == 400
+        assert r.json()["error"] == "bad_request"
+
+
+class TestStoppages:
+    def test_one_active_per_line_invariant(self, client):
+        c, _ = client
+        r1 = c.post("/stoppages", json={
+            "line": "19", "reason": "breakdown",
+            "startedAt": 1, "startAgoMin": 5, "duration": "1h", "ts": 1,
+        })
+        assert r1.status_code == 200
+        r2 = c.post("/stoppages", json={
+            "line": "19", "reason": "quality-hold",
+            "startedAt": 2, "startAgoMin": 0, "duration": "30m", "ts": 2,
+        })
+        assert r2.status_code == 200
+        actives = r2.json()["stoppages"]
+        # The first stoppage on L19 was superseded by the second.
+        assert len([s for s in actives if s["line"] == "19"]) == 1
+        assert actives[-1]["reason"] == "quality-hold"
+
+    def test_resume_clears_active_stoppage(self, client):
+        c, _ = client
+        sid = c.post("/stoppages", json={
+            "line": "14", "reason": "breakdown",
+            "startedAt": 1, "startAgoMin": 0, "duration": "15m", "ts": 1,
+        }).json()["stoppage"]["id"]
+        r = c.post(f"/stoppages/{sid}/resume")
+        assert r.status_code == 200
+        assert r.json()["stoppages"] == []
+
+    def test_resume_unknown_id_returns_404(self, client):
+        c, _ = client
+        r = c.post("/stoppages/missing/resume")
+        assert r.status_code == 404
+
+
+class TestStoppageReplan:
+    def test_shifts_lane_forward_by_duration(self, client):
+        c, _ = client
+        sid = c.post("/stoppages", json={
+            "line": "19", "reason": "breakdown",
+            "startedAt": 1, "startAgoMin": 0, "duration": "1h", "ts": 1,
+        }).json()["stoppage"]["id"]
+        r = c.post("/plan/stoppage-replan", json={
+            "stoppageId": sid, "line": "19", "durationKey": "1h",
+        })
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["shiftedHours"] == 1.0
+        assert body["shiftedCount"] == 1
+        # L19's only band was originally at start=0; now it should be 1.0.
+        assert body["plan"]["basePlan"]["19"][0]["start"] == 1.0
+
+
+class TestMove:
+    def test_preview_does_not_persist(self, client):
+        c, _ = client
+        preview = c.post("/plan/move/preview", json={
+            "runId": "B14", "fromLine": "14", "toLine": "17", "slotIndex": 0,
+        })
+        assert preview.status_code == 200, preview.text
+        body = preview.json()
+        assert body["ripple"]["runId"] == "B14"
+        # B14 now sits on L17 in the previewed plan
+        assert any(b.get("of") == "B14" for b in body["plan"]["basePlan"]["17"])
+        # …but the live /plan is untouched
+        live = c.get("/plan").json()
+        assert any(b.get("of") == "B14" for b in live["basePlan"]["14"])
+
+    def test_commit_persists_and_pushes_downstream(self, client):
+        c, _ = client
+        r = c.post("/plan/move", json={
+            "runId": "B14", "fromLine": "14", "toLine": "17", "slotIndex": 1,
+        })
+        assert r.status_code == 200, r.text
+        live = c.get("/plan").json()
+        # B14 lives on L17 after the commit; L14 lost it
+        assert any(b.get("of") == "B14" for b in live["basePlan"]["17"])
+        assert not any(b.get("of") == "B14" for b in live["basePlan"]["14"])
+
+    def test_unknown_run_returns_404(self, client):
+        c, _ = client
+        r = c.post("/plan/move/preview", json={
+            "runId": "GHOST", "fromLine": "14", "toLine": "17", "slotIndex": 0,
+        })
+        assert r.status_code == 404
