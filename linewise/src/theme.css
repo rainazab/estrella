@@ -198,7 +198,7 @@
   --card-bg:          var(--surface);
   --card-bg-hover:    var(--surface-2);
   --card-bg-selected: #f7faf3;             /* impact-option-card.selected */
-  --card-bg-on:       var(--green-1000);   /* pl-card.on selected on brand */
+  --card-bg-on:       var(--brand);        /* pl-card.on selected on brand */
 
   --panel-bg:         var(--surface);
   --panel-divider:    var(--paper-300);
@@ -222,12 +222,13 @@
   --ink-deep:   var(--paper-1000);
   --ink-mute:   var(--paper-800);   /* very-muted heading */
 
-  /* on-brand text (sidebar / FAB / pills.on / pl-card.on) */
-  --ink-on-brand:        var(--green-tx-200);  /* default text on brand */
-  --ink-on-brand-strong: var(--green-tx-100);  /* brand wordmark, active nav */
-  --ink-on-brand-mute:   var(--green-tx-300);  /* sidebar body */
-  --ink-on-brand-cap:    var(--green-tx-500);  /* sidebar caption */
-  --ink-on-brand-sect:   var(--green-tx-700);  /* sidebar section label */
+  /* on-brand text (sidebar / FAB / pills.on / pl-card.on)
+     Cream tones — work on DAMM red (and would still work on green). */
+  --ink-on-brand:        var(--green-tx-200);          /* #f1f0ec cream */
+  --ink-on-brand-strong: var(--green-tx-100);          /* #f4f3ee cream — wordmark */
+  --ink-on-brand-mute:   rgba(255,240,225,0.80);       /* warm cream — sidebar body */
+  --ink-on-brand-cap:    rgba(255,235,210,0.62);       /* peach cap — sidebar caption */
+  --ink-on-brand-sect:   rgba(255,225,195,0.48);       /* faint peach — section label */
 
   /* card on selected (white text variants used in pl-card.on) */
   --ink-on-selected:        var(--white);
@@ -254,12 +255,14 @@
   --focus-ring-bg:      rgba(47,93,73,0.16);   /* input focus glow */
 
   /* ──────────────────────────────────────────────────────────────────────────
-     §5  BRAND & ACCENT
+     §5  BRAND & ACCENT — DAMM
+     Brand swapped to DAMM vintage red. Cream paper bg stays (matches the
+     DAMM Damm wordmark torn-paper feel). Amber accent stays (Estrella gold).
      ────────────────────────────────────────────────────────────────────────── */
-  --brand:         var(--green-1000);     /* primary deep green */
-  --brand-2:       var(--green-900);      /* hover / accent green */
-  --brand-ring:    var(--green-800);      /* bell-btn.on inner ring */
-  --brand-soft:    var(--green-200);      /* target-brand bg */
+  --brand:         var(--deck-red);       /* #b6252a — DAMM vintage red */
+  --brand-2:       var(--red-900);        /* #8f1f25 — hover, deeper */
+  --brand-ring:    var(--red-700);        /* #b06b6b — soft red highlight ring */
+  --brand-soft:    var(--red-100);        /* #fde8ea — soft pink tint */
 
   --accent:        var(--amber-950);      /* warm amber */
   --accent-2:      var(--amber-900);      /* FAB warn / accent variant */
@@ -378,18 +381,18 @@
      ────────────────────────────────────────────────────────────────────────── */
   --sb-bg:            var(--brand);
   --sb-ink:           var(--ink-on-brand-mute);
-  --sb-divider:       var(--green-on);
+  --sb-divider:       var(--red-loader-d4);   /* #3a0008 — near-black red divider */
   --sb-brand-name:    var(--ink-on-brand-strong);
   --sb-brand-cap:     var(--ink-on-brand-cap);
   --sb-section-label: var(--ink-on-brand-sect);
-  --sb-item-bg-hover: var(--green-950);
-  --sb-item-bg-on:    var(--green-925);
+  --sb-item-bg-hover: var(--red-950);        /* #7a2525 — darker red hover */
+  --sb-item-bg-on:    var(--red-loader-d1);  /* #8a000a — deep red active */
   --sb-item-ink:      var(--ink-on-brand-mute);
   --sb-item-ink-on:   var(--ink-on-brand-strong);
   --sb-icon:          var(--ink-on-brand-cap);
   --sb-icon-on:       var(--accent);
   --sb-foot-bg:       var(--surface-on-brand);
-  --sb-foot-border:   var(--green-925);
+  --sb-foot-border:   var(--red-loader-d1);
 
   /* ──────────────────────────────────────────────────────────────────────────
      §11  LANE / TIMELINE
@@ -480,6 +483,7 @@
   --alpha-ink-10:  rgba(35,35,31,0.10);
   --alpha-ink-12:  rgba(35,35,31,0.12);
   --alpha-ink-14:  rgba(35,35,31,0.14);
+  --alpha-ink-15:  rgba(35,35,31,0.15);
   --alpha-ink-16:  rgba(35,35,31,0.16);
   --alpha-ink-18:  rgba(35,35,31,0.18);
   --alpha-ink-22:  rgba(35,35,31,0.22);
@@ -502,6 +506,7 @@
   --alpha-brand2-08: rgba(47,93,73,0.08);
   --alpha-brand2-12: rgba(47,93,73,0.12);
   --alpha-brand2-16: rgba(47,93,73,0.16);
+  --alpha-brand2-18: rgba(47,93,73,0.18);
   --alpha-brand2-22: rgba(47,93,73,0.22);
   --alpha-brand2-28: rgba(47,93,73,0.28);
   --alpha-brand2-45: rgba(47,93,73,0.45);
@@ -509,6 +514,7 @@
   --alpha-good-26:  rgba(109,143,74,0.26);
   --alpha-good-30:  rgba(109,143,74,0.30);
   --alpha-bad-05:   rgba(154,47,47,0.05);
+  --alpha-bad-07:   rgba(154,47,47,0.07);
   --alpha-bad-10:   rgba(154,47,47,0.10);
   --alpha-bad-13:   rgba(154,47,47,0.13);
   --alpha-bad-line: rgba(176,107,107,0.30);
@@ -534,9 +540,11 @@
   --alpha-white-96: rgba(255,255,255,0.96);
 
   --alpha-black-025:rgba(0,0,0,0.025);
+  --alpha-black-04: rgba(0,0,0,0.04);
   --alpha-black-05: rgba(0,0,0,0.05);
   --alpha-black-08: rgba(0,0,0,0.08);
   --alpha-black-18: rgba(0,0,0,0.18);
+  --alpha-black-25: rgba(0,0,0,0.25);
 
   /* ──────────────────────────────────────────────────────────────────────────
      §16  TYPOGRAPHY

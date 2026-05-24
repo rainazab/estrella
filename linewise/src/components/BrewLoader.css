@@ -4,29 +4,37 @@
 
 .brew-loader {
   --bg: #ffffff;
-  --bg-soft: #f7f6f3;
+  --bg-soft: var(--loader-bg-soft);
   --steel-dark: #4a5363;
   --steel: #8893a5;
   --steel-light: #c2c9d4;
-  --damm-red: #e30613;
+  --damm-red: var(--loader-red);
   --damm-red-deep: #a3000d;
-  --damm-red-soft: #fde8ea;
-  --ink: #1a1a1a;
+  --damm-red-soft: var(--loader-red-soft);
+  --ink: var(--loader-ink);
   --ink-2: #5b5a53;
   --ink-3: #918f86;
-  --hairline: rgba(0, 0, 0, 0.08);
+  --hairline: var(--alpha-black-08);
   --good: #1b8a4e;
   --bad: #b8401a;
 
   position: relative;
   width: min(1180px, 100%);
+  height: 100%;
+  max-height: 100vh;
   margin: 0 auto;
-  padding: 32px 24px 32px;
+  padding: 20px 24px 16px;
   color: var(--ink);
   font-family: inherit;
   user-select: none;
   background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-sizing: border-box;
 }
+.brew-loader > * { flex-shrink: 0; }
+.brew-loader__stage { flex: 1 1 auto; min-height: 0; flex-shrink: 1; }
 
 /* ============ DAMM HEADER ============ */
 
@@ -34,8 +42,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 18px;
-  margin-bottom: 22px;
+  padding-bottom: 12px;
+  margin-bottom: 0;
   border-bottom: 1px solid var(--hairline);
 }
 .brew-loader__brand { display: flex; align-items: center; gap: 14px; }
@@ -43,7 +51,7 @@
   width: 36px; height: 36px; flex: 0 0 36px;
   display: grid; place-items: center;
   background: var(--damm-red); border-radius: 50%; color: #fff;
-  box-shadow: 0 4px 12px rgba(227, 6, 19, 0.25);
+  box-shadow: 0 4px 12px var(--loader-glow-2);
 }
 .brew-loader__wordmark {
   font-weight: 800; font-size: 22px; letter-spacing: 0.14em;
@@ -66,7 +74,7 @@
 .brew-loader__steps {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  margin-bottom: 16px;
+  margin-bottom: 0;
 }
 .brew-step {
   position: relative;
@@ -104,7 +112,7 @@
 .brew-step--2 .brew-step__num { animation: num-cycle 6s linear infinite; animation-delay: -4s; }
 .brew-step--3 .brew-step__num { animation: num-cycle 6s linear infinite; animation-delay: -2s; }
 @keyframes num-cycle {
-  0%, 33%      { background: var(--damm-red); border-color: var(--damm-red); color: #fff; box-shadow: 0 0 0 4px rgba(227, 6, 19, 0.15); }
+  0%, 33%      { background: var(--damm-red); border-color: var(--damm-red); color: #fff; box-shadow: 0 0 0 4px var(--loader-glow); }
   33.01%, 100% { background: #fff; border-color: var(--steel-light); color: var(--ink-3); box-shadow: none; }
 }
 .brew-step--1 .brew-step__label { animation: label-cycle 6s linear infinite; animation-delay: 0s; }
@@ -120,7 +128,7 @@
   text-align: center;
   font-size: 13px;
   color: var(--ink-2);
-  margin-bottom: 16px;
+  margin-bottom: 0;
 }
 .brew-loader__status b { color: var(--damm-red); font-weight: 700; }
 .brew-loader__status-track { position: relative; height: 1.4em; }
@@ -138,55 +146,14 @@
   33%, 100% { opacity: 0; transform: translate(-50%, -4px); }
 }
 
-/* ============ CALENDAR STRIP (above SVG) ============ */
-.brew-loader__calendar {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 12px 18px;
-  margin-bottom: 14px;
-  background: var(--bg-soft);
-  border: 1px solid var(--hairline);
-  border-radius: 12px;
-}
-.brew-loader__cal-label {
-  font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
-  color: var(--ink-3); font-weight: 700; white-space: nowrap;
-  line-height: 1.4;
-}
-.brew-loader__cal-label b {
-  display: block; color: var(--ink-2); font-weight: 800;
-}
-.brew-loader__cal-grid {
-  flex: 1; display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
-}
-.cal-day { display: flex; flex-direction: column; gap: 5px; }
-.cal-day__name {
-  font-size: 10px; font-weight: 700; color: var(--ink-2);
-  letter-spacing: 0.08em; text-transform: uppercase;
-}
-.cal-day__blocks {
-  display: flex; gap: 2px; height: 16px;
-  background: rgba(0,0,0,0.04); border-radius: 3px; padding: 2px;
-}
-.cal-block {
-  flex: 1; border-radius: 1px;
-  background: var(--steel-light); opacity: 0.18;
-  transform-origin: center;
-  animation: cal-fill 6s ease-out infinite both;
-}
-.cal-block--est { background: var(--damm-red); }
-.cal-block--dau { background: #d4a017; }
-.cal-block--vol { background: #1a1a1a; }
-@keyframes cal-fill {
-  0%, 4%    { opacity: 0.18; transform: scaleY(0.5); }
-  10%, 88%  { opacity: 1;    transform: scaleY(1); }
-  95%, 100% { opacity: 0.18; transform: scaleY(0.5); }
-}
-
-/* ============ STAGE (SVG) ============ */
+/* ============ STAGE (SVG) ============
+   Fills the available flex space. preserveAspectRatio (default
+   xMidYMid meet) scales the viewBox to fit while keeping aspect. */
 .brew-loader__stage {
-  width: 100%; height: auto; display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: block;
   filter: drop-shadow(0 12px 32px rgba(15, 23, 42, 0.08));
 }
 
@@ -211,52 +178,6 @@
   72%, 88%  { opacity: 1; transform: scale(1) translateY(0); }
   94%, 100% { opacity: 0; transform: scale(0.95) translateY(-8px); }
 }
-
-/* ============ KPI COUNTER ROW ============ */
-.brew-loader__kpis {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 12px;
-  margin-top: 22px;
-  padding: 18px 22px;
-  background: var(--bg-soft);
-  border: 1px solid var(--hairline);
-  border-radius: 14px;
-}
-.kpi {
-  display: flex; flex-direction: column; gap: 4px;
-  border-right: 1px solid var(--hairline);
-  padding-right: 16px;
-}
-.kpi:last-child { border-right: 0; }
-.kpi__label {
-  font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
-  color: var(--ink-3); font-weight: 700;
-}
-.kpi__values {
-  display: flex; align-items: baseline; gap: 8px;
-  font-variant-numeric: tabular-nums;
-}
-.kpi__before {
-  font-size: 16px; color: var(--ink-3); text-decoration: line-through;
-  text-decoration-color: rgba(0,0,0,0.25);
-}
-.kpi__arrow { color: var(--ink-3); font-size: 14px; }
-.kpi__after {
-  font-size: 26px; font-weight: 800;
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-  transition: color .3s ease;
-}
-.kpi__after--good { color: var(--good); }
-.kpi__after--bad  { color: var(--damm-red); }
-.kpi__delta {
-  font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
-  padding: 2px 8px; border-radius: 999px;
-  background: rgba(27, 138, 78, 0.12); color: var(--good);
-  align-self: flex-start;
-}
-.kpi__delta--bad { background: rgba(227, 6, 19, 0.10); color: var(--damm-red); }
 
 /* =================================================================
    SVG ANIMATIONS
@@ -285,10 +206,10 @@
   0%   { transform: translate(-40px, 0);  opacity: 0; }
   6%   { transform: translate(0, 0);      opacity: 1; }
   30%  { transform: translate(180px, 0);  opacity: 1; }
-  44%  { transform: translate(290px, -108px); opacity: 1; }
-  86%  { transform: translate(800px, -108px); opacity: 1; }
-  96%  { transform: translate(900px, -108px); opacity: 0; }
-  100% { transform: translate(900px, -108px); opacity: 0; }
+  44%  { transform: translate(290px, -180px); opacity: 1; }
+  86%  { transform: translate(800px, -180px); opacity: 1; }
+  96%  { transform: translate(900px, -180px); opacity: 0; }
+  100% { transform: translate(900px, -180px); opacity: 0; }
 }
 @keyframes route-l2 {
   0%   { transform: translate(-40px, 0);  opacity: 0; }
@@ -303,10 +224,10 @@
   0%   { transform: translate(-40px, 0);  opacity: 0; }
   6%   { transform: translate(0, 0);      opacity: 1; }
   30%  { transform: translate(180px, 0);  opacity: 1; }
-  44%  { transform: translate(290px, 108px); opacity: 1; }
-  86%  { transform: translate(800px, 108px); opacity: 1; }
-  96%  { transform: translate(900px, 108px); opacity: 0; }
-  100% { transform: translate(900px, 108px); opacity: 0; }
+  44%  { transform: translate(290px, 180px); opacity: 1; }
+  86%  { transform: translate(800px, 180px); opacity: 1; }
+  96%  { transform: translate(900px, 180px); opacity: 0; }
+  100% { transform: translate(900px, 180px); opacity: 0; }
 }
 
 /* 6 bottles, 3s loop, staggered every 0.5s.
@@ -335,14 +256,14 @@
 .out-count--2 { animation-delay: -0.5s; }
 .out-count--3 { animation-delay: -1.0s; }
 @keyframes out-flash {
-  0%, 100% { fill: #1a1a1a; }
+  0%, 100% { fill: var(--loader-ink); }
   10%      { fill: var(--damm-red); }
 }
 
 /* === MASCOT DANCE (unchanged from v1, slightly tuned) === */
 .mascot {
-  transform-origin: 340px 510px;
-  transform-box: view-box;
+  transform-origin: center bottom;
+  transform-box: fill-box;
   animation: mascot-dance 1.2s ease-in-out infinite;
 }
 @keyframes mascot-dance {
@@ -353,8 +274,8 @@
   100% { transform: translate(0, 0)        rotate(0deg); }
 }
 .mascot-body {
-  transform-origin: 340px 460px;
-  transform-box: view-box;
+  transform-origin: center 75%;
+  transform-box: fill-box;
   animation: mascot-head-bob 0.6s ease-in-out infinite;
 }
 @keyframes mascot-head-bob {
@@ -362,8 +283,8 @@
   50%      { transform: translateY(-2px) rotate(2deg); }
 }
 .mascot-arm-left {
-  transform-origin: 290px 420px;
-  transform-box: view-box;
+  transform-origin: right top;
+  transform-box: fill-box;
   animation: arm-left-swing 1.2s ease-in-out infinite;
 }
 @keyframes arm-left-swing {
@@ -372,8 +293,8 @@
 }
 /* Right arm + baton — points to a line based on the beat */
 .mascot-arm {
-  transform-origin: 390px 420px;
-  transform-box: view-box;
+  transform-origin: left top;
+  transform-box: fill-box;
   animation: baton-point 3s ease-in-out infinite;
 }
 @keyframes baton-point {
