@@ -597,7 +597,7 @@ function MonthAggregateRun({ planned, baseline, timeUnit, pxPerDay, lineKey, onR
       <div
         key={week.key}
         className="tl-agg-slot"
-        style={{ position: 'absolute', left, top: 12, bottom: 12, zIndex: 2 }}
+        style={{ position: 'absolute', left, top: 12, bottom: 12, zIndex: 2, display: 'flex', alignItems: 'center' }}
       >
       <AggregateCard
         widthPx={widthPx}
