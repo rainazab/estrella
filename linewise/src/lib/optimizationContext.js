@@ -46,10 +46,20 @@ export function buildOptimizationContext(data, optionId = 'oee', recKeyOverride 
 }
 
 function buildOptimizationOptions(data) {
-  const oeeKey = data.objectives.oee.order[0];
-  const timeKey = data.objectives.time.order[0];
-  const disKey = data.objectives.dis.order[0];
-  const balanceKey = findBalancedKey(data, timeKey);
+  /* Distinct-pick so each card surfaces a different line even when
+     one line dominates every axis. Same resolution rule as PlanLab. */
+  const oeeOrder = data.objectives?.oee?.order ?? [];
+  const timeOrder = data.objectives?.time?.order ?? [];
+  const disOrder = data.objectives?.dis?.order ?? [];
+  const pickDistinct = (order, exclude) => order.find((k) => !exclude.has(k)) ?? order[0];
+  const oeeKey = oeeOrder[0];
+  const used = new Set([oeeKey]);
+  const timeKey = pickDistinct(timeOrder, used);
+  used.add(timeKey);
+  const disKey = pickDistinct(disOrder, used);
+  used.add(disKey);
+  const recKeys = Object.keys(data.recommendations ?? {});
+  const balanceKey = recKeys.find((k) => !used.has(k)) ?? findBalancedKey(data, timeKey);
 
   return [
     {

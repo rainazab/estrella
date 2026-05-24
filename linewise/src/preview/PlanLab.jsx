@@ -1407,9 +1407,76 @@ function planUnitsToHours(value, timeUnit) {
 }
 
 function buildOptions(data) {
-  const oeeKey = data.objectives.oee.order[0];
-  const timeKey = data.objectives.time.order[0];
-  const disKey = data.objectives.dis.order[0];
+  /* Resolve the four card slots to *distinct* recommendations. The
+     ranker often picks the same line as the winner on multiple axes
+     (when one line dominates), so we pick the highest-ranked rec on
+     each axis that hasn't already been used. The "balanced" slot gets
+     the remaining rec when there is one, else falls back to a
+     middle-of-the-pack pick. This guarantees four meaningfully
+     different cards instead of four copies of the same numbers. */
+  const oeeOrder = data.objectives?.oee?.order ?? [];
+  const timeOrder = data.objectives?.time?.order ?? [];
+  const disOrder = data.objectives?.dis?.order ?? [];
+
+  const pickFirstDistinct = (order, exclude) => {
+    for (const k of order) {
+      if (!exclude.has(k)) return k;
+    }
+    return order[0];
+  };
+  const oeeKey = oeeOrder[0];
+  const used = new Set([oeeKey]);
+  const timeKey = pickFirstDistinct(timeOrder, used);
+  used.add(timeKey);
+  const disKey = pickFirstDistinct(disOrder, used);
+  used.add(disKey);
+  // Balanced slot — take the leftover rec, or the median rec on the
+  // OEE axis if every line was already used.
+  const recKeys = Object.keys(data.recommendations ?? {});
+  const leftover = recKeys.find((k) => !used.has(k));
+  const balanceKey = leftover ?? oeeOrder[Math.floor(oeeOrder.length / 2)] ?? oeeKey;
+
+  /* Derived per-rec strings — replace the previous hardcoded "+2.1
+     OEE recovery" / "Shifts FDT13LT back ~6h" pros/cons. Pros and cons
+     are inferred from the rec's own fields so they describe the
+     actually-recommended plan instead of an aspirational template. */
+  const proConFor = (key, axis) => {
+    const r = data.recommendations?.[key] ?? {};
+    const moves = Number.isFinite(r.ordersMoved) ? r.ordersMoved : 0;
+    const recovery = r.recovery?.hours;
+    const evidenceN = r.evidence?.n;
+    const pros = [];
+    const cons = [];
+    if (axis === 'oee') {
+      if (r.oeeDelta) pros.push(`Expected OEE ${r.oeeDelta} vs naive`);
+      if (evidenceN) pros.push(`Backed by ${evidenceN} historical analogues`);
+      if (recovery != null) pros.push(`Recovers to baseline in ~${recovery}h`);
+      if (r.deadline && r.deadline !== 'on time') cons.push(`Pushes due date ${r.deadline}`);
+      if (moves > 0) cons.push(`${moves} downstream order${moves === 1 ? '' : 's'} moved`);
+    } else if (axis === 'time') {
+      if (r.deadline === 'on time') pros.push('On-time delivery preserved');
+      if (r.oeeDelta) pros.push(`OEE recovery ${r.oeeDelta}`);
+      if (moves <= 2) pros.push('Minimal downstream impact');
+      if (parseFloat(String(r.oeeDelta || '0').replace('+','').replace('−','-')) < 5) {
+        cons.push('Lower OEE than peak option');
+      }
+      if (moves > 0) cons.push(`${moves} order${moves === 1 ? '' : 's'} moved`);
+    } else if (axis === 'dis') {
+      if (moves === 0) pros.push('Zero orders moved — plan unchanged');
+      if (moves === 0) pros.push('Predictable execution');
+      if (recovery != null) pros.push(`~${recovery}h to baseline`);
+      if (r.oeeDelta) cons.push(`OEE impact ${r.oeeDelta}`);
+      if (r.deadline && r.deadline !== 'on time') cons.push(`Due date ${r.deadline}`);
+    } else {
+      if (r.deadline === 'on time') pros.push('On-time delivery');
+      if (r.oeeDelta) pros.push(`OEE ${r.oeeDelta}`);
+      if (moves <= 2) pros.push('Modest schedule churn');
+      cons.push('Not maximised on any single axis');
+      if (moves > 0) cons.push(`${moves} order${moves === 1 ? '' : 's'} moved`);
+    }
+    return { pros: pros.slice(0, 3), cons: cons.slice(0, 3) };
+  };
+
   return [
     {
       id: 'oee',
@@ -1418,16 +1485,7 @@ function buildOptions(data) {
       tone: 'good',
       tradeoff: 'misses due date',
       description: 'Highest OEE recovery, with a delivery-date tradeoff.',
-      pros: [
-        'Same-envase changeover — lowest historical loss',
-        'Best 33cl analogue match (8 prior runs)',
-        '14h faster recovery vs naive plan',
-      ],
-      cons: [
-        'Misses due date by 1 day',
-        'Shifts FDT13LT back ~6h',
-        'Customer may push back on delay',
-      ],
+      ...proConFor(oeeKey, 'oee'),
     },
     {
       id: 'time',
@@ -1436,16 +1494,7 @@ function buildOptions(data) {
       tone: 'mid',
       tradeoff: 'lower OEE',
       description: 'Keeps the customer promise with a smaller OEE gain.',
-      pros: [
-        'On-time delivery for Carrefour',
-        'Modest +2.1 OEE recovery',
-        'No customer SLA risk',
-      ],
-      cons: [
-        'Lower than peak OEE',
-        'Brand+clean changeover required',
-        'Weaker analogue match',
-      ],
+      ...proConFor(timeKey, 'time'),
     },
     {
       id: 'dis',
@@ -1454,34 +1503,16 @@ function buildOptions(data) {
       tone: 'quiet',
       tradeoff: 'OEE loss',
       description: 'Leaves the schedule stable and avoids extra moves.',
-      pros: [
-        'Zero orders moved',
-        'Plan stays unchanged',
-        'Predictable execution',
-      ],
-      cons: [
-        '−0.4 OEE loss vs naive',
-        'Familia change adds cost',
-        'Still misses due date',
-      ],
+      ...proConFor(disKey, 'dis'),
     },
     {
       id: 'bal',
       title: 'Balanced plan',
-      recKey: oeeKey,
+      recKey: balanceKey,
       tone: 'brand',
       tradeoff: 'compromise',
       description: 'Balanced recovery and serviceability for the team.',
-      pros: [
-        'On-time delivery',
-        '+6.2 OEE recovery',
-        'Compromise both planners accept',
-      ],
-      cons: [
-        '2 orders moved',
-        'Not max on either axis',
-        'More complex execution',
-      ],
+      ...proConFor(balanceKey, 'bal'),
     },
   ];
 }
