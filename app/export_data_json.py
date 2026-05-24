@@ -2009,51 +2009,50 @@ def main(argv: Optional[List[str]] = None) -> int:
     operational = load_operational_contract(timeline.get("anchorDate"))
 
     # Extend the planning horizon to end-of-year. Damm's Planificado
-    # workbook only carries ~7 days of committed plan; this step fills
-    # W23 onwards through 2026-12-31 with rotating slices of the 2025
-    # Master OEE history per line, so every forward week is a different
-    # real week (real OFs, real SKUs, real OEEs) — not a clone of W22.
-    # The recommender + resequencer can then reason about the whole year.
+    # workbook only carries ~7 days of committed plan; W23 onwards is
+    # projected from 2025 Master OEE history.
     horizon_days = horizon_days_to_eoy(timeline.get("anchorDate"))
     anchor_dt = datetime.fromisoformat(timeline["anchorDate"]).date()
-    historical_pool = build_historical_runs_pool(master_blocks)
-    base_plan = project_forward_production(
-        base_plan,
-        target_horizon_days=horizon_days,
-        cycle_period_days=7.0,
-        historical_runs=historical_pool,
-    )
-    pool_sizes = ", ".join(f"L{k}={len(v)}" for k, v in historical_pool.items())
-    print(
-        f"   forward production projection: "
-        f"tiled to {horizon_days}-day horizon (EOY {anchor_dt.year}-12-31) "
-        f"from history pool [{pool_sizes}]",
-        flush=True,
-    )
 
-    # Project every Tabla CF cadence row across the same horizon and
-    # interleave the resulting service blocks into the (now extended)
-    # basePlan. The contract (v2.3+) says clean/maint blocks live in
-    # basePlan for the move-flow collision check; weeklyStops keeps
-    # the per-line summary markers separately.
+    # Project service blocks FIRST so they're at deterministic Tabla CF
+    # cadence slots (Monday cleans, Thursday maints). Production then
+    # gets laid out *around* those slots — no time-collision between
+    # cleaning/maint and projected production runs.
     projected_blocks = project_service_blocks(
         operational.get("cleaningSchedule") or {},
         anchor=anchor_dt,
         horizon_days=horizon_days,
     )
-    for line, blocks in projected_blocks.items():
-        lane = list(base_plan.get(line) or [])
-        # Keep the blocks alongside production runs sorted by start so
-        # the move flow can reason about gaps; the frontend already
-        # discriminates production vs service by the `kind` field.
-        merged = sorted(lane + list(blocks), key=lambda s: float(s.get("start") or 0.0))
-        base_plan[line] = merged
     print(
         f"   service-block projection: "
         f"{sum(len(b) for b in projected_blocks.values())} blocks across {len(projected_blocks)} lines "
         f"({horizon_days}-day horizon)",
         flush=True,
     )
+
+    historical_pool = build_historical_runs_pool(master_blocks)
+    base_plan = project_forward_production(
+        base_plan,
+        target_horizon_days=horizon_days,
+        cycle_period_days=7.0,
+        historical_runs=historical_pool,
+        locked_blocks_per_line=projected_blocks,
+    )
+    pool_sizes = ", ".join(f"L{k}={len(v)}" for k, v in historical_pool.items())
+    print(
+        f"   forward production projection: "
+        f"tiled to {horizon_days}-day horizon (EOY {anchor_dt.year}-12-31) "
+        f"from history pool [{pool_sizes}], skipping service slots",
+        flush=True,
+    )
+
+    # Now merge the service blocks into the base_plan alongside the
+    # production runs (sorted by start). The frontend discriminates
+    # production vs service by the `kind` field.
+    for line, blocks in projected_blocks.items():
+        lane = list(base_plan.get(line) or [])
+        merged = sorted(lane + list(blocks), key=lambda s: float(s.get("start") or 0.0))
+        base_plan[line] = merged
 
     payload: Dict[str, Any] = {
         "urgentOrders": urgents,

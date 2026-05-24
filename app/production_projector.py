@@ -51,6 +51,23 @@ def _is_production(seg: Dict[str, Any]) -> bool:
     return kind in (None, "ins", "shift")
 
 
+def _next_locked_interval(
+    cursor: float,
+    window_end: float,
+    locked_intervals: List[tuple],
+) -> Optional[tuple]:
+    """Return the first locked interval `(start, end)` that overlaps
+    [cursor, window_end), or None if no overlap. Assumes
+    `locked_intervals` is sorted by start time."""
+    for start, end in locked_intervals:
+        if end <= cursor:
+            continue
+        if start >= window_end:
+            return None
+        return (start, end)
+    return None
+
+
 def _fill_week_from_history(
     *,
     line_pool: List[Dict[str, Any]],
@@ -59,28 +76,41 @@ def _fill_week_from_history(
     cycle_h: float,
     target_h: float,
     pool_offset: int,
+    locked_intervals: Optional[List[tuple]] = None,
 ) -> List[Dict[str, Any]]:
     """Pull consecutive runs from a line's historical pool, starting at
     `pool_offset` (wraps around), accumulating until ~`cycle_h` of run
-    time is placed at `week_start_h`. Returns the projected bands."""
+    time is placed at `week_start_h`. Production runs skip past any
+    `locked_intervals` they would overlap — those slots belong to
+    cleaning/maintenance.
+
+    Returns the projected bands."""
     if not line_pool:
         return []
+    locked = list(locked_intervals or [])
     out: List[Dict[str, Any]] = []
     cursor = week_start_h
     accumulated = 0.0
     idx = pool_offset
     safety = 0
+    max_safety = max(8, len(line_pool) * 4)
     while accumulated < cycle_h:
         safety += 1
-        if safety > len(line_pool) * 2:
-            break  # defensive — never loop more than twice through the pool
+        if safety > max_safety:
+            break  # defensive — never spin forever
         run = line_pool[idx % len(line_pool)]
         idx += 1
         w = float(run.get("w") or 0.0)
         if w <= 0:
             continue
+        # If a locked interval overlaps [cursor, cursor+w), jump past
+        # the lock and re-check from the new cursor on the next loop.
+        clash = _next_locked_interval(cursor, cursor + w, locked)
+        if clash is not None:
+            cursor = clash[1]  # land at the end of the lock
+            continue
         if cursor + w > target_h:
-            break  # don't overshoot the horizon
+            break
         clone = copy.deepcopy(run)
         clone["start"] = round(cursor, 2)
         clone["w"] = round(w, 2)
@@ -100,6 +130,7 @@ def project_forward_production(
     target_horizon_days: float,
     cycle_period_days: float = 7.0,
     historical_runs: Optional[Dict[str, List[Dict[str, Any]]]] = None,
+    locked_blocks_per_line: Optional[Dict[str, List[Dict[str, Any]]]] = None,
 ) -> Dict[str, List[Dict[str, Any]]]:
     """Return a new basePlan where each line's production runs are tiled
     forward to roughly `target_horizon_days` from the anchor (start=0).
@@ -110,10 +141,14 @@ def project_forward_production(
     of that pool (history-replay mode). Otherwise the original
     Planificado week is cloned forward (clone-Planificado fallback).
 
+    `locked_blocks_per_line[line]` (optional) is a list of pre-projected
+    service blocks (clean/maint) per line. Production runs are laid out
+    *around* these so they don't collide with cleaning/maint time slots
+    in the timeline. The exporter typically passes the output of
+    `cf_matrix.project_service_blocks` here.
+
     Non-production blocks (clean / maint) in the original lane are
-    preserved at their original positions. The exporter calls
-    `project_service_blocks` *after* this function so the extended
-    cleaning cadence interleaves with the projected production.
+    preserved at their original positions.
     """
     if not isinstance(base_plan, dict):
         return base_plan
@@ -141,6 +176,14 @@ def project_forward_production(
             continue
 
         line_pool = (historical_runs or {}).get(str(line)) or []
+        # Pre-compute sorted locked intervals for this line so production
+        # runs skip past cleaning/maint slots when placed.
+        locked_for_line = (locked_blocks_per_line or {}).get(str(line)) or []
+        locked_intervals = sorted(
+            (float(b.get("start") or 0.0), float(b.get("start") or 0.0) + float(b.get("w") or 0.0))
+            for b in locked_for_line
+            if b.get("kind") in ("clean", "maint")
+        )
         tiled: List[Dict[str, Any]] = list(production_seed)
 
         cycle_n = 2
@@ -162,6 +205,7 @@ def project_forward_production(
                     cycle_h=cycle_h,
                     target_h=target_h,
                     pool_offset=pool_offset,
+                    locked_intervals=locked_intervals,
                 ))
             else:
                 # Fallback: clone the Planificado seed forward unchanged.

@@ -172,10 +172,39 @@ class TestHistoryReplayMode:
             historical_runs=history,
         )
         projected = [s for s in out['14'] if s.get('source') == 'projected_from_history']
-        # No crash; some runs placed; weeks tagged correctly
         assert projected
         weeks = {s.get('cycleWeek') for s in projected}
         assert weeks.issubset({2, 3, 4, 5})
+
+    def test_locked_intervals_keep_production_off_service_slots(self):
+        """Projected production must skip past any cleaning/maint time
+        slots in locked_blocks_per_line, not stack on top of them."""
+        seed = [_prod('ED13LT', start=0, w=168.0)]
+        # 10 historical runs, each 12h. With no locks, week 2 would fill
+        # 192..312h continuously.
+        history = {'14': [_prod(f'HIST{i:02d}', start=0, w=12.0) for i in range(10)]}
+        # Lock Monday 09:00-17:00 of every projected week (192..200, 360..368).
+        locked = {'14': [
+            {'kind': 'clean', 'start': 192.0, 'w': 8.0},
+            {'kind': 'clean', 'start': 360.0, 'w': 8.0},
+        ]}
+        out = pp.project_forward_production(
+            {'14': seed},
+            target_horizon_days=28,
+            cycle_period_days=7.0,
+            historical_runs=history,
+            locked_blocks_per_line=locked,
+        )
+        # No projected production should land inside [192, 200) or [360, 368).
+        for seg in out['14']:
+            if seg.get('source') != 'projected_from_history':
+                continue
+            s = seg['start']
+            e = s + seg['w']
+            assert not (s < 200 and e > 192), \
+                f"run {seg.get('of')} at {s}-{e} collides with lock 192-200"
+            assert not (s < 368 and e > 360), \
+                f"run {seg.get('of')} at {s}-{e} collides with lock 360-368"
 
 
 class TestHorizonDaysToEoy:

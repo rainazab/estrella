@@ -582,10 +582,11 @@ function MonthAggregateRun({ planned, baseline, timeUnit, pxPerDay, lineKey, onR
   const widthPx = aggregateWidthPx('month', pxPerDay);
   const weeks = buildWeekAggregates(planned, timeUnit);
   /* At month zoom, service blocks (clean/maint) are real events the
-     planner needs to see at their precise axis date — not just rolled
-     into a week-aggregate's cleanCount badge. Render them as their own
-     small absolutely-positioned cards using the existing tc-service
-     design so they pop against the week aggregates. */
+     planner needs to see at their precise axis date. Render them as a
+     thin TOP-STRIP of compact marker pills (NOT full-height cards) so
+     they sit above the week aggregates without covering them. The
+     aggregate's body stays readable; the strip marks "what service
+     happens this week + when". */
   const serviceBlocks = (planned ?? []).filter(
     (s) => s?.kind === 'clean' || s?.kind === 'maint',
   );
@@ -601,14 +602,16 @@ function MonthAggregateRun({ planned, baseline, timeUnit, pxPerDay, lineKey, onR
            exceed pxPerDay), so a flex-flow aggregate would land several
            axis weeks to the right of where its week actually sits. Absolute
            positioning anchors each aggregate to the same coordinate the
-           axis uses, so "Week 21" lands under W21. */
+           axis uses, so "Week 21" lands under W21. The aggregate is
+           pushed down by tl-month-svc-strip-height so the service strip
+           at the top doesn't overlap it. */
         const daysFromToday = Math.round((week.weekStart - TODAY) / 86400000);
         const left = todayX + daysFromToday * pxPerDay;
         return (
           <div
             key={week.key}
             className="tl-agg-slot"
-            style={{ position: 'absolute', left, top: 12, bottom: 12, zIndex: 2 }}
+            style={{ position: 'absolute', left, top: 40, bottom: 12, zIndex: 2 }}
           >
             <AggregateCard
               widthPx={widthPx}
@@ -643,23 +646,24 @@ function MonthAggregateRun({ planned, baseline, timeUnit, pxPerDay, lineKey, onR
       })}
       {serviceBlocks.map((seg, i) => {
         const startDays = segStartDays(seg, timeUnit);
-        const durHours = segDurationHours(seg, timeUnit);
         const durDays = segDurationDays(seg, timeUnit);
         const left = todayX + startDays * pxPerDay;
-        // Service blocks are 8h wide in time = ~9px at month zoom. Floor
-        // at ~56px so the kind label + duration stay legible.
-        const cardWidth = Math.max(56, Math.round(durDays * pxPerDay));
+        // Compact pill at month zoom — wide enough to read "Clean 8h" /
+        // "Maint 8h" but narrow enough to feel like a marker, not a card.
+        const pillWidth = Math.max(72, Math.round(durDays * pxPerDay));
+        const label = seg.kind === 'clean' ? 'Clean' : 'Maint';
         return (
           <div
             key={`svc-${lineKey}-${seg.kind}-${seg.start}-${i}`}
-            className="tl-month-svc"
-            style={{ position: 'absolute', left, top: 12, bottom: 12, zIndex: 3 }}
+            className={`tl-month-svc-pill tl-month-svc-pill-${seg.kind}`}
+            style={{ position: 'absolute', left, top: 8, height: 28, width: pillWidth, zIndex: 3 }}
+            title={`${seg.kind === 'clean' ? 'Cleaning / CIP' : 'Maintenance'} · ${(segDurationHours(seg, timeUnit)).toFixed(0)}h`}
           >
-            <TimelineCard
-              kind={seg.kind}
-              durationHours={durHours}
-              widthPx={cardWidth}
-            />
+            <span className="tl-month-svc-icon" aria-hidden="true">
+              {seg.kind === 'clean' ? '⚙' : '🔧'}
+            </span>
+            <span className="tl-month-svc-label">{label}</span>
+            <span className="tl-month-svc-dur">{(segDurationHours(seg, timeUnit)).toFixed(0)}h</span>
           </div>
         );
       })}
