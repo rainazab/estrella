@@ -152,6 +152,7 @@ export default function Timeline({
     1,
     ...LINES.flatMap((k) => (activePlan?.[k] ?? []).map((seg) => plannedEnd(seg, timeUnit))),
   ));
+  const todayXForMetrics = maxExecDays * pxPerDay;
   const laneMetrics = LINES.map((lineKey) => {
     const laneExecDays = mode === 'default'
       ? executedEnd(data?.executedHistory?.[lineKey] ?? [], timeUnit)
@@ -161,9 +162,24 @@ export default function Timeline({
       .reduce((sum, seg) => sum + segmentWidthPx(seg, zoom, pxPerDay, timeUnit), 0);
     const planned = activePlan?.[lineKey] ?? [];
     const aggregateWidth = aggregateWidthPx(zoom, pxPerDay);
-    const plannedWidth = aggregateWidth == null
-      ? planned.reduce((sum, seg) => sum + segmentWidthPx(seg, zoom, pxPerDay, timeUnit), 0)
-      : buildWeekAggregates(planned, timeUnit).length * aggregateWidth;
+    let plannedWidth;
+    if (aggregateWidth == null) {
+      plannedWidth = planned.reduce((sum, seg) => sum + segmentWidthPx(seg, zoom, pxPerDay, timeUnit), 0);
+    } else {
+      /* Month zoom — aggregates are absolutely positioned by week start,
+         not flowed sequentially. plannedWidth here is the flex-flow
+         padding needed to extend scrollWidth past the rightmost absolute
+         aggregate, measured from the post-executed flex cursor. */
+      const weeks = buildWeekAggregates(planned, timeUnit);
+      const postExec = (leadPadDays * pxPerDay) + executedWidth;
+      let maxRight = postExec;
+      for (const w of weeks) {
+        const days = Math.round((w.weekStart - TODAY) / 86400000);
+        const right = todayXForMetrics + days * pxPerDay + aggregateWidth;
+        if (right > maxRight) maxRight = right;
+      }
+      plannedWidth = Math.max(0, maxRight - postExec);
+    }
     return {
       leadPadDays,
       contentWidthPx: (leadPadDays * pxPerDay) + executedWidth + plannedWidth,
@@ -562,16 +578,28 @@ function laneFormatsFromRules(rule) {
   return rule.formats.map((fmt) => fmt.label).filter(Boolean);
 }
 
-function MonthAggregateRun({ planned, baseline, timeUnit, pxPerDay, lineKey, onRunClick }) {
+function MonthAggregateRun({ planned, baseline, timeUnit, pxPerDay, lineKey, onRunClick, todayX = 0 }) {
   const widthPx = aggregateWidthPx('month', pxPerDay);
   return buildWeekAggregates(planned, timeUnit).map((week) => {
     const runRef = week.currentRun ?? week.firstRun ?? null;
     const seg = runRef?.seg ?? null;
     const prev = Number.isInteger(runRef?.index) && runRef.index > 0 ? planned[runRef.index - 1] : null;
     const next = Number.isInteger(runRef?.index) && runRef.index < planned.length - 1 ? planned[runRef.index + 1] : null;
+    /* Position by axis date — the lane body lays executed cards out as
+       a flex flow which drifts past their real time span (min-widths
+       exceed pxPerDay), so a flex-flow aggregate would land several
+       axis weeks to the right of where its week actually sits. Absolute
+       positioning anchors each aggregate to the same coordinate the
+       axis uses, so "Week 21" lands under W21. */
+    const daysFromToday = Math.round((week.weekStart - TODAY) / 86400000);
+    const left = todayX + daysFromToday * pxPerDay;
     return (
-      <AggregateCard
+      <div
         key={week.key}
+        className="tl-agg-slot"
+        style={{ position: 'absolute', left, top: 12, bottom: 12, zIndex: 2 }}
+      >
+      <AggregateCard
         widthPx={widthPx}
         period="week"
         label={week.label}
@@ -599,6 +627,7 @@ function MonthAggregateRun({ planned, baseline, timeUnit, pxPerDay, lineKey, onR
           state: 'planned',
         }) : null}
       />
+      </div>
     );
   });
 }
@@ -929,6 +958,7 @@ function Lane({ lineKey, centre, baseline, formats = [], executed, planned, zoom
             pxPerDay={pxPerDay}
             lineKey={lineKey}
             onRunClick={onRunClick}
+            todayX={todayX}
           />
         ) : showFuturePlan && planned.map((seg, i) => {
           const displaySeg = hydrateSegment(seg, orderLookup);
