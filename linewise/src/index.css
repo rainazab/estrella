@@ -4276,3 +4276,35 @@ table.ana .of { font-weight: 600; }
   border-color: var(--line, #e6e3d8);
 }
 .signal-alert-dismiss:hover { background: #fff; }
+
+/* ---------- inline NOW divider (replaces the old absolute tl-today)
+   Sits between executed cards and planned cards in DOM order, so the
+   gray→color transition is enforced visually regardless of MIN card
+   widths. Aligned across L14/L17/L19 via per-lane preNowPadPx. */
+.tl-now-inline {
+  flex: 0 0 auto;
+  position: relative;
+  width: 2px;
+  margin: 0 8px;
+  background: var(--brand-2, #2d6b3f);
+  z-index: 2;
+  align-self: stretch;
+}
+.tl-now-inline-label {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.tl-now-inline-l-now {
+  background: var(--brand-2, #2d6b3f);
+  color: #fff;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border-radius: 4px;
+}

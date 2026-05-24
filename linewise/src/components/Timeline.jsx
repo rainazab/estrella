@@ -96,8 +96,8 @@ export default function Timeline({
   const viewportWidth = useTimelineViewportWidth(timelineRef);
   const pxPerDay = pxPerDayForZoom(zoom, viewportWidth);
   const pxPerHour = pxPerDay / 24;
-  /* execHoursByLine — total executed window per lane in HOURS. We
-     convert to days only for the axis (which labels week boundaries). */
+  const minCardWidth = MIN_CARD_WIDTH[zoom] ?? 168;
+  /* execHoursByLine — total executed window per lane in HOURS. */
   const execHoursByLine = mode === 'default'
     ? LINES.map((k) => executedEndHours(data?.executedHistory?.[k] ?? []))
     : LINES.map(() => 0);
@@ -108,10 +108,23 @@ export default function Timeline({
     24,
     ...LINES.flatMap((k) => (activePlan?.[k] ?? []).map(plannedEndHours)),
   );
-  /* todayX — pixel x of the "now" line in scroll-content coordinates,
-     shared across the axis and every lane so the NOW stripe forms one
-     continuous vertical column even when executed cards on each line have
-     different cumulative widths. */
+  /* Card rendered widths are clamped to MIN_CARD_WIDTH for legibility,
+     so positioning the NOW line by *time* (maxExecHours × pxPerHour)
+     leaves executed cards overlapping the line. Compute the RENDERED
+     px footprint of each lane's executed history and align the divider
+     across lanes via lead-padding instead. NOW becomes an inline
+     flex-none element sitting between executed and planned cards — the
+     ordering is enforced by DOM. */
+  const execRenderedPxByLine = LINES.map((k) => {
+    if (mode !== 'default') return 0;
+    const lane = data?.executedHistory?.[k] ?? [];
+    return lane.reduce(
+      (acc, seg) => acc + Math.max(minCardWidth, Math.round((seg.w ?? 0) * pxPerHour)),
+      0,
+    );
+  });
+  const maxExecRenderedPx = Math.max(0, ...execRenderedPxByLine);
+  // todayX is still computed for the TimelineAxis (which uses time units).
   const todayX = maxExecHours * pxPerHour;
 
   if (mode !== 'default') {
@@ -152,8 +165,8 @@ export default function Timeline({
         const planned = activePlan?.[lineKey] ?? [];
         const stoppage = stoppages.find((s) => s.line === lineKey) ?? null;
         const laneIssues = issues.filter((i) => i.line === lineKey);
-        const laneExecHours = execHoursByLine[idx] ?? 0;
-        const leadPadHours = Math.max(0, maxExecHours - laneExecHours);
+        const laneExecRenderedPx = execRenderedPxByLine[idx] ?? 0;
+        const preNowPadPx = Math.max(0, maxExecRenderedPx - laneExecRenderedPx);
         return (
           <Lane
             key={lineKey}
@@ -166,7 +179,7 @@ export default function Timeline({
             zoom={zoom}
             sync={sync}
             primary={idx === 0}
-            leadPadHours={leadPadHours}
+            preNowPadPx={preNowPadPx}
             planHorizonHours={planHorizonHours}
             todayX={todayX}
             pxPerDay={pxPerDay}
@@ -341,7 +354,13 @@ function RecommendationLane({ data, lineKey, rec, zoom, showNaive, sync, primary
         )}
       </div>
       <div className="tl-lane-body" ref={bodyRef} onScroll={() => sync?.broadcast(bodyRef.current)}>
-        <div className="tl-today" aria-label="now" style={{ left: todayX }} />
+        <div className="tl-now-inline" aria-label="now divider">
+          {primary && (
+            <span className="tl-now-inline-label">
+              <span className="tl-now-inline-l-now">NOW</span>
+            </span>
+          )}
+        </div>
         {proposed.map((seg, index) => (
           <SegmentCard
             key={`r-${lineKey}-${seg.of ?? seg.kind}-${index}`}
@@ -454,17 +473,16 @@ function stoppageDurationLabel(key) {
   }[key] || '—';
 }
 
-/* computeTodayScroll — derive the scrollLeft for the current zoom. Week and
-   month views open on the current calendar week so the viewport reads as one
-   week / five weeks instead of an arbitrary slice starting mid-week. Quarter
-   keeps today at the left edge for longer-horizon scanning.
+/* computeTodayScroll — derive the scrollLeft so the NOW divider lands at
+   the leftmost visible position of the lane body. Executed history is
+   available by scrolling LEFT from there; forward plan is the default
+   view. Same behaviour for every zoom level.
    Returns null when the lane doesn't actually need scrolling. */
-function computeTodayScroll(body, zoom, pxPerDay) {
+function computeTodayScroll(body, _zoom, _pxPerDay) {
   if (!body) return null;
-  const today = body.querySelector('.tl-today');
+  const today = body.querySelector('.tl-now-inline');
   if (!today || body.scrollWidth <= body.clientWidth) return null;
-  const anchorBackDays = zoom === 'quarter' ? 0 : daysSinceWeekStart(TODAY);
-  const target = today.offsetLeft - (anchorBackDays * pxPerDay);
+  const target = today.offsetLeft;
   const maxScroll = Math.max(0, body.scrollWidth - body.clientWidth);
   return Math.min(maxScroll, Math.max(0, target));
 }
@@ -493,7 +511,7 @@ function laneFormatsFromRules(rule) {
   return rule.formats.map((fmt) => fmt.label).filter(Boolean);
 }
 
-function Lane({ lineKey, centre, baseline, formats = [], executed, planned, zoom, sync, primary = false, leadPadHours = 0, planHorizonHours = 1, todayX = 0, pxPerDay, pxPerHour, onRunClick = null, moving = null, onMoveDrop = null, stoppage = null, issues = [], onResumeLine = null }) {
+function Lane({ lineKey, centre, baseline, formats = [], executed, planned, zoom, sync, primary = false, preNowPadPx = 0, planHorizonHours = 1, todayX = 0, pxPerDay, pxPerHour, onRunClick = null, moving = null, onMoveDrop = null, stoppage = null, issues = [], onResumeLine = null }) {
   // Defensive: if a caller forgot pxPerHour, derive it.
   const ppH = pxPerHour ?? (pxPerDay / 24);
   /* Moving-mode derived state — null when no move is in flight. We
@@ -661,11 +679,11 @@ function Lane({ lineKey, centre, baseline, formats = [], executed, planned, zoom
         })()}
       </div>
       <div className="tl-lane-body" ref={bodyRef} onScroll={handleScroll}>
-        {leadPadHours > 0 && (
+        {preNowPadPx > 0 && (
           <div
             className="tl-lead-pad"
             aria-hidden="true"
-            style={{ flex: 'none', width: leadPadHours * ppH }}
+            style={{ flex: 'none', width: preNowPadPx }}
           />
         )}
         {(() => {
@@ -688,7 +706,17 @@ function Lane({ lineKey, centre, baseline, formats = [], executed, planned, zoom
             );
           });
         })()}
-        <div className="tl-today" aria-label="today" style={{ left: todayX }} />
+        {/* Inline NOW divider — always sits between executed and planned
+            cards in DOM order, so the gray-vs-color boundary is enforced
+            visually even when rendered card widths exceed the cards'
+            true hour-footprint. Aligned across lanes via preNowPadPx. */}
+        <div className="tl-now-inline" aria-label="now divider">
+          {primary && (
+            <span className="tl-now-inline-label">
+              <span className="tl-now-inline-l-now">NOW</span>
+            </span>
+          )}
+        </div>
         {stoppage && (
           <div
             className="tl-stoppage-block tl-stoppage-block-long"
