@@ -28,7 +28,6 @@ export default function TimelineCard({
   selected = false,
   dateLabel = null,
   ghost = false,
-  label = null,
 }) {
   const isService = kind === 'clean' || kind === 'maint';
   const fmt = format || deriveFormat({ sku, material });
@@ -44,7 +43,7 @@ export default function TimelineCard({
         title={kind === 'clean' ? 'Cleaning / CIP' : 'Maintenance'}
       >
         <span className="tc-svc-label">
-          {label || (kind === 'clean' ? 'Cleaning' : 'Maintenance')}
+          {kind === 'clean' ? 'Cleaning' : 'Maintenance'}
         </span>
         {dateLabel && <span className="tc-svc-date">{dateLabel}</span>}
         <span className="tc-svc-dur">{formatDuration(durationHours)}</span>
@@ -71,12 +70,24 @@ export default function TimelineCard({
     onClick ? 'tc-clickable' : '',
   ].filter(Boolean).join(' ');
 
+  function handleKeyDown(e) {
+    if (!onClick) return;
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    onClick(e);
+  }
+
   return (
-    <motion.button
-      type="button"
+    <motion.div
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      layout
+      whileHover={onClick ? { y: -1 } : undefined}
+      whileTap={onClick ? { y: 0 } : undefined}
       className={cls}
       style={{ width: w }}
       onClick={onClick}
+      onKeyDown={onClick ? handleKeyDown : undefined}
       aria-label={`${material}, ${formatVol(volume)} units, OEE ${oee?.toFixed(2)}`}
     >
       {kind === 'ins' && <span className="tc-edge" aria-hidden="true" />}
@@ -149,7 +160,7 @@ export default function TimelineCard({
           </InfoPopover>
         </div>
       )}
-    </motion.button>
+    </motion.div>
   );
 }
 
@@ -171,7 +182,7 @@ export function deriveFormat({ sku, material }) {
   if (material) {
     if (/13/.test(material)) return '33cl';
     if (/(12|05)/.test(material)) return '50cl';
-    if (/(2\s*\/\s*5|2[-_]5|\b44\b)/.test(material)) return '44cl';
+    if (/(2[-_]?5|44)/.test(material)) return '44cl';
   }
   return null;
 }

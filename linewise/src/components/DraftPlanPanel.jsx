@@ -1,10 +1,18 @@
 import { motion } from 'framer-motion';
-import { deriveFormat, formatDuration, formatVol } from './TimelineCard.jsx';
-import { allowedFormats } from '../lib/lineRules.js';
+import { deriveFormat, formatVol, formatDuration, fmtDelta, oeeBand } from './TimelineCard.jsx';
 
-/* DraftPlanPanel — right-side overlay listing the current draft plan,
-   grouped by line. Mirrors the Inbox panel's slide-in pattern so the
-   user gets a consistent "drawer" experience from the TopBar menu. */
+/* DraftPlanPanel — right-side overlay listing the next few runs from the
+   draft plan as a chronological card list across all lines.
+
+   Scope:
+     - Shows the next THREE upcoming (non-expired) runs, sorted by start.
+       The full plan stays accessible from the timeline; this drawer is a
+       quick "what's next?" preview.
+     - Defensive "expired" branding: any run whose end has slipped into
+       the past is dimmed and excluded from the active count. */
+
+const TODAY = new Date(2026, 4, 23);
+const WK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const FORMAT_TONE = {
   '33cl': 'tercio',
@@ -12,35 +20,46 @@ const FORMAT_TONE = {
   '44cl': 'cuarenta',
 };
 
-const LINE_LABEL = {
-  '14': 'L14 · CF PRAT',
-  '17': 'L17 · CF PRAT',
-  '19': 'L19 · CF PRAT',
-};
+const MAX_RUNS = 3;
 
-export default function DraftPlanPanel({
-  plan,
-  originalPlan = null,
-  lineRules = null,
-  weeklyStops = null,
-  planState = 'optimized',
-  onClose,
-  onMoveRun = null,
-}) {
-  const lanes = Object.entries(plan ?? {});
-  const totalRuns = lanes.reduce(
-    (sum, [, lane]) => sum + lane.filter((run) => run.kind !== 'clean' && run.kind !== 'maint').length,
-    0,
-  );
-  const totalUnits = lanes.reduce(
-    (sum, [, lane]) => sum + lane.reduce((s, r) => s + (r.vol ?? 0), 0),
-    0,
-  );
-  const totalHours = lanes.reduce(
-    (sum, [, lane]) => sum + lane.reduce((s, r) => s + (r.w ?? 0), 0),
-    0,
-  );
-  const originalRuns = Object.values(originalPlan ?? {}).reduce((sum, lane) => sum + (lane?.length ?? 0), 0);
+function addDays(base, days) {
+  const d = new Date(base);
+  d.setDate(d.getDate() + Math.round(days));
+  return d;
+}
+
+function fmtDay(d) {
+  return `${WK[d.getDay()]} ${d.getDate()}`;
+}
+
+function fmtRange(startDays, durDays) {
+  const a = addDays(TODAY, startDays);
+  const b = addDays(TODAY, startDays + durDays);
+  if (a.toDateString() === b.toDateString()) return fmtDay(a);
+  return `${fmtDay(a)} → ${fmtDay(b)}`;
+}
+
+function startsIn(days) {
+  if (days <= 0) return 'now';
+  if (days < 1) return 'today';
+  if (days < 2) return 'tomorrow';
+  if (days < 7) return `in ${Math.round(days)}d`;
+  const weeks = days / 7;
+  if (weeks < 8) return `in ${weeks.toFixed(weeks < 2 ? 1 : 0)}w`;
+  return `in ${Math.round(weeks / 4.3)}mo`;
+}
+
+export default function DraftPlanPanel({ plan, lineBaseline = {}, onClose, onRunClick }) {
+  const runs = [];
+  for (const [lineKey, lane] of Object.entries(plan ?? {})) {
+    lane.forEach((r, idx) => {
+      runs.push({ ...r, lineKey, idx });
+    });
+  }
+  runs.sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
+
+  const active = runs.filter((r) => (r.start ?? 0) + (r.w ?? 0) >= 0);
+  const upcoming = active.slice(0, MAX_RUNS);
 
   return (
     <motion.div
@@ -61,122 +80,100 @@ export default function DraftPlanPanel({
         <div className="inbox-head">
           <div>
             <div className="eyebrow">Draft Plan</div>
-            <div className="panel-title">Plan summary</div>
-            <div className="plan-state-row">
-              <span className={`plan-state-chip plan-${planState}`}>{planState}</span>
-              <span>vs original Planificado</span>
-            </div>
+            <div className="panel-title">Next up</div>
           </div>
           <span className="inbox-x" onClick={onClose}>✕</span>
         </div>
         <div className="panel-desc">
-          {totalRuns} runs · {formatVol(totalUnits)} un · {formatDuration(totalHours)} scheduled
-          {originalRuns > 0 && ` · ${Math.abs(totalRuns - originalRuns)} run delta`}
+          Showing next {upcoming.length} of {active.length} planned runs · click a card for details.
         </div>
 
-        <div className="inbox-sections">
-          {lanes.map(([lineKey, lane]) => (
-            <section key={lineKey} className="inbox-section draft-line-section">
-              <div className="section-head">
-                <span className="section-title">{LINE_LABEL[lineKey] ?? `L${lineKey}`}</span>
-                <span className="section-count">{lane.length}</span>
-              </div>
-              <LineRuleRow lineKey={lineKey} lineRules={lineRules} />
-              {lane.length === 0 ? (
-                <div className="section-empty">No runs scheduled.</div>
-              ) : (
-                <div className="inbox-cards">
-                  {mergeStops(lane, weeklyStops?.[lineKey]).map((run, idx) => (
-                    <DraftCard
-                      key={`${lineKey}-${run.of ?? run.id ?? run.kind}-${idx}`}
-                      run={run}
-                      onMove={run.kind === 'clean' || run.kind === 'maint' ? null : (() => onMoveRun?.(lineKey, run._planIndex ?? idx))}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-          ))}
+        <div className="draft-cards">
+          {upcoming.length === 0 ? (
+            <div className="section-empty">No upcoming runs.</div>
+          ) : (
+            upcoming.map((run) => (
+              <DraftCard
+                key={`${run.lineKey}-${run.idx}-${run.of}`}
+                run={run}
+                baseline={lineBaseline?.[run.lineKey]}
+                onClick={onRunClick ? () => onRunClick(run) : undefined}
+              />
+            ))
+          )}
         </div>
 
         <div className="panel-foot bordered">
-          Locked cleaning and maintenance rows come from Tabla CF and cannot be moved.
+          Working copy of the plan — drafts auto-save and can be promoted to
+          the live schedule from the planner view.
         </div>
       </motion.div>
     </motion.div>
   );
 }
 
-function DraftCard({ run, onMove = null }) {
-  if (run.kind === 'clean' || run.kind === 'maint') {
-    return (
-      <div className={`tc tc-inbox tc-service-row tc-${run.kind}`}>
-        <div className="tc-row tc-row-top">
-          <span className="tc-mat">{run.label || (run.kind === 'clean' ? 'Weekly cleaning' : 'Maintenance')}</span>
-          <span className="tc-grow" />
-          <span className="locked-pill">locked</span>
-        </div>
-        <div className="tc-row tc-row-bot">
-          <span>{run.cadence || 'scheduled'}</span>
-          <span className="tc-sep">·</span>
-          <span className="tc-dur">{formatDuration(run.w ?? run.durationHours ?? 8)}</span>
-        </div>
-      </div>
-    );
-  }
+function DraftCard({ run, baseline, onClick }) {
   const fmt = deriveFormat({ sku: run.sku, material: run.of });
   const brand = (run.sku ?? '').split(' · ')[0];
+  const start = run.start ?? 0;
+  const dur = run.w ?? 0;
+  const expired = start + dur < 0;
+  const oee = Number.isFinite(run.oee) ? run.oee : null;
+  const delta = oee != null && baseline != null ? oee - baseline : null;
+  const band = delta != null ? oeeBand(delta) : null;
+
+  const cls = [
+    'draft-card',
+    expired ? 'draft-card-expired' : '',
+    onClick && !expired ? 'draft-card-clickable' : '',
+  ].filter(Boolean).join(' ');
+
   return (
-    <div className="tc tc-inbox tc-mid">
-      <div className="tc-row tc-row-top">
-        <span className="tc-mat">{run.of}</span>
+    <button
+      type="button"
+      className={cls}
+      onClick={expired ? undefined : onClick}
+      aria-label={`${run.of} on L${run.lineKey}, ${fmtRange(start, dur)}`}
+    >
+      <div className="draft-card-top">
+        <span className="draft-card-of">{run.of}</span>
         {fmt && <span className={`tc-fmt tc-fmt-${FORMAT_TONE[fmt] ?? 'other'}`}>{fmt}</span>}
+        <span className="draft-card-line">L{run.lineKey}</span>
         <span className="tc-grow" />
-        <span className="tc-due">
-          <span className="tc-due-l">OEE</span>
-          <span className="tc-due-v">{(run.oee ?? 0).toFixed(2)}</span>
-        </span>
+        {expired ? (
+          <span className="tc-status-pill tc-status-done">expired</span>
+        ) : (
+          <span className="draft-card-eta">{startsIn(start)}</span>
+        )}
       </div>
-      <div className="tc-row tc-row-bot">
-        <span className="tc-sku" title={run.sku}>{brand}</span>
-        <span className="tc-sep">·</span>
-        <span className="tc-vol">{formatVol(run.vol ?? 0)}<span className="tc-vol-u">un</span></span>
-        <span className="tc-grow" />
-        <span className="tc-due">
-          <span className="tc-due-l">dur</span>
-          <span className="tc-due-v">{formatDuration(run.w ?? 0)}</span>
-        </span>
+
+      <div className="draft-card-sku" title={run.sku}>{brand}</div>
+
+      <div className="draft-card-meta">
+        <div className="draft-meta-cell">
+          <span className="draft-meta-l">When</span>
+          <span className="draft-meta-v">{fmtRange(start, dur)}</span>
+        </div>
+        <div className="draft-meta-cell">
+          <span className="draft-meta-l">Duration</span>
+          <span className="draft-meta-v">{formatDuration(dur * 24)} · {dur.toFixed(1)}w</span>
+        </div>
+        <div className="draft-meta-cell">
+          <span className="draft-meta-l">Volume</span>
+          <span className="draft-meta-v">{formatVol(run.vol ?? 0)}<span className="tc-vol-u">un</span></span>
+        </div>
+        <div className="draft-meta-cell">
+          <span className="draft-meta-l">OEE</span>
+          <span className="draft-meta-v">
+            {oee != null ? oee.toFixed(2) : '—'}
+            {delta != null && (
+              <span className={`draft-meta-delta draft-delta-${band}`}>
+                {' '}{fmtDelta(delta)}
+              </span>
+            )}
+          </span>
+        </div>
       </div>
-      {onMove && (
-        <button type="button" className="draft-move-btn" onClick={onMove}>
-          Test move
-        </button>
-      )}
-    </div>
+    </button>
   );
-}
-
-function LineRuleRow({ lineKey, lineRules }) {
-  const formats = allowedFormats(lineKey, lineRules);
-  return (
-    <div className="draft-rule-row">
-      {formats.map((fmt) => (
-        <span key={fmt.key} className="line-rule-chip">{fmt.label}</span>
-      ))}
-    </div>
-  );
-}
-
-function mergeStops(lane, stops = []) {
-  const merged = [
-    ...(lane ?? []).map((run, idx) => ({ ...run, _planIndex: idx })),
-    ...(stops ?? []).map((stop) => ({ ...stop, locked: true })),
-  ];
-  return merged.sort((a, b) => {
-    const byStart = Number(a.start ?? 0) - Number(b.start ?? 0);
-    if (byStart !== 0) return byStart;
-    if (a.kind && !b.kind) return -1;
-    if (!a.kind && b.kind) return 1;
-    return 0;
-  });
 }

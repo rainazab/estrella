@@ -24,6 +24,7 @@ export default function RunDetailModal({
   state = 'planned',
   onClose,
   onMove,
+  onPreviewInPlanner,
 }) {
   useEffect(() => {
     if (!open) return;
@@ -64,6 +65,7 @@ export default function RunDetailModal({
               state={state}
               onClose={onClose}
               onMove={onMove}
+              onPreviewInPlanner={onPreviewInPlanner}
             />
           </motion.div>
         </motion.div>
@@ -72,7 +74,7 @@ export default function RunDetailModal({
   );
 }
 
-function Body({ run, prev, next, lineKey, lineBaseline, state, onClose, onMove }) {
+function Body({ run, prev, next, lineKey, lineBaseline, state, onClose, onMove, onPreviewInPlanner }) {
   const isExecuted = state === 'executed';
   const fmt = run.format || deriveFormat({ sku: run.sku, material: run.material });
   const delta = lineBaseline != null && run.oee != null ? run.oee - lineBaseline : null;
@@ -167,7 +169,12 @@ function Body({ run, prev, next, lineKey, lineBaseline, state, onClose, onMove }
         </footer>
       ) : (
         <footer className="rd-foot">
-          <button className="rd-btn rd-btn-primary" onClick={onMove}>Move to another line</button>
+          <button className="rd-btn rd-btn-ghost" onClick={onMove}>Move to another line</button>
+          {onPreviewInPlanner && (
+            <button className="rd-btn rd-btn-primary" onClick={onPreviewInPlanner}>
+              Recalculate & preview in planner
+            </button>
+          )}
         </footer>
       )}
     </>

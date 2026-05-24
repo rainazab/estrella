@@ -27,6 +27,13 @@ export default function MoveImpactPanel({ preview, onConfirm, onDiscard }) {
   const switchDelta = (ripple.formatSwitchesNew ?? 0) - (ripple.formatSwitchesOld ?? 0);
   const switchTone = switchDelta < 0 ? 'good' : switchDelta > 0 ? 'bad' : 'mid';
 
+  /* Collisions = pushed runs that overrun a downstream scheduled
+     cleaning/maintenance. We don't hard-block the planner — Maria can
+     still commit if she has a real reason — but the Confirm button
+     turns destructive and a warning bar explains the consequence. */
+  const collisions = ripple.collisions ?? [];
+  const hasCollisions = collisions.length > 0;
+
   return (
     <motion.div
       className="move-impact"
@@ -43,16 +50,38 @@ export default function MoveImpactPanel({ preview, onConfirm, onDiscard }) {
           <b>L{ripple.toLine}</b>
           {ripple.destPrev && (
             <span className="mi-where">
-              · between <b>{ripple.destPrev}</b>
-              {ripple.destNext ? <> and <b>{ripple.destNext}</b></> : <> and end of plan</>}
+              {whereText(ripple.runId, ripple.destPrev, ripple.destNext)}
             </span>
           )}
         </div>
         <div className="mi-actions">
           <button className="mi-btn mi-btn-ghost" onClick={onDiscard}>Discard</button>
-          <button className="mi-btn mi-btn-primary" onClick={onConfirm}>Confirm move</button>
+          <button
+            className={`mi-btn ${hasCollisions ? 'mi-btn-danger' : 'mi-btn-primary'}`}
+            onClick={onConfirm}
+          >
+            {hasCollisions ? 'Override & confirm' : 'Confirm move'}
+          </button>
         </div>
       </div>
+
+      {hasCollisions && (
+        <div className="mi-warning">
+          <span className="mi-warning-icon" aria-hidden="true">⚠</span>
+          <div className="mi-warning-text">
+            <b>This move breaks {collisions.length} scheduled {collisions.length === 1 ? 'service window' : 'service windows'}.</b>
+            {' '}
+            {collisions.slice(0, 3).map((c, i) => (
+              <span key={c.of + i}>
+                {i > 0 && '; '}
+                <b>{c.of}</b> would overrun the next {c.kind} by {fmtHours(c.byHours)}
+              </span>
+            ))}
+            {collisions.length > 3 && <> ; +{collisions.length - 3} more</>}.
+            {' '}Maintenance won't run on time — confirm only if you've coordinated with the line.
+          </div>
+        </div>
+      )}
 
       <div className="mi-metrics">
         <Metric
@@ -77,6 +106,16 @@ export default function MoveImpactPanel({ preview, onConfirm, onDiscard }) {
           deltaSuffix={switchDelta === 0 ? '' : switchDelta < 0 ? ' (fewer CIPs)' : ' (more CIPs)'}
           tone={switchTone}
           help="Adjacent runs of different formats on the affected lanes. Each switch implies a CIP."
+        />
+        <Metric
+          label="Delivery risk"
+          value={(ripple.collisions?.length ?? 0) === 0
+            ? 'safe'
+            : `${ripple.collisions.length} ${ripple.collisions.length === 1 ? 'run' : 'runs'} collide with ${collidesWithLabel(ripple.collisions)}`}
+          tone={(ripple.collisions?.length ?? 0) === 0 ? 'good' : 'bad'}
+          help={(ripple.collisions?.length ?? 0) === 0
+            ? 'No pushed run overruns a downstream cleaning or maintenance block.'
+            : ripple.collisions.map((c) => `${c.of} would overrun the next ${c.kind} by ${fmtHours(c.byHours)}`).join('\n')}
         />
         <Metric
           label="Ripple"
@@ -136,4 +175,34 @@ function fmtHours(h) {
   if (h < 1) return `${Math.round(h * 60)}m`;
   if (h < 10) return `${h.toFixed(1)}h`;
   return `${Math.round(h)}h`;
+}
+
+/* whereText — landing position copy. Disambiguates the awkward
+   "between X and X" case (when both neighbours share a material code,
+   which happens often with repeated AmiBock/Estrella runs). */
+function whereText(runId, prev, next) {
+  if (!prev) return ' · at start of plan';
+  if (!next) return <> · after <b>{prev}</b>, at end of plan</>;
+  if (prev === next) return <> · between two <b>{prev}</b> runs</>;
+  if (prev === runId || next === runId) {
+    /* Adjacent neighbour shares the moved run's identity — rare but
+       happens on same-lane reshuffles. Don't say "between AM05LTST and
+       AM05LTST" when AM05LTST is the thing being moved. */
+    const other = prev === runId ? next : prev;
+    return <> · next to another <b>{other}</b></>;
+  }
+  return <> · between <b>{prev}</b> and <b>{next}</b></>;
+}
+
+/* collidesWithLabel — terse summary of what the pushed runs hit.
+   "the next cleaning" if all collisions are with cleanings; mixed
+   wording otherwise. */
+function collidesWithLabel(collisions) {
+  if (!collisions?.length) return '';
+  const kinds = new Set(collisions.map((c) => c.kind));
+  if (kinds.size === 1) {
+    const k = collisions[0].kind;
+    return k === 'clean' ? 'scheduled cleaning' : 'scheduled maintenance';
+  }
+  return 'scheduled service';
 }

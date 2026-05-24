@@ -1,39 +1,23 @@
 import { useState, useEffect, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { usePlan } from './hooks/usePlan.js';
+import { useTimelineMoveFlow } from './hooks/useTimelineMoveFlow.js';
 import TopBar from './components/TopBar.jsx';
 import KPIStrip from './components/KPIStrip.jsx';
 import Inbox from './components/Inbox.jsx';
 import Fab from './components/Fab.jsx';
 import Timeline from './components/Timeline.jsx';
 import RecommendationPanel from './components/RecommendationPanel.jsx';
+import PlanLab from './preview/PlanLab.jsx';
 import ImpactSummary from './components/ImpactSummary.jsx';
 import LiveStatus from './components/LiveStatus.jsx';
-import RunDetailModal from './components/RunDetailModal.jsx';
-import MoveBanner from './components/MoveBanner.jsx';
-import MoveCalculating from './components/MoveCalculating.jsx';
-import MoveImpactPanel from './components/MoveImpactPanel.jsx';
 import DraftPlanPanel from './components/DraftPlanPanel.jsx';
-import PlannerActionDrawer from './components/PlannerActionDrawer.jsx';
-import SettingsDrawer from './components/SettingsDrawer.jsx';
-import { computeMovePreview, isLineCompatible } from './lib/movePlan.js';
+import IssueModal from './components/IssueModal.jsx';
+import StoppageModal from './components/StoppageModal.jsx';
+import ReplanBanner from './components/ReplanBanner.jsx';
+import LogToast from './components/LogToast.jsx';
+import { computeStoppageReplan } from './lib/stoppagePlan.js';
 import { deriveFormat } from './components/TimelineCard.jsx';
-
-const DEFAULT_SETTINGS = {
-  defaultObjective: 'oee',
-  defaultView: 'week',
-  showOriginalOverlay: false,
-  compactCards: false,
-  comparisonBaseline: 'sevenDay',
-};
-
-function loadPlannerSettings() {
-  try {
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem('linewise.settings') || '{}') };
-  } catch {
-    return DEFAULT_SETTINGS;
-  }
-}
 
 /* App state mirrors the prototype's `state` object 1:1.
    view : 'queue' (landing planner) | 'calculating' | 'recs'
@@ -56,44 +40,37 @@ function Workspace({ data }) {
   const demo = new URLSearchParams(location.search).get('demo');
   const demoRecs = demo === 'recs' || demo === 'simulate' || demo === 'recommend';
   const demoCalc = demo === 'calculating';
-  const initialSettings = loadPlannerSettings();
   const [view, setView] = useState(demoCalc ? 'calculating' : demoRecs ? 'recs' : 'queue');
-  const [settings, setSettings] = useState(initialSettings);
-  const [objective, setObjective] = useState(initialSettings.defaultObjective);
+  const [objective, setObjective] = useState('oee');
   const [selectedImpact, setSelectedImpact] = useState(demoRecs ? 'oee' : null);
   const [selectedLine, setSelectedLine] = useState(demoRecs ? data.objectives.oee.order[0] : null);
   const [manualSlot, setManualSlot] = useState(null);
   const [showNaive, setShowNaive] = useState(demo === 'simulate');
-  const [zoom, setZoom] = useState(initialSettings.defaultView);
+  const [zoom, setZoom] = useState('month');
   const [inboxOpen, setInboxOpen] = useState(demo === 'inbox');
   const [draftOpen, setDraftOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [actionDrawer, setActionDrawer] = useState(null);
-  const [showOriginalPlan, setShowOriginalPlan] = useState(Boolean(initialSettings.showOriginalOverlay));
   const [orders, setOrders] = useState(data.urgentOrders);
   const [activeOrder, setActiveOrder] = useState(data.urgentOrders[0]);
-  const [runDetail, setRunDetail] = useState(null);
-  const [lineEvents, setLineEvents] = useState({ '14': [], '17': [], '19': [] });
-  /* Move flow state:
-     - `moving` = the run currently being moved (set when Maria clicks
-       "Move to another line" in the run detail modal). Closes the modal,
-       puts the timeline into moving-mode with compatibility overlays and
-       drop zones.
-     - `moveCalculating` → `movePending` → confirm/discard: see below. */
-  const [moving, setMoving] = useState(null);
-  /* moveCalculating = transient state shown while the "Recalculating
-     impact..." overlay is up. Holds the preview + destination so the
-     overlay can name what's being recalculated. ~1.3s, mirroring the
-     urgent-order calculate flow's pacing. */
-  const [moveCalculating, setMoveCalculating] = useState(null);
-  /* movePending = preview waiting on Maria's Confirm/Discard. The
-     plan is already committed visually (so she can see the new shape
-     in the timeline below); Discard reverts. */
-  const [movePending, setMovePending] = useState(null);
-  /* committedPlan = base plan after any confirmed moves. When null we
-     fall back to data.basePlan; once a move commits we snapshot the
-     preview here so it persists. */
-  const [committedPlan, setCommittedPlan] = useState(null);
+  /* Quick-action flow state:
+     - `issueModalOpen` / `stoppageModalOpen` — which Fab-launched modal
+       is on screen (only one at a time).
+     - `issues` — append-only audit log of reported issues (in-memory
+       for the prototype). Each entry: { id, line, category, severity,
+       note, ts }. Later surfaces as a marker on the executed run.
+     - `stoppages` — currently-active line stoppages. Each entry:
+       { id, line, reason, duration, startAgoMin, startedAt, ts }.
+       Drives KPI "Lines running", the lane STOPPED badge, and the
+       replan banner.
+     - `replanPrompt` — payload for the ReplanBanner. Set on stoppage
+       submit; cleared by Dismiss/Replan.
+     - `toast` — single transient confirmation pill. { id, title,
+       detail, tone }. */
+  const [issueModalOpen, setIssueModalOpen] = useState(false);
+  const [stoppageModalOpen, setStoppageModalOpen] = useState(false);
+  const [issues, setIssues] = useState([]);
+  const [stoppages, setStoppages] = useState([]);
+  const [replanPrompt, setReplanPrompt] = useState(null);
+  const [toast, setToast] = useState(null);
   const lastSyncRef = useRef(Date.now());
 
   /* surface the urgent-orders inbox once on boot */
@@ -101,70 +78,22 @@ function Workspace({ data }) {
     if (!demo) setInboxOpen(true);
   }, [demo]);
 
-  useEffect(() => {
-    localStorage.setItem('linewise.settings', JSON.stringify(settings));
-  }, [settings]);
+  /* Move-flow orchestration is shared with PlanLab — see
+     useTimelineMoveFlow. App-specific extensions:
+       - Inbox draft-panel and previewDraftRun both call setRunDetail
+         directly (exposed below) to open the modal from outside the
+         timeline.
+       - The `getOnPreviewInPlanner` opt-in injects the "Recalculate &
+         preview in planner" action onto runs flagged `fromDraft`. */
+  const { timelineProps, overlays, setRunDetail, setCommittedPlan } = useTimelineMoveFlow({
+    data,
+    basePlan: data.basePlan,
+    getOnPreviewInPlanner: ({ runDetail }) => runDetail?.fromDraft
+      ? () => previewDraftRun(runDetail.rawRun)
+      : undefined,
+  });
 
-  /* Esc cancels moving mode. Listening here (not in the timeline) so the
-     handler survives across re-renders of the lane components. */
-  useEffect(() => {
-    if (!moving) return;
-    const onKey = (e) => { if (e.key === 'Escape') setMoving(null); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [moving]);
-
-  /* Effective plan — folds any committed move into data.basePlan. The
-     timeline reads from this rather than data.basePlan directly so a
-     confirmed move sticks across renders. */
-  const optimizedLine = data.objectives?.oee?.order?.[0];
-  const optimizedPlan = data.recommendations?.[optimizedLine]?.plan ?? data.basePlan;
-  const effectivePlan = showOriginalPlan ? data.basePlan : (committedPlan ?? optimizedPlan);
-  const planState = showOriginalPlan ? 'original' : committedPlan ? 'draft' : 'optimized';
-
-  /* Drop handler — fires the calculate flash and then routes into the
-     impact-review panel. We deliberately don't commit the plan until
-     after the flash so the "recalculating" moment feels honest (the
-     timeline behind the overlay still shows the pre-move plan). */
-  function handleMoveDrop({ lineKey, slotIndex }) {
-    if (!moving) return;
-    const format = moving.format;
-    if (!isLineCompatible(lineKey, format, data.lineRules)) return;
-    const preview = computeMovePreview({
-      basePlan: effectivePlan,
-      lineBaseline: data.lineBaseline,
-      moving: { fromLine: moving.fromLine, fromIndex: moving.fromIndex },
-      dest: { lineKey, slotIndex },
-    });
-    if (!preview) return;
-    const priorPlan = effectivePlan;
-    setMoveCalculating({
-      moving,
-      dest: { lineKey, slotIndex },
-      preview,
-      priorPlan,
-    });
-    setMoving(null);
-    /* 1.3s matches the urgent-order calculate flash (selectUrgent) so
-       both interactions feel like the same product moment. */
-    setTimeout(() => {
-      setMoveCalculating(null);
-      setMovePending({ ...preview, priorPlan });
-      setCommittedPlan(preview.plan);
-    }, 1300);
-  }
-
-  function confirmMove() {
-    /* Plan is already committed; just dismiss the review panel. */
-    setMovePending(null);
-  }
-
-  function discardMove() {
-    if (!movePending) return;
-    const baseForCurrentMode = showOriginalPlan ? data.basePlan : optimizedPlan;
-    setCommittedPlan(movePending.priorPlan === baseForCurrentMode ? null : movePending.priorPlan);
-    setMovePending(null);
-  }
+  const effectivePlan = timelineProps.effectivePlan;
 
   const inRecs = view === 'recs' || view === 'calculating';
 
@@ -181,6 +110,40 @@ function Workspace({ data }) {
     }, 1300);
   }
 
+  /* previewDraftRun — fired from the RunDetailModal's "Recalculate &
+     preview in planner" action. Mirrors selectUrgent's pacing so the
+     calculating flash feels like the same product moment, but lands on
+     the recs view focused on the run's own line. The synthesized order
+     gives the recommendation panel its header context — the run becomes
+     the "order under review" for that planner session. */
+  function previewDraftRun(run) {
+    if (!run) return;
+    /* Close the modal first, then defer the heavier state transitions to
+       the next tick. Doing it all in one batch left framer-motion's
+       AnimatePresence exit animation half-played on the rd-overlay,
+       because the calculating view mounts concurrent motion targets. */
+    setRunDetail(null);
+    setDraftOpen(false);
+    setTimeout(() => {
+      setActiveOrder({
+        of: run.of,
+        status: 'planned',
+        sku: run.sku,
+        units: Math.round((run.vol ?? 0) * 1000),
+        hl: 0,
+        due: 'scheduled',
+      });
+      setView('calculating');
+      setTimeout(() => {
+        setObjective('oee');
+        setSelectedImpact('oee');
+        setSelectedLine(run.lineKey || data.objectives.oee.order[0]);
+        setShowNaive(false);
+        setView('recs');
+      }, 1300);
+    }, 160);
+  }
+
   function createManualOrder(order) {
     setOrders((current) => [
       order,
@@ -195,161 +158,147 @@ function Workspace({ data }) {
     setView('queue');
   }
 
-  function dropOnLine(line) {
-    const key = resolveManualSlotKey({ lineKey: line });
-    setManualSlot(key);
-    setSelectedLine(data.manualSlots?.[key]?.recKey ?? line);
-    setView('calculating');
-    setTimeout(() => {
-      setShowNaive(false);
-      setView('recs');
-    }, 900);
-  }
-
-  function dropUrgentOnSlot({ lineKey, anchorOf = null }) {
-    const urgentFormat = deriveFormat({ sku: activeOrder?.sku, material: activeOrder?.of });
-    if (!isLineCompatible(lineKey, urgentFormat, data.lineRules)) return;
-    const key = resolveManualSlotKey({ lineKey, anchorOf });
-    setManualSlot(key);
-    setSelectedLine(data.manualSlots?.[key]?.recKey ?? lineKey);
-    setView('calculating');
-    setTimeout(() => {
-      setShowNaive(false);
-      setView('recs');
-    }, 900);
-  }
-
-  function resolveManualSlotKey({ lineKey, anchorOf = null }) {
-    const slots = data.manualSlots ?? {};
-    const exact = anchorOf ? `${lineKey}-after-${anchorOf}` : null;
-    if (exact && slots[exact]) return exact;
-    const end = `${lineKey}-end`;
-    if (!anchorOf && slots[end]) return end;
-    const fallback = Object.entries(slots).find(([key, slot]) => (
-      String(slot.recKey) === String(lineKey)
-      && (!anchorOf || key.includes(anchorOf))
-    ));
-    return fallback?.[0] ?? null;
-  }
-
-  function updateSettings(nextSettings) {
-    setSettings(nextSettings);
-    setZoom(nextSettings.defaultView);
-    setShowOriginalPlan(Boolean(nextSettings.showOriginalOverlay));
-    setObjective(nextSettings.defaultObjective);
-  }
-
-  function addLineEvent(event) {
-    setLineEvents((current) => ({
-      ...current,
-      [event.line]: [event, ...(current[event.line] ?? [])],
-    }));
-  }
-
-  function startMoveFromPlan(lineKey, fromIndex) {
-    const lane = effectivePlan?.[lineKey] ?? [];
-    const run = lane[fromIndex];
-    if (!run || run.kind === 'clean' || run.kind === 'maint') return;
-    setMoving({
-      run,
-      fromLine: lineKey,
-      fromIndex,
-      format: run.format || deriveFormat({ sku: run.sku, material: run.of }),
+  function logIssue(payload) {
+    const entry = { id: `iss-${Date.now()}`, ...payload };
+    setIssues((prev) => [entry, ...prev]);
+    setIssueModalOpen(false);
+    setToast({
+      id: entry.id,
+      title: `Issue logged on L${entry.line}`,
+      detail: `${labelCategory(entry.category)} · ${labelSeverity(entry.severity)}`,
+      tone: entry.severity === 'critical' ? 'warn' : 'neutral',
     });
-    setDraftOpen(false);
+  }
+
+  function logStoppage(payload) {
+    /* One active stoppage per line — replace any prior. Keeps the KPI
+       and lane badge unambiguous; if a planner re-logs the same line
+       they probably mean to update it. */
+    const entry = { id: `stp-${Date.now()}`, ...payload };
+    setStoppages((prev) => [
+      entry,
+      ...prev.filter((s) => s.line !== entry.line),
+    ]);
+    setStoppageModalOpen(false);
+    setReplanPrompt(entry);
+    setToast({
+      id: entry.id,
+      title: `L${entry.line} stopped`,
+      detail: `${labelReason(entry.reason)} · est. ${labelDuration(entry.duration)}`,
+      tone: 'bad',
+    });
+  }
+
+  function startReplan() {
+    if (!replanPrompt) return;
+    /* Real replan: shift every planned segment on the stopped lane
+       forward by the stoppage duration and commit the new plan. The
+       short calculating flash mirrors the urgent-order flow so it
+       feels like the same product moment, but here we end up back
+       on the schedule (not the recs view) with a visibly updated
+       timeline. */
+    const prompt = replanPrompt;
+    const line = prompt.line;
+    setReplanPrompt(null);
+    setView('calculating');
+
+    setTimeout(() => {
+      const replan = computeStoppageReplan({
+        basePlan: effectivePlan,
+        line,
+        durationKey: prompt.duration,
+      });
+      setCommittedPlan(replan.plan);
+      setView('queue');
+      setToast({
+        id: `rpl-${Date.now()}`,
+        title: `L${line} replanned`,
+        detail: `Shifted ${replan.shiftedCount} ${replan.shiftedCount === 1 ? 'run' : 'runs'} by ${fmtShiftHours(replan.shiftedHours)}`,
+        tone: 'neutral',
+      });
+    }, 1300);
+  }
+
+  function resumeLine(line) {
+    /* Mark a line resumed: drop the active stoppage so the KPI strip
+       returns to N/N and the lane badge clears. Any plan changes from
+       a Replan are intentionally left in place — the planner already
+       committed to that new sequence. */
+    setStoppages((prev) => prev.filter((s) => s.line !== line));
+    /* If a replan banner is still up for the same line (planner hadn't
+       acted yet), clear it too. */
+    setReplanPrompt((prev) => (prev?.line === line ? null : prev));
+    setToast({
+      id: `res-${Date.now()}`,
+      title: `L${line} resumed`,
+      detail: 'Line back in production',
+      tone: 'neutral',
+    });
+  }
+
+  function dropOnLine(line) {
+    const LINE_DROP_SLOT = { '14': '14-end', '17': '17-after-AM05LTST', '19': '19-end' };
+    const key = LINE_DROP_SLOT[line];
+    if (!key) return;
+    setManualSlot(key);
+    setView('calculating');
+    setTimeout(() => {
+      setShowNaive(false);
+      setView('recs');
+    }, 900);
   }
 
   const stageLine = manualSlot
-    ? data.manualSlots[manualSlot]?.recKey
-    : selectedLine || data.objectives?.[objective]?.order?.[0] || data.objectives?.oee?.order?.[0];
+    ? data.manualSlots[manualSlot].recKey
+    : selectedLine || data.objectives[objective].order[0];
 
   const urgentCount = orders.filter((o) => o.status === 'urgent').length;
 
   return (
-    <div className={`app${settings.compactCards ? ' app-compact' : ''}`}>
+    <div className="app">
       <div className={`main${inRecs ? ' main-recs' : ''}`}>
         <TopBar
           urgentCount={urgentCount}
           inboxOpen={inboxOpen}
           onBellClick={() => setInboxOpen((o) => !o)}
           onDraftPlan={() => { setInboxOpen(false); setDraftOpen(true); }}
-          onSettings={() => { setInboxOpen(false); setSettingsOpen(true); }}
+          onSettings={() => { /* TODO: open settings */ }}
           onLogout={() => { /* TODO: wire to auth */ }}
         />
 
-        <div className={`shell${inRecs ? ' recs' : ''}`}>
-          <div className="panel">
-            {view === 'calculating' && (
-              <PanelCalculating order={activeOrder} />
-            )}
-            {view === 'recs' && (
-              <RecommendationPanel
-                data={data}
-                order={activeOrder}
-                objective={objective}
-                selectedImpact={selectedImpact}
-                selectedLine={selectedLine}
-                manualSlot={manualSlot}
-                onObjectiveChange={(k) => {
-                  setObjective(k);
-                  setSelectedImpact(k);
-                  setSelectedLine(data.objectives[k].order[0]);
-                  setShowNaive(false);
-                }}
-                onSelectImpact={setSelectedImpact}
-                onSelectCard={(line) => {
-                  setSelectedLine(line);
-                  setShowNaive(false);
-                }}
-                onClearManual={() => setManualSlot(null)}
-                onBack={backToQueue}
-              />
-            )}
+        {view === 'recs' ? (
+          <div className="shell plan-shell">
+            <PlanLab data={data} order={activeOrder} onBack={backToQueue} />
           </div>
-
-          <div className="stage">
-            <div className="stage-pad">
-              {view === 'queue' && (
-                <DefaultStage
-                  data={data}
-                  effectivePlan={effectivePlan}
-                  zoom={zoom}
-                  onZoom={setZoom}
-                  onRunClick={setRunDetail}
-                  moving={moving}
-                  onMoveDrop={handleMoveDrop}
-                  planState={planState}
-                  showOriginalPlan={showOriginalPlan}
-                  onToggleOriginal={(checked) => {
-                    setShowOriginalPlan(checked);
-                    setSettings((cur) => ({ ...cur, showOriginalOverlay: checked }));
-                  }}
-                  lineRules={data.lineRules}
-                  weeklyStops={data.weeklyStops}
-                  events={lineEvents}
-                  settings={settings}
-                />
-              )}
-              {view === 'calculating' && <CalculatingStage />}
-              {view === 'recs' && (
-                <RecommendationStage
-                  data={data}
-                  line={stageLine}
-                  zoom={zoom}
-                  onZoom={setZoom}
-                  showNaive={showNaive}
-                  onToggleNaive={setShowNaive}
-                  onDropOnLine={dropOnLine}
-                  onUrgentDrop={dropUrgentOnSlot}
-                  lineRules={data.lineRules}
-                  weeklyStops={data.weeklyStops}
-                  activeOrder={activeOrder}
-                  events={lineEvents}
-                />
+        ) : (
+          <div className={`shell${inRecs ? ' recs' : ''}`}>
+            <div className="panel">
+              {view === 'calculating' && (
+                <PanelCalculating order={activeOrder} />
               )}
             </div>
+
+            <div className="stage">
+              <div className="stage-pad">
+                {view === 'queue' && (
+                  <DefaultStage
+                    data={data}
+                    timelineProps={timelineProps}
+                    zoom={zoom}
+                    onZoom={setZoom}
+                    stoppages={stoppages}
+                    issues={issues}
+                    replanPrompt={replanPrompt}
+                    onReplan={startReplan}
+                    onDismissReplan={() => setReplanPrompt(null)}
+                    onResumeLine={resumeLine}
+                  />
+                )}
+                {view === 'calculating' && <CalculatingStage />}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
 
         <AnimatePresence>
           {inboxOpen && (
@@ -365,100 +314,86 @@ function Workspace({ data }) {
             <DraftPlanPanel
               key="draft"
               plan={effectivePlan}
-              originalPlan={data.basePlan}
-              lineRules={data.lineRules}
-              weeklyStops={data.weeklyStops}
-              planState={planState}
+              lineBaseline={data.lineBaseline}
               onClose={() => setDraftOpen(false)}
-              onMoveRun={startMoveFromPlan}
-            />
-          )}
-          {settingsOpen && (
-            <SettingsDrawer
-              key="settings"
-              settings={settings}
-              lineRules={data.lineRules}
-              onChange={updateSettings}
-              onClose={() => setSettingsOpen(false)}
-            />
-          )}
-          {actionDrawer && (
-            <PlannerActionDrawer
-              key={actionDrawer}
-              type={actionDrawer}
-              lineRules={data.lineRules}
-              onClose={() => setActionDrawer(null)}
-              onSubmit={addLineEvent}
+              onRunClick={(run) => {
+                const lineKey = run.lineKey;
+                const lane = effectivePlan?.[lineKey] ?? [];
+                const idx = lane.findIndex((s) => s.of === run.of);
+                if (idx < 0) return;
+                const seg = lane[idx];
+                setRunDetail({
+                  seg: {
+                    material: seg.of,
+                    sku: seg.sku,
+                    volume: seg.vol,
+                    oee: seg.oee,
+                    durationHours: (seg.w ?? 0) * 24,
+                    format: deriveFormat({ sku: seg.sku, material: seg.of }),
+                  },
+                  prev: lane[idx - 1] ? {
+                    material: lane[idx - 1].of,
+                    sku: lane[idx - 1].sku,
+                    volume: lane[idx - 1].vol,
+                    oee: lane[idx - 1].oee,
+                    durationHours: (lane[idx - 1].w ?? 0) * 24,
+                  } : null,
+                  next: lane[idx + 1] ? {
+                    material: lane[idx + 1].of,
+                    sku: lane[idx + 1].sku,
+                    volume: lane[idx + 1].vol,
+                    oee: lane[idx + 1].oee,
+                    durationHours: (lane[idx + 1].w ?? 0) * 24,
+                  } : null,
+                  lineKey,
+                  baseline: data.lineBaseline?.[lineKey],
+                  state: 'planned',
+                  /* Origin marker: when the modal was opened from the
+                     Draft Plan drawer we expose the "Recalculate &
+                     preview in planner" action, which lands the planner
+                     on this run's line after a calculating flash. */
+                  fromDraft: true,
+                  rawRun: { ...seg, lineKey },
+                });
+                setDraftOpen(false);
+              }}
             />
           )}
         </AnimatePresence>
 
-        {view === 'queue' && !inboxOpen && (
+        {view === 'queue' && !inboxOpen && !issueModalOpen && !stoppageModalOpen && (
           <Fab
             onAction={(key) => {
               if (key === 'order')    setInboxOpen(true);
-              if (key === 'issue')    setActionDrawer('issue');
-              if (key === 'stoppage') setActionDrawer('stoppage');
+              if (key === 'issue')    setIssueModalOpen(true);
+              if (key === 'stoppage') setStoppageModalOpen(true);
             }}
           />
         )}
 
-        {/* Live status pill — fixed at bottom-left of the canvas so the
-            planner always knows whether the data on screen is current. */}
-        <div className="live-anchor">
-          <LiveStatus data={data} lastSync={lastSyncRef.current} />
-        </div>
-
-        <RunDetailModal
-          open={!!runDetail}
-          run={runDetail?.seg}
-          prev={runDetail?.prev}
-          next={runDetail?.next}
-          lineKey={runDetail?.lineKey}
-          lineBaseline={runDetail?.baseline}
-          state={runDetail?.state}
-          onClose={() => setRunDetail(null)}
-          onMove={() => {
-            /* Entering moving mode requires the run's source index in
-               its lane — derive from the effective plan since that's
-               what the timeline is rendering. */
-            const seg = runDetail?.seg;
-            const lineKey = runDetail?.lineKey;
-            if (!seg || !lineKey) return;
-            const lane = effectivePlan?.[lineKey] ?? [];
-            const fromIndex = lane.findIndex((s) => s.of === seg.material);
-            if (fromIndex < 0) return;
-            setMoving({
-              run: lane[fromIndex],
-              fromLine: lineKey,
-              fromIndex,
-              format: seg.format || deriveFormat({ sku: seg.sku, material: seg.material }),
-            });
-            setRunDetail(null);
-          }}
+        <IssueModal
+          open={issueModalOpen}
+          onClose={() => setIssueModalOpen(false)}
+          onSubmit={logIssue}
         />
+        <StoppageModal
+          open={stoppageModalOpen}
+          onClose={() => setStoppageModalOpen(false)}
+          onSubmit={logStoppage}
+        />
+        <LogToast toast={toast} onDismiss={() => setToast(null)} />
 
-        {moving && (
-          <MoveBanner
-            moving={moving}
-            onCancel={() => setMoving(null)}
-          />
+        {/* Live status pill — fixed at bottom-left of the canvas so the
+            planner always knows whether the data on screen is current.
+            PlanLab renders its own live indicator in its footer, so hide
+            this one when the recs view is active to avoid duplicates. */}
+        {view !== 'recs' && (
+          <div className="live-anchor">
+            <LiveStatus data={data} lastSync={lastSyncRef.current} />
+          </div>
         )}
 
-        {moveCalculating && (
-          <MoveCalculating
-            moving={moveCalculating.moving}
-            dest={moveCalculating.dest}
-          />
-        )}
-
-        {movePending && (
-          <MoveImpactPanel
-            preview={movePending}
-            onConfirm={confirmMove}
-            onDiscard={discardMove}
-          />
-        )}
+        {overlays}
       </div>
     </div>
   );
@@ -522,60 +457,35 @@ function PanelCalculating({ order }) {
 }
 
 function DefaultStage({
-  data,
-  effectivePlan,
-  zoom,
-  onZoom,
-  onRunClick,
-  moving,
-  onMoveDrop,
-  planState,
-  showOriginalPlan,
-  onToggleOriginal,
-  lineRules,
-  weeklyStops,
-  events,
-  settings,
+  data, timelineProps, zoom, onZoom,
+  stoppages = [], issues = [], replanPrompt = null, onReplan, onDismissReplan, onResumeLine,
 }) {
+  const stoppedLines = stoppages.map((s) => s.line);
   return (
     <>
-      <KPIStrip data={data} events={events} settings={settings} />
-      <EventStrip events={events} />
+      <KPIStrip data={data} stoppedLines={stoppedLines} />
+      <ReplanBanner
+        prompt={replanPrompt}
+        onReplan={onReplan}
+        onDismiss={onDismissReplan}
+      />
       <div className="stage-head">
         <div>
-          <div className="stage-title">
-            {planState === 'original' ? 'Original plan' : planState === 'draft' ? 'Draft plan' : 'Optimized plan'}
-            {planState === 'optimized' && <span className="plan-compare-chip">vs original Planificado</span>}
-          </div>
-          <div className="stage-sub">
-            {planState === 'original'
-              ? 'Planificado baseline · LineWise optimized view available'
-              : 'LineWise recommended schedule · executed history left of today'}
-          </div>
+          <div className="stage-title">Production schedule</div>
+          <div className="stage-sub">Executed history left of today · forward plan right</div>
         </div>
         <div className="stage-head-right">
-          <label className="stage-plan-toggle">
-            <input
-              type="checkbox"
-              checked={showOriginalPlan}
-              onChange={(e) => onToggleOriginal(e.target.checked)}
-            />
-            Original plan
-          </label>
           <ZoomCtl zoom={zoom} onZoom={onZoom} />
         </div>
       </div>
       <Timeline
         data={data}
-        effectivePlan={effectivePlan}
         mode="default"
         zoom={zoom}
-        onRunClick={onRunClick}
-        moving={moving}
-        onMoveDrop={onMoveDrop}
-        lineRules={lineRules}
-        weeklyStops={weeklyStops}
-        events={events}
+        stoppages={stoppages}
+        issues={issues}
+        onResumeLine={onResumeLine}
+        {...timelineProps}
       />
     </>
   );
@@ -605,24 +515,9 @@ function CalculatingStage() {
   );
 }
 
-function RecommendationStage({
-  data,
-  line,
-  zoom,
-  onZoom,
-  showNaive,
-  onToggleNaive,
-  onDropOnLine,
-  onUrgentDrop,
-  lineRules,
-  weeklyStops,
-  activeOrder,
-  events,
-}) {
+function RecommendationStage({ data, line, zoom, onZoom, showNaive, onToggleNaive, onDropOnLine }) {
   const rec = data.recommendations[line];
-  const order = activeOrder ?? data.urgentOrders[0];
-  const [draggingUrgent, setDraggingUrgent] = useState(false);
-  const urgentFormat = deriveFormat({ sku: order.sku, material: order.of });
+  const order = data.urgentOrders[0];
   return (
     <>
       <div className="stage-head">
@@ -651,12 +546,7 @@ function RecommendationStage({
         <div
           className="drag-token"
           draggable
-          onDragStart={(e) => {
-            e.dataTransfer.setData('text/plain', order.of);
-            e.dataTransfer.effectAllowed = 'move';
-            setDraggingUrgent(true);
-          }}
-          onDragEnd={() => setDraggingUrgent(false)}
+          onDragStart={(e) => { e.dataTransfer.setData('text/plain', 'urgent'); e.dataTransfer.effectAllowed = 'move'; }}
         >
           <span className="dt-of">{order.of}</span>
           <span className="dt-sub">{order.sku}</span>
@@ -670,30 +560,8 @@ function RecommendationStage({
         rec={rec}
         showNaive={showNaive}
         onDropOnLine={onDropOnLine}
-        onUrgentDrop={onUrgentDrop}
-        lineRules={lineRules}
-        weeklyStops={weeklyStops}
-        urgentDrop={draggingUrgent ? { active: true, format: urgentFormat, w: 8 } : null}
-        events={events}
       />
     </>
-  );
-}
-
-function EventStrip({ events }) {
-  const list = Object.entries(events ?? {}).flatMap(([line, lineEvents]) => (
-    (lineEvents ?? []).map((event) => ({ ...event, line }))
-  ));
-  if (!list.length) return null;
-  return (
-    <div className="event-strip">
-      {list.slice(0, 4).map((event) => (
-        <span key={event.id} className={`event-pill event-${event.type}`}>
-          L{event.line} · {event.category}
-          {event.type === 'stoppage' && event.durationMinutes ? ` · ${event.durationMinutes}m` : ''}
-        </span>
-      ))}
-    </div>
   );
 }
 
@@ -705,6 +573,32 @@ function ZoomCtl({ zoom, onZoom }) {
       ))}
     </div>
   );
+}
+
+/* ---------- quick-action label helpers ---------- */
+
+function labelCategory(k) {
+  return { mech: 'Mechanical', elec: 'Electrical', quality: 'Quality', material: 'Material' }[k] || k;
+}
+function labelSeverity(k) {
+  return { warn: 'Warning', critical: 'Critical' }[k] || k;
+}
+function labelReason(k) {
+  return {
+    'breakdown': 'Breakdown',
+    'no-material': 'No material',
+    'no-operator': 'No operator',
+    'quality-hold': 'Quality hold',
+    'other': 'Other',
+  }[k] || k;
+}
+function labelDuration(k) {
+  return { '15m': '15 min', '30m': '30 min', '1h': '1 hour', '2h+': '2 h+', 'unknown': 'unknown' }[k] || k;
+}
+function fmtShiftHours(h) {
+  if (h < 1) return `${Math.round(h * 60)} min`;
+  if (h === 1) return '1 hour';
+  return `${h} hours`;
 }
 
 export default App;

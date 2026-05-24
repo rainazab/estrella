@@ -71,11 +71,28 @@ export function computeMovePreview({ basePlan, lineBaseline, moving, dest }) {
   const prev = adjustedToIndex > 0 ? destLane[adjustedToIndex - 1] : null;
   const insertedStart = prev ? (prev.start ?? 0) + (prev.w ?? 0) : 0;
 
-  // Shift downstream segments forward.
+  /* Shift downstream segments forward, AND track collisions. The
+     primary collision signal: any cleaning/maintenance block in the
+     ripple gets pushed, which is a planning violation in reality
+     (service windows are scheduled with external constraints — crew
+     availability, contractor visits, CIP cycles). Flagging when one
+     moves is the most honest "this move breaks something committed"
+     signal we can produce without per-run due dates. */
   const pushAmount = removedRun.w ?? 0;
   let pushedCount = 0;
+  const collisions = [];
+
   for (let i = adjustedToIndex; i < destLane.length; i++) {
-    destLane[i] = { ...destLane[i], start: (destLane[i].start ?? 0) + pushAmount };
+    const seg = destLane[i];
+    if (seg.kind === 'clean' || seg.kind === 'maint') {
+      /* The service block gets pushed by `pushAmount` days; flag it. */
+      collisions.push({
+        of: seg.kind === 'clean' ? 'Scheduled cleaning' : 'Scheduled maintenance',
+        kind: seg.kind,
+        byHours: pushAmount * 24,
+      });
+    }
+    destLane[i] = { ...seg, start: (seg.start ?? 0) + pushAmount };
     pushedCount += 1;
   }
 
@@ -121,6 +138,10 @@ export function computeMovePreview({ basePlan, lineBaseline, moving, dest }) {
          same-format run and inject a CIP, or vice versa. */
       formatSwitchesOld: countFormatSwitches(basePlan, fromLine) + (fromLine !== toLine ? countFormatSwitches(basePlan, toLine) : 0),
       formatSwitchesNew: countFormatSwitches(plan, fromLine) + (fromLine !== toLine ? countFormatSwitches(plan, toLine) : 0),
+      /* Delivery-risk proxy: which pushed runs would overrun a downstream
+         service window. Empty array means "move is safe to commit."
+         Populated means "this move breaks scheduled CIPs/maintenance." */
+      collisions,
     },
   };
 }
