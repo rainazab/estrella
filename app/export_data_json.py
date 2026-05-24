@@ -45,6 +45,7 @@ import pandas as pd
 from . import config, data_loader, sample_data
 from .block_classifier import classify_blocks, verify_of_woid_join
 from .cf_matrix import load_cf_matrix, load_operational_contract, project_service_blocks
+from .production_projector import project_forward_production, horizon_days_to_eoy
 from .changeover_typing import annotate_master
 from .config import LINES
 from .data_contract import CONTRACT_VERSION, summarize, validate
@@ -1958,17 +1959,29 @@ def main(argv: Optional[List[str]] = None) -> int:
     timeline = build_timeline_metadata(base_plan, exported_at=exported_at)
     operational = load_operational_contract(timeline.get("anchorDate"))
 
-    # Project every Tabla CF cadence row across the forward window and
-    # interleave the resulting service blocks into basePlan. The
-    # contract (v2.3+) says clean/maint blocks live in basePlan for the
-    # move-flow collision check; weeklyStops keeps the per-line summary
-    # markers separately. Horizon mirrors the longest UI view (quarter
-    # = daysAhead 90).
-    horizon_days = max(
-        90,
-        int(((timeline.get("views") or {}).get("quarter") or {}).get("daysAhead") or 90),
-    )
+    # Extend the planning horizon to end-of-year. Damm's Planificado
+    # workbook only carries ~7 days of committed plan; this step tiles
+    # that weekly pattern forward through 2026-12-31 so the timeline +
+    # the recommender + the resequencer can reason about W23-onward.
+    # Each tiled band is tagged source: "projected_from_planificado",
+    # cycleWeek, and inferredWidth so downstream consumers can tell
+    # committed apart from modelled.
+    horizon_days = horizon_days_to_eoy(timeline.get("anchorDate"))
     anchor_dt = datetime.fromisoformat(timeline["anchorDate"]).date()
+    base_plan = project_forward_production(
+        base_plan, target_horizon_days=horizon_days, cycle_period_days=7.0,
+    )
+    print(
+        f"   forward production projection: "
+        f"tiled to {horizon_days}-day horizon (EOY {anchor_dt.year}-12-31)",
+        flush=True,
+    )
+
+    # Project every Tabla CF cadence row across the same horizon and
+    # interleave the resulting service blocks into the (now extended)
+    # basePlan. The contract (v2.3+) says clean/maint blocks live in
+    # basePlan for the move-flow collision check; weeklyStops keeps
+    # the per-line summary markers separately.
     projected_blocks = project_service_blocks(
         operational.get("cleaningSchedule") or {},
         anchor=anchor_dt,
