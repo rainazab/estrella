@@ -131,11 +131,20 @@ function DraftCard({ run, baseline, onClick }) {
     onClick && !expired ? 'draft-card-clickable' : '',
   ].filter(Boolean).join(' ');
 
+  function handleKeyDown(e) {
+    if (expired || !onClick) return;
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    onClick();
+  }
+
   return (
-    <button
-      type="button"
+    <div
+      role={expired || !onClick ? undefined : 'button'}
+      tabIndex={expired || !onClick ? undefined : 0}
       className={cls}
       onClick={expired ? undefined : onClick}
+      onKeyDown={handleKeyDown}
       aria-label={`${run.of} on L${run.lineKey}, ${fmtRange(start, dur)}`}
     >
       <div className="draft-card-top">
@@ -177,6 +186,6 @@ function DraftCard({ run, baseline, onClick }) {
           </span>
         </div>
       </div>
-    </button>
+    </div>
   );
 }

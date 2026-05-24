@@ -1,14 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { usePlan } from './hooks/usePlan.js';
-import {
-  postIssue,
-  postStoppage,
-  resumeStoppage as apiResumeStoppage,
-  postStoppageReplan,
-  postResequence,
-} from './api/client.js';
 import { useTimelineMoveFlow } from './hooks/useTimelineMoveFlow.js';
+import { useChangeLedger } from './hooks/useChangeLedger.js';
 import TopBar from './components/TopBar.jsx';
 import KPIStrip from './components/KPIStrip.jsx';
 import Inbox from './components/Inbox.jsx';
@@ -21,16 +15,18 @@ import LiveStatus from './components/LiveStatus.jsx';
 import DraftPlanPanel from './components/DraftPlanPanel.jsx';
 import IssueModal from './components/IssueModal.jsx';
 import StoppageModal from './components/StoppageModal.jsx';
+import ShiftCloseModal, { LAST_HANDOFF_STORAGE_KEY } from './components/ShiftCloseModal.jsx';
 import ReplanBanner from './components/ReplanBanner.jsx';
 import LogToast from './components/LogToast.jsx';
 import SettingsDrawer from './components/SettingsDrawer.jsx';
-import YearCompare from './components/YearCompare.jsx';
-import WorldSignals from './components/WorldSignals.jsx';
-import SignalAlert from './components/SignalAlert.jsx';
+import ProvenanceModal from './components/ProvenanceModal.jsx';
 import { useSettings } from './hooks/useSettings.js';
-import { useSignals } from './hooks/useSignals.js';
 import { computeStoppageReplan } from './lib/stoppagePlan.js';
+import { buildOptimizationContext } from './lib/optimizationContext.js';
 import { deriveFormat } from './components/TimelineCard.jsx';
+import { signalToCitation, worldSignals } from './lib/cala-mock.js';
+import { CalaVerticalIcon, getCalaVertical } from './lib/calaVerticals.js';
+import BrewLoader from './components/BrewLoader.jsx';
 
 /* App state mirrors the prototype's `state` object 1:1.
    view : 'queue' (landing planner) | 'calculating' | 'recs'
@@ -41,15 +37,16 @@ import { deriveFormat } from './components/TimelineCard.jsx';
    zoom         : 'week' | 'month' | 'quarter'                           */
 function App() {
   const { data, loading, error, reload } = usePlan();
+  const forceLoading = new URLSearchParams(location.search).get('demo') === 'loading';
 
-  if (loading) return <BootShell><LoadingState /></BootShell>;
+  if (loading || forceLoading) return <BootShell><LoadingState /></BootShell>;
   if (error)   return <BootShell><ErrorState error={error} onRetry={reload} /></BootShell>;
-  return <Workspace data={data} reload={reload} />;
+  return <Workspace data={data} />;
 }
 
 /* Workspace — only mounts once data has arrived, so every child can
    safely assume `data` is the full plan contract. */
-function Workspace({ data, reload }) {
+function Workspace({ data }) {
   const demo = new URLSearchParams(location.search).get('demo');
   const demoRecs = demo === 'recs' || demo === 'simulate' || demo === 'recommend';
   const demoCalc = demo === 'calculating';
@@ -58,6 +55,8 @@ function Workspace({ data, reload }) {
   const [selectedImpact, setSelectedImpact] = useState(demoRecs ? 'oee' : null);
   const [selectedLine, setSelectedLine] = useState(demoRecs ? data.objectives.oee.order[0] : null);
   const [manualSlot, setManualSlot] = useState(null);
+  const [plannerMovePreview, setPlannerMovePreview] = useState(null);
+  const [plannerOpenOrderOf, setPlannerOpenOrderOf] = useState(null);
   const [showNaive, setShowNaive] = useState(demo === 'simulate');
   const [zoom, setZoom] = useState('month');
   const [inboxOpen, setInboxOpen] = useState(demo === 'inbox');
@@ -85,60 +84,29 @@ function Workspace({ data, reload }) {
   const [replanPrompt, setReplanPrompt] = useState(null);
   const [toast, setToast] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [handoffOpen, setHandoffOpen] = useState(false);
+  const [lastHandoff, setLastHandoff] = useState(readLastHandoff);
   const [settings, setSettings] = useSettings();
-  const { data: signalsData, refresh: refreshSignalsApi } = useSignals();
-  const [dismissedSignals, setDismissedSignals] = useState(() => SignalAlert.loadDismissed());
-  const worldSignalsRef = useRef(null);
+  const { changes: ledgerChanges, appendChange } = useChangeLedger();
   const lastSyncRef = useRef(Date.now());
-
-  function dismissSignal(id) {
-    setDismissedSignals((prev) => {
-      const next = new Set(prev);
-      next.add(id);
-      SignalAlert.persistDismissed(next);
-      return next;
-    });
-  }
-
-  function reviewSignal() {
-    worldSignalsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-
-  function resequenceWeek() {
-    /* Fire the global re-sequencer. The endpoint persists the new
-       basePlan as a plan_override; we surface the savings as a toast
-       and pull the new schedule via reload(). Falls back to a "no
-       backend" toast if the API isn't reachable. */
-    postResequence()
-      .then((resp) => {
-        const s = resp?.summary ?? {};
-        const delta = Number(s.totalCostDelta ?? 0);
-        const reordered = Number(s.totalReordered ?? 0);
-        setToast({
-          id: `rsq-${Date.now()}`,
-          title: reordered > 0 ? 'Week resequenced' : 'Already optimal',
-          detail: reordered > 0
-            ? `Saved ${delta.toFixed(2)} changeover cost · ${reordered} runs moved`
-            : 'No moves improved the total — schedule kept as-is',
-          tone: reordered > 0 ? 'good' : 'neutral',
-        });
-        reload?.();
-      })
-      .catch((err) => {
-        if (import.meta.env.DEV) console.warn('[resequence] failed', err);
-        setToast({
-          id: `rsq-err-${Date.now()}`,
-          title: 'Resequence unavailable',
-          detail: 'Backend not reachable — start ./scripts/run_server.sh',
-          tone: 'warn',
-        });
-      });
-  }
 
   /* surface the urgent-orders inbox once on boot */
   useEffect(() => {
     if (!demo) setInboxOpen(true);
   }, [demo]);
+
+  /* Keep the inbox aligned with the latest plan payload. This matters in
+     the demo server because plan.json can change while the app is already
+     open; preserve manually-created orders, but merge in server examples. */
+  useEffect(() => {
+    const planOrders = data.urgentOrders ?? [];
+    setOrders((current) => mergePlanOrders(current, planOrders));
+    setActiveOrder((current) => {
+      if (!current) return planOrders[0] ?? null;
+      const fresh = planOrders.find((order) => order.of === current.of);
+      return fresh ? { ...current, ...fresh } : current;
+    });
+  }, [data.urgentOrders]);
 
   /* Move-flow orchestration is shared with PlanLab — see
      useTimelineMoveFlow. App-specific extensions:
@@ -150,6 +118,33 @@ function Workspace({ data, reload }) {
   const { timelineProps, overlays, setRunDetail, setCommittedPlan } = useTimelineMoveFlow({
     data,
     basePlan: data.basePlan,
+    optimizationContext: buildOptimizationContext(data, selectedImpact || objective),
+    onMoveAccepted: (preview) => {
+      setActiveOrder(orderFromMovePreview(preview));
+      setInboxOpen(false);
+      setDraftOpen(false);
+      setView('calculating');
+      return 'planner';
+    },
+    onMovePreviewReady: (preview) => {
+      setPlannerMovePreview(preview);
+      setObjective('oee');
+      setSelectedImpact('oee');
+      setSelectedLine(preview.ripple.toLine || data.objectives.oee.order[0]);
+      setShowNaive(false);
+      appendChange({
+        action: 'moveToPlanner',
+        type: 'manual_move_confirmed',
+        summary: `${preview.ripple.runId} moved from L${preview.ripple.fromLine} to L${preview.ripple.toLine}`,
+        rationale: 'line-change',
+        runId: preview.ripple.runId,
+        fromLine: preview.ripple.fromLine,
+        toLine: preview.ripple.toLine,
+        ripple: preview.ripple,
+      });
+      setView('recs');
+    },
+    onLedgerEvent: appendChange,
     getOnPreviewInPlanner: ({ runDetail }) => runDetail?.fromDraft
       ? () => previewDraftRun(runDetail.rawRun)
       : undefined,
@@ -161,6 +156,28 @@ function Workspace({ data, reload }) {
 
   function selectUrgent(order = orders[0]) {
     if (order) setActiveOrder(order);
+    setPlannerMovePreview(null);
+    setPlannerOpenOrderOf(
+      order?.status === 'queued' || order?.status === 'scheduled'
+        ? order.of
+        : null,
+    );
+    if (order) {
+      const queued = order.status === 'queued' || order.status === 'scheduled';
+      appendChange({
+        action: queued ? 'selectQueued' : 'selectUrgent',
+        type: queued ? 'queued_order_selected' : 'urgent_order_selected',
+        summary: `Selected ${queued ? 'queued' : 'urgent'} order ${order.of}`,
+        order: {
+          of: order.of,
+          sku: order.sku,
+          units: order.units,
+          hl: order.hl,
+          due: order.due,
+          status: order.status,
+        },
+      });
+    }
     setInboxOpen(false);
     setView('calculating');
     setTimeout(() => {
@@ -170,6 +187,10 @@ function Workspace({ data, reload }) {
       setShowNaive(false);
       setView('recs');
     }, 1300);
+  }
+
+  function replanAllUrgents(urgentOrders = orders.filter((o) => o.status === 'urgent')) {
+    selectUrgent(urgentOrders[0]);
   }
 
   /* previewDraftRun — fired from the RunDetailModal's "Recalculate &
@@ -186,6 +207,8 @@ function Workspace({ data, reload }) {
        because the calculating view mounts concurrent motion targets. */
     setRunDetail(null);
     setDraftOpen(false);
+    setPlannerMovePreview(null);
+    setPlannerOpenOrderOf(null);
     setTimeout(() => {
       setActiveOrder({
         of: run.of,
@@ -217,107 +240,104 @@ function Workspace({ data, reload }) {
     setSelectedLine(null);
     setSelectedImpact(null);
     setManualSlot(null);
+    setPlannerMovePreview(null);
+    setPlannerOpenOrderOf(null);
     setView('queue');
   }
 
   function logIssue(payload) {
-    /* Optimistic update with a client-generated id, then reconcile with
-       the server's view (server-assigned id + ts). If the backend isn't
-       reachable we keep the optimistic entry — the demo stays interactive
-       offline. */
-    const optimistic = { id: `iss-local-${Date.now()}`, ts: Date.now(), ...payload };
-    setIssues((prev) => [optimistic, ...prev]);
+    const entry = { id: `iss-${Date.now()}`, ...payload };
+    setIssues((prev) => [entry, ...prev]);
+    appendChange({
+      action: 'logIssue',
+      type: 'issue_logged',
+      summary: `Issue logged on L${entry.line}`,
+      issueId: entry.id,
+      line: entry.line,
+      category: entry.category,
+      severity: entry.severity,
+      note: entry.note,
+      reportedAt: entry.ts,
+    });
     setIssueModalOpen(false);
     setToast({
-      id: optimistic.id,
-      title: `Issue logged on L${optimistic.line}`,
-      detail: `${labelCategory(optimistic.category)} · ${labelSeverity(optimistic.severity)}`,
-      tone: optimistic.severity === 'critical' ? 'warn' : 'neutral',
+      id: entry.id,
+      title: `Issue logged on L${entry.line}`,
+      detail: `${labelCategory(entry.category)} · ${labelSeverity(entry.severity)}`,
+      tone: entry.severity === 'critical' ? 'warn' : 'neutral',
     });
-    postIssue({ ...payload, ts: optimistic.ts })
-      .then(({ issue }) => {
-        setIssues((prev) => prev.map((i) => (i.id === optimistic.id ? issue : i)));
-      })
-      .catch((err) => {
-        if (import.meta.env.DEV) console.warn('[issues] backend unavailable, keeping local entry', err);
-      });
   }
 
   function logStoppage(payload) {
-    /* One active stoppage per line — replace any prior. Optimistic local
-       update mirrors the server's invariant; reconcile from the response
-       so the id/ts match what the server stored. */
-    const optimistic = { id: `stp-local-${Date.now()}`, ts: Date.now(), ...payload };
+    /* One active stoppage per line — replace any prior. Keeps the KPI
+       and lane badge unambiguous; if a planner re-logs the same line
+       they probably mean to update it. */
+    const entry = { id: `stp-${Date.now()}`, ...payload };
     setStoppages((prev) => [
-      optimistic,
-      ...prev.filter((s) => s.line !== optimistic.line),
+      entry,
+      ...prev.filter((s) => s.line !== entry.line),
     ]);
+    appendChange({
+      action: 'logStoppage',
+      type: 'stoppage_logged',
+      summary: `L${entry.line} stopped`,
+      stoppageId: entry.id,
+      line: entry.line,
+      reason: entry.reason,
+      duration: entry.duration,
+      startedAt: entry.startedAt,
+      startAgoMin: entry.startAgoMin,
+      reportedAt: entry.ts,
+    });
     setStoppageModalOpen(false);
-    setReplanPrompt(optimistic);
+    setReplanPrompt({ ...entry, source: 'internal' });
     setToast({
-      id: optimistic.id,
-      title: `L${optimistic.line} stopped`,
-      detail: `${labelReason(optimistic.reason)} · est. ${labelDuration(optimistic.duration)}`,
+      id: entry.id,
+      title: `L${entry.line} stopped`,
+      detail: `${labelReason(entry.reason)} · est. ${labelDuration(entry.duration)}`,
       tone: 'bad',
     });
-    postStoppage({ ...payload, ts: optimistic.ts })
-      .then(({ stoppages: serverList, stoppage }) => {
-        setStoppages(serverList ?? []);
-        if (stoppage) {
-          setReplanPrompt((prev) => (prev?.id === optimistic.id ? stoppage : prev));
-        }
-      })
-      .catch((err) => {
-        if (import.meta.env.DEV) console.warn('[stoppages] backend unavailable, keeping local entry', err);
-      });
   }
 
   function startReplan() {
     if (!replanPrompt) return;
     /* Real replan: shift every planned segment on the stopped lane
-       forward by the stoppage duration and commit the new plan. We try
-       the backend first; if it answers we use the server's new plan
-       (which also covers service blocks), otherwise we fall back to the
-       client-side shift in stoppagePlan.js so the demo still moves. */
+       forward by the stoppage duration and commit the new plan. The
+       short calculating flash mirrors the urgent-order flow so it
+       feels like the same product moment, but here we end up back
+       on the schedule (not the recs view) with a visibly updated
+       timeline. */
     const prompt = replanPrompt;
     const line = prompt.line;
     setReplanPrompt(null);
     setView('calculating');
 
-    const finish = (shiftedCount, shiftedHours, nextPlan) => {
-      if (nextPlan) setCommittedPlan(nextPlan);
+    setTimeout(() => {
+      const replan = computeStoppageReplan({
+        basePlan: effectivePlan,
+        line,
+        durationKey: prompt.duration,
+      });
+      setCommittedPlan(replan.plan);
+      appendChange({
+        action: 'startReplan',
+        type: 'stoppage_replan_committed',
+        summary: `L${line} replanned after stoppage`,
+        line,
+        stoppageId: prompt.id,
+        reason: prompt.reason,
+        duration: prompt.duration,
+        shiftedCount: replan.shiftedCount,
+        shiftedHours: replan.shiftedHours,
+      });
       setView('queue');
       setToast({
         id: `rpl-${Date.now()}`,
         title: `L${line} replanned`,
-        detail: `Shifted ${shiftedCount} ${shiftedCount === 1 ? 'run' : 'runs'} by ${fmtShiftHours(shiftedHours)}`,
+        detail: `Shifted ${replan.shiftedCount} ${replan.shiftedCount === 1 ? 'run' : 'runs'} by ${fmtShiftHours(replan.shiftedHours)}`,
         tone: 'neutral',
       });
-    };
-
-    /* Fire the request in parallel with the calculating flash so the UI
-       still feels instant even if the network is slow. */
-    const apiCall = postStoppageReplan({
-      stoppageId: prompt.id,
-      line,
-      durationKey: prompt.duration,
-    }).catch((err) => {
-      if (import.meta.env.DEV) console.warn('[replan] backend unavailable, using client-side shift', err);
-      return null;
-    });
-
-    Promise.all([apiCall, new Promise((r) => setTimeout(r, 1300))]).then(([resp]) => {
-      if (resp?.plan?.basePlan) {
-        finish(resp.shiftedCount ?? 0, resp.shiftedHours ?? 0, resp.plan.basePlan);
-      } else {
-        const replan = computeStoppageReplan({
-          basePlan: effectivePlan,
-          line,
-          durationKey: prompt.duration,
-        });
-        finish(replan.shiftedCount, replan.shiftedHours, replan.plan);
-      }
-    });
+    }, 1300);
   }
 
   function resumeLine(line) {
@@ -325,7 +345,6 @@ function Workspace({ data, reload }) {
        returns to N/N and the lane badge clears. Any plan changes from
        a Replan are intentionally left in place — the planner already
        committed to that new sequence. */
-    const active = stoppages.find((s) => s.line === line);
     setStoppages((prev) => prev.filter((s) => s.line !== line));
     /* If a replan banner is still up for the same line (planner hadn't
        acted yet), clear it too. */
@@ -336,15 +355,6 @@ function Workspace({ data, reload }) {
       detail: 'Line back in production',
       tone: 'neutral',
     });
-    if (active?.id && !active.id.startsWith('stp-local-')) {
-      apiResumeStoppage(active.id)
-        .then(({ stoppages: serverList }) => {
-          if (Array.isArray(serverList)) setStoppages(serverList);
-        })
-        .catch((err) => {
-          if (import.meta.env.DEV) console.warn('[resume] backend unavailable', err);
-        });
-    }
   }
 
   function dropOnLine(line) {
@@ -373,13 +383,70 @@ function Workspace({ data, reload }) {
           inboxOpen={inboxOpen}
           onBellClick={() => setInboxOpen((o) => !o)}
           onDraftPlan={() => { setInboxOpen(false); setDraftOpen(true); }}
+          onHandoff={() => setHandoffOpen(true)}
           onSettings={() => setSettingsOpen(true)}
           onLogout={() => { /* TODO: wire to auth */ }}
         />
 
         {view === 'recs' ? (
           <div className="shell plan-shell">
-            <PlanLab data={data} order={activeOrder} onBack={backToQueue} />
+            <PlanLab
+              key={plannerMovePreview
+                ? `move-${plannerMovePreview.ripple.runId}-${plannerMovePreview.ripple.toLine}`
+                : `plan-${activeOrder?.of ?? 'none'}`}
+              data={data}
+              order={activeOrder}
+              initialMovePreview={plannerMovePreview}
+              autoOpenOrderOf={plannerOpenOrderOf}
+              onBack={backToQueue}
+              onSaveDraft={({ title, metrics }) => {
+                appendChange({
+                  action: 'saveDraftPlan',
+                  type: 'draft_plan_saved',
+                  summary: `Draft saved: ${title}`,
+                  title,
+                  metrics,
+                });
+                setToast({
+                  id: `draft-${Date.now()}`,
+                  title: 'Draft saved',
+                  detail: title,
+                  tone: 'neutral',
+                });
+              }}
+              onSendReport={({ title, metrics }) => {
+                appendChange({
+                  action: 'sendPlanReport',
+                  type: 'plan_report_sent',
+                  summary: `Report sent: ${title}`,
+                  title,
+                  metrics,
+                });
+                setToast({
+                  id: `report-${Date.now()}`,
+                  title: 'Report sent',
+                  detail: title,
+                  tone: 'neutral',
+                });
+              }}
+              onApplyPlan={({ plan, title, metrics }) => {
+                setCommittedPlan(plan);
+                appendChange({
+                  action: 'applyPlan',
+                  type: 'plan_applied',
+                  summary: `Applied plan: ${title}`,
+                  title,
+                  metrics,
+                });
+                setToast({
+                  id: `apply-${Date.now()}`,
+                  title: 'Plan applied',
+                  detail: title,
+                  tone: 'neutral',
+                });
+                backToQueue();
+              }}
+            />
           </div>
         ) : (
           <div className={`shell${inRecs ? ' recs' : ''}`}>
@@ -394,22 +461,18 @@ function Workspace({ data, reload }) {
                 {view === 'queue' && (
                   <DefaultStage
                     data={data}
+                    orders={orders}
                     timelineProps={timelineProps}
                     zoom={zoom}
                     onZoom={setZoom}
                     stoppages={stoppages}
                     issues={issues}
+                    changes={ledgerChanges}
                     replanPrompt={replanPrompt}
                     onReplan={startReplan}
+                    onSelectUrgent={selectUrgent}
                     onDismissReplan={() => setReplanPrompt(null)}
                     onResumeLine={resumeLine}
-                    signalsData={signalsData}
-                    onRefreshSignals={refreshSignalsApi}
-                    dismissedSignals={dismissedSignals}
-                    onDismissSignal={dismissSignal}
-                    onReviewSignal={reviewSignal}
-                    worldSignalsRef={worldSignalsRef}
-                    onResequence={resequenceWeek}
                   />
                 )}
                 {view === 'calculating' && <CalculatingStage />}
@@ -423,8 +486,14 @@ function Workspace({ data, reload }) {
             <Inbox
               key="inbox"
               orders={orders}
+              data={data}
+              effectivePlan={effectivePlan}
+              mode="briefing"
+              ledgerChanges={ledgerChanges}
+              lastHandoff={lastHandoff}
               onClose={() => setInboxOpen(false)}
               onSelectUrgent={selectUrgent}
+              onReplanAll={replanAllUrgents}
               onCreateOrder={createManualOrder}
             />
           )}
@@ -508,6 +577,22 @@ function Workspace({ data, reload }) {
           onClose={() => setStoppageModalOpen(false)}
           onSubmit={logStoppage}
         />
+        <ShiftCloseModal
+          open={handoffOpen}
+          changes={ledgerChanges}
+          issues={issues}
+          stoppages={stoppages}
+          onClose={() => setHandoffOpen(false)}
+          onSent={(payload) => {
+            setLastHandoff(payload);
+            setToast({
+              id: payload.id,
+              title: 'Handoff sent',
+              detail: `${payload.changes.length} recent ${payload.changes.length === 1 ? 'change' : 'changes'} included`,
+              tone: 'neutral',
+            });
+          }}
+        />
         <LogToast toast={toast} onDismiss={() => setToast(null)} />
 
         {/* Live status pill — fixed at bottom-left of the canvas so the
@@ -543,9 +628,8 @@ function BootShell({ children }) {
 
 function LoadingState() {
   return (
-    <div className="center-state">
-      <span className="spinner" />
-      <div className="small">Loading plan…</div>
+    <div className="center-state" style={{ background: '#fff', minHeight: '70vh', borderRadius: 12 }}>
+      <BrewLoader />
     </div>
   );
 }
@@ -584,48 +668,30 @@ function PanelCalculating({ order }) {
 }
 
 function DefaultStage({
-  data, timelineProps, zoom, onZoom,
-  stoppages = [], issues = [], replanPrompt = null, onReplan, onDismissReplan, onResumeLine,
-  signalsData = null, onRefreshSignals = null,
-  dismissedSignals = new Set(), onDismissSignal = () => {}, onReviewSignal = () => {},
-  worldSignalsRef = null,
-  onResequence = null,
+  data, orders = data?.urgentOrders ?? [], timelineProps, zoom, onZoom,
+  stoppages = [], issues = [], changes = [], replanPrompt = null, onReplan, onSelectUrgent, onDismissReplan, onResumeLine,
 }) {
   const stoppedLines = stoppages.map((s) => s.line);
   return (
     <>
-      <SignalAlert
-        data={signalsData}
-        dismissed={dismissedSignals}
-        onDismiss={onDismissSignal}
-        onReview={onReviewSignal}
+      <KPIStrip
+        data={data}
+        stoppedLines={stoppedLines}
+        urgentOrders={orders}
+        onSelectUrgent={onSelectUrgent}
       />
-      <KPIStrip data={data} stoppedLines={stoppedLines} />
-      <YearCompare data={data} />
-      <div ref={worldSignalsRef}>
-        <WorldSignals data={signalsData} onRefresh={onRefreshSignals} />
-      </div>
       <ReplanBanner
         prompt={replanPrompt}
         onReplan={onReplan}
         onDismiss={onDismissReplan}
       />
       <div className="stage-head">
-        <div>
+        <div className="stage-head-title">
           <div className="stage-title">Production schedule</div>
           <div className="stage-sub">Executed history left of today · forward plan right</div>
         </div>
+        <HomepageNewsStrip data={data} plan={timelineProps.effectivePlan} changes={changes} />
         <div className="stage-head-right">
-          {onResequence && (
-            <button
-              type="button"
-              className="resequence-btn"
-              onClick={onResequence}
-              title="Reorder the forward queue to minimise total changeover cost"
-            >
-              ↻ Re-sequence week
-            </button>
-          )}
           <ZoomCtl zoom={zoom} onZoom={onZoom} />
         </div>
       </div>
@@ -639,6 +705,206 @@ function DefaultStage({
         {...timelineProps}
       />
     </>
+  );
+}
+
+function HomepageNewsStrip({ data, plan, changes = [] }) {
+  const [activeItem, setActiveItem] = useState(null);
+  const signals = worldSignals
+    .filter((signal) => signal.severity === 'high' || signal.severity === 'medium')
+    .map((signal) => ({
+      signal,
+      impact: impactedVolumeForSignal(signal, data, plan),
+    }))
+    .filter((item) => item.impact.orderCount > 0)
+    .sort((a, b) => priorityRank(a.signal) - priorityRank(b.signal))
+    .slice(0, 2);
+
+  if (!signals.length) return <RecentChangesRail changes={changes} />;
+
+  return (
+    <section className="news-strip" aria-label="External signals and impacted orders">
+      <div className="news-strip-label">
+        <span>Cala priorities</span>
+        <small>Impacted volume</small>
+      </div>
+      <div className="news-strip-items">
+        {signals.map(({ signal, impact }, index) => (
+          <NewsStripCard
+            signal={signal}
+            impact={impact}
+            priority={index + 1}
+            key={signal.id}
+            onClick={() => setActiveItem({ signal, impact, priority: index + 1 })}
+          />
+        ))}
+      </div>
+      <ProvenanceModal
+        open={!!activeItem}
+        citations={activeItem ? [signalToCitation(activeItem.signal)] : []}
+        title={activeItem?.signal?.headline ?? 'Cala priority'}
+        onClose={() => setActiveItem(null)}
+      >
+        {activeItem && <NewsImpactSummary item={activeItem} />}
+      </ProvenanceModal>
+    </section>
+  );
+}
+
+function NewsStripCard({ signal, impact, priority, onClick }) {
+  const meta = getCalaVertical(signal.vertical);
+  const priorityLabel = `P${priority}`;
+
+  return (
+    <button
+      type="button"
+      className={`news-card ${meta.accentClass}`}
+      onClick={onClick}
+      aria-label={`${priorityLabel} ${meta.name}: ${signal.headline}. ${formatNewsUnits(impact.totalUnits)} impacted`}
+      title={`${priorityLabel} · ${signal.headline} · ${formatNewsUnits(impact.totalUnits)} impacted`}
+    >
+      <span className="news-icon">
+        <CalaVerticalIcon vertical={signal.vertical} size={15} />
+      </span>
+      <span className="news-priority">{priorityLabel}</span>
+      <span className="news-main">
+        <span className="news-topline">
+          {meta.shortLabel}
+          <b>{signal.delta}</b>
+        </span>
+        <span className="news-headline">{signal.headline}</span>
+      </span>
+      <span className="news-impacts" aria-label={`Impacted volume for ${signal.headline}`}>
+        <b>{formatNewsUnits(impact.totalUnits)}</b>
+        <small>{impact.orderCount} OFs</small>
+      </span>
+      <time className="news-time" dateTime={signal.fetchedAt}>{fmtSignalTime(signal.fetchedAt)}</time>
+    </button>
+  );
+}
+
+function NewsImpactSummary({ item }) {
+  const meta = getCalaVertical(item.signal.vertical);
+  return (
+    <section className={`news-modal-impact ${meta.accentClass}`} aria-label="Impacted volume">
+      <div className="news-modal-metric">
+        <span>Total impacted volume</span>
+        <b>{formatNewsUnits(item.impact.totalUnits)}</b>
+      </div>
+      <div className="news-modal-metric">
+        <span>Impacted OFs</span>
+        <b>{item.impact.orderCount}</b>
+      </div>
+      <div className="news-modal-list">
+        {item.impact.orders.slice(0, 8).map((order) => (
+          <span key={order.of}>
+            <b>{order.of}</b>
+            <em>{formatNewsUnits(order.units)}</em>
+            {order.line && <small>L{order.line}</small>}
+          </span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function impactedVolumeForSignal(signal, data, plan) {
+  const affectedOfs = new Set(signal.affects?.ofs ?? []);
+  const affectedLines = new Set((signal.affects?.lines ?? []).map(String));
+  const orders = new Map();
+
+  for (const order of data?.urgentOrders ?? []) {
+    if (affectedOfs.has(order.of)) {
+      upsertImpactedOrder(orders, {
+        of: order.of,
+        units: Number(order.units) || 0,
+        status: order.status,
+      });
+    }
+  }
+
+  for (const [lineKey, lane] of Object.entries(plan ?? {})) {
+    for (const run of lane ?? []) {
+      if (!run?.of || run.kind === 'clean' || run.kind === 'maint') continue;
+      if (!affectedOfs.has(run.of) && !affectedLines.has(String(lineKey))) continue;
+      upsertImpactedOrder(orders, {
+        of: run.of,
+        units: Math.round((Number(run.vol) || 0) * 1000),
+        line: String(lineKey),
+      });
+    }
+  }
+
+  const orderList = [...orders.values()].sort((a, b) => b.units - a.units);
+  return {
+    orderCount: orderList.length,
+    totalUnits: orderList.reduce((sum, order) => sum + order.units, 0),
+    orders: orderList,
+  };
+}
+
+function upsertImpactedOrder(orders, next) {
+  const current = orders.get(next.of);
+  orders.set(next.of, {
+    ...current,
+    ...next,
+    units: (current?.units ?? 0) + (next.units ?? 0),
+    line: current?.line ?? next.line,
+  });
+}
+
+function priorityRank(signal) {
+  const severity = { high: 0, medium: 1, low: 2 }[signal.severity] ?? 3;
+  const time = new Date(signal.fetchedAt).getTime();
+  return severity * 1e13 - (Number.isFinite(time) ? time : 0);
+}
+
+function formatNewsUnits(units) {
+  if (!units) return '0 un';
+  if (units >= 1000000) {
+    const m = units / 1000000;
+    return `${m.toFixed(m >= 10 ? 1 : 2)}M un`;
+  }
+  if (units >= 1000) {
+    const k = units / 1000;
+    return `${k.toFixed(k >= 100 ? 0 : 1)}k un`;
+  }
+  return `${units.toLocaleString()} un`;
+}
+
+function fmtSignalTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'now';
+  return new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+}
+
+function RecentChangesRail({ changes = [] }) {
+  const recent = changes.slice(-5);
+  if (!recent.length) return null;
+  return (
+    <div className="change-rail" aria-label="Recent changes">
+      <span className="change-rail-label">Recent changes</span>
+      <div className="change-rail-items">
+        {recent.map((change) => (
+          <button
+            key={change.id}
+            type="button"
+            className="change-pill"
+            title={detailForLedgerChange(change)}
+          >
+            <span>{fmtLedgerTime(change.ts)}</span>
+            <span className="change-pill-main">
+              <b>{change.summary ?? change.type}</b>
+              <small>{whyForLedgerChange(change)}</small>
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -750,6 +1016,74 @@ function fmtShiftHours(h) {
   if (h < 1) return `${Math.round(h * 60)} min`;
   if (h === 1) return '1 hour';
   return `${h} hours`;
+}
+function orderFromMovePreview(preview) {
+  const ripple = preview?.ripple ?? {};
+  const run = (preview?.plan?.[ripple.toLine] ?? []).find((seg) => seg?.of === ripple.runId)
+    ?? preview?.moving?.run
+    ?? {};
+  return {
+    of: ripple.runId ?? run.of ?? 'Manual move',
+    status: 'planned',
+    sku: run.sku ?? 'Moved order',
+    units: Math.round((Number(run.vol) || 0) * 1000),
+    hl: 0,
+    due: 'scheduled',
+  };
+}
+function mergePlanOrders(current = [], planOrders = []) {
+  if (!planOrders.length) return current;
+  const planIds = new Set(planOrders.map((order) => order.of));
+  const currentById = new Map(current.map((order) => [order.of, order]));
+  const manualOrders = current.filter((order) => !planIds.has(order.of));
+  const merged = [
+    ...manualOrders,
+    ...planOrders.map((order) => ({ ...(currentById.get(order.of) ?? {}), ...order })),
+  ];
+  if (merged.length !== current.length) return merged;
+  const changed = merged.some((order, index) => {
+    const prior = current[index];
+    return !prior
+      || prior.of !== order.of
+      || prior.status !== order.status
+      || prior.sku !== order.sku
+      || prior.units !== order.units
+      || prior.hl !== order.hl
+      || prior.due !== order.due;
+  });
+  return changed ? merged : current;
+}
+function readLastHandoff() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(LAST_HANDOFF_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+function fmtLedgerTime(ts) {
+  if (!ts) return '--:--';
+  return new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date(ts));
+}
+function detailForLedgerChange(change) {
+  if (change.type === 'manual_move_confirmed') return `Why: ${change.rationale ?? 'manual'} · L${change.fromLine} to L${change.toLine}`;
+  if (change.type === 'stoppage_replan_committed') return `Why: ${labelReason(change.reason)} · ${change.shiftedCount ?? 0} runs shifted by ${fmtShiftHours(change.shiftedHours ?? 0)}`;
+  if (change.type === 'stoppage_logged') return `Why: ${labelReason(change.reason)} · ${labelDuration(change.duration)}`;
+  if (change.type === 'issue_logged') return `Why: ${labelCategory(change.category)} · ${labelSeverity(change.severity)}`;
+  return change.summary ?? 'Planner change';
+}
+function whyForLedgerChange(change) {
+  if (change.type === 'manual_move_confirmed') return `Why: ${change.rationale ?? 'manual'}`;
+  if (change.type === 'stoppage_replan_committed') return `Why: ${labelReason(change.reason)}`;
+  if (change.type === 'stoppage_logged') return `Why: ${labelReason(change.reason)}`;
+  if (change.type === 'issue_logged') return `Why: ${labelCategory(change.category)}`;
+  if (change.type === 'urgent_order_selected') return 'Why: urgent order';
+  return 'Why: planner action';
 }
 
 export default App;

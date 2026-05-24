@@ -26,6 +26,8 @@ export default function TimelineCard({
   widthPx,
   onClick,
   selected = false,
+  focused = false,
+  focusIndex = null,
   dateLabel = null,
   ghost = false,
 }) {
@@ -66,6 +68,7 @@ export default function TimelineCard({
     kind === 'ins' ? 'tc-ins' : '',
     kind === 'shift' ? 'tc-shift' : '',
     selected ? 'tc-selected' : '',
+    focused ? 'tc-focused' : '',
     ghost ? 'tc-moving-ghost' : '',
     onClick ? 'tc-clickable' : '',
   ].filter(Boolean).join(' ');
@@ -86,6 +89,7 @@ export default function TimelineCard({
       whileTap={onClick ? { y: 0 } : undefined}
       className={cls}
       style={{ width: w }}
+      data-tl-run-index={focusIndex ?? undefined}
       onClick={onClick}
       onKeyDown={onClick ? handleKeyDown : undefined}
       aria-label={`${material}, ${formatVol(volume)} units, OEE ${oee?.toFixed(2)}`}

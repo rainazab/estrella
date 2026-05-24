@@ -33,12 +33,18 @@ export function useTimelineMoveFlow({
   data,
   basePlan,
   getOnPreviewInPlanner,
+  optimizationContext,
+  initialCommittedPlan,
+  onMoveAccepted,
+  onLedgerEvent,
+  onMovePreviewReady,
+  onMovePreviewDiscard,
 } = {}) {
   const [runDetail, setRunDetail] = useState(null);
   const [moving, setMoving] = useState(null);
   const [moveCalculating, setMoveCalculating] = useState(null);
   const [movePending, setMovePending] = useState(null);
-  const [committedPlan, setCommittedPlan] = useState(null);
+  const [committedPlan, setCommittedPlan] = useState(initialCommittedPlan ?? null);
 
   /* Esc cancels moving mode. Listening here (not in the timeline) so the
      handler survives across re-renders of the lane components. */
@@ -69,24 +75,44 @@ export function useTimelineMoveFlow({
     });
     if (!preview) return;
     const priorPlan = effectivePlan;
+    const movePayload = {
+      ...preview,
+      priorPlan,
+      moving,
+      dest: { lineKey, slotIndex },
+    };
+    const routeToPlanner = onMoveAccepted?.(movePayload) === 'planner';
+
     setMoveCalculating({
       moving,
       dest: { lineKey, slotIndex },
       preview,
       priorPlan,
+      routeToPlanner,
     });
     setMoving(null);
     /* 1.3s matches the urgent-order calculate flash (selectUrgent) so
        both interactions feel like the same product moment. */
     setTimeout(() => {
       setMoveCalculating(null);
-      setMovePending({ ...preview, priorPlan });
+      if (!routeToPlanner) setMovePending({ ...preview, priorPlan });
       setCommittedPlan(preview.plan);
+      onMovePreviewReady?.(movePayload);
     }, 1300);
   }
 
-  function confirmMove() {
+  function confirmMove(rationale = 'manual') {
     /* Plan is already committed; just dismiss the review panel. */
+    onLedgerEvent?.({
+      action: 'confirmMove',
+      type: 'manual_move_confirmed',
+      summary: `${movePending.ripple.runId} moved from L${movePending.ripple.fromLine} to L${movePending.ripple.toLine}`,
+      rationale,
+      runId: movePending.ripple.runId,
+      fromLine: movePending.ripple.fromLine,
+      toLine: movePending.ripple.toLine,
+      ripple: movePending.ripple,
+    });
     setMovePending(null);
   }
 
@@ -96,29 +122,49 @@ export function useTimelineMoveFlow({
       movePending.priorPlan === basePlan ? null : movePending.priorPlan,
     );
     setMovePending(null);
+    onMovePreviewDiscard?.(movePending);
   }
 
   function openRunFromTimeline(payload) {
     setRunDetail(payload);
   }
 
+  function beginMove({ lineKey, fromIndex, run, format } = {}) {
+    if (!lineKey) return false;
+    const lane = effectivePlan?.[lineKey] ?? [];
+    const idx = Number.isInteger(fromIndex)
+      ? fromIndex
+      : lane.findIndex((s) => s.of === run?.of);
+    if (idx < 0 || !lane[idx]) return false;
+    const sourceRun = run ?? lane[idx];
+    setMoving({
+      run: sourceRun,
+      fromLine: lineKey,
+      fromIndex: idx,
+      format: format || deriveFormat({ sku: sourceRun.sku, material: sourceRun.of }),
+    });
+    setRunDetail(null);
+    return true;
+  }
+
   function onRunDetailMove() {
-    /* Entering moving mode requires the run's source index in its lane —
-       derive from the effective plan since that's what the timeline is
-       rendering. */
+    /* Entering moving mode requires the run's source index in its lane.
+       Prefer the index captured by the timeline so duplicate OFs don't
+       move the first matching run by accident. */
     const seg = runDetail?.seg;
     const lineKey = runDetail?.lineKey;
     if (!seg || !lineKey) return;
     const lane = effectivePlan?.[lineKey] ?? [];
-    const fromIndex = lane.findIndex((s) => s.of === seg.material);
+    const fromIndex = Number.isInteger(runDetail?.index)
+      ? runDetail.index
+      : lane.findIndex((s) => s.of === seg.material);
     if (fromIndex < 0) return;
-    setMoving({
-      run: lane[fromIndex],
-      fromLine: lineKey,
+    beginMove({
+      lineKey,
       fromIndex,
+      run: lane[fromIndex],
       format: seg.format || deriveFormat({ sku: seg.sku, material: seg.material }),
     });
-    setRunDetail(null);
   }
 
   const onPreviewInPlanner = typeof getOnPreviewInPlanner === 'function'
@@ -136,6 +182,8 @@ export function useTimelineMoveFlow({
       lineKey: runDetail?.lineKey,
       lineBaseline: runDetail?.baseline,
       state: runDetail?.state,
+      showMoveAction: !runDetail?.fromDraft,
+      optimizationContext: runDetail?.optimizationContext ?? optimizationContext,
       onClose: () => setRunDetail(null),
       onPreviewInPlanner,
       onMove: onRunDetailMove,
@@ -144,7 +192,7 @@ export function useTimelineMoveFlow({
       moving,
       onCancel: () => setMoving(null),
     }),
-    moveCalculating && createElement(MoveCalculating, {
+    moveCalculating && !moveCalculating.routeToPlanner && createElement(MoveCalculating, {
       moving: moveCalculating.moving,
       dest: moveCalculating.dest,
     }),
@@ -163,6 +211,7 @@ export function useTimelineMoveFlow({
       moving,
       onMoveDrop: handleMoveDrop,
     },
+    beginMove,
     /* Useful for callers that need to open the modal from outside the
        timeline (Inbox draft panel, planner preview action). */
     runDetail,

@@ -18,10 +18,11 @@ export default function RunDetailModal({
   open,
   run,
   prev,
-  next,
   lineKey,
   lineBaseline,
   state = 'planned',
+  showMoveAction = true,
+  optimizationContext = null,
   onClose,
   onMove,
   onPreviewInPlanner,
@@ -59,10 +60,11 @@ export default function RunDetailModal({
             <Body
               run={run}
               prev={prev}
-              next={next}
               lineKey={lineKey}
               lineBaseline={lineBaseline}
               state={state}
+              showMoveAction={showMoveAction}
+              optimizationContext={optimizationContext}
               onClose={onClose}
               onMove={onMove}
               onPreviewInPlanner={onPreviewInPlanner}
@@ -74,17 +76,13 @@ export default function RunDetailModal({
   );
 }
 
-function Body({ run, prev, next, lineKey, lineBaseline, state, onClose, onMove, onPreviewInPlanner }) {
+function Body({ run, prev, lineKey, lineBaseline, state, showMoveAction, optimizationContext, onClose, onMove, onPreviewInPlanner }) {
   const isExecuted = state === 'executed';
   const fmt = run.format || deriveFormat({ sku: run.sku, material: run.material });
   const delta = lineBaseline != null && run.oee != null ? run.oee - lineBaseline : null;
   const band = oeeBand(delta);
 
-  const prevFmt = prev ? (prev.format || deriveFormat({ sku: prev.sku, material: prev.material })) : null;
-  const nextFmt = next ? (next.format || deriveFormat({ sku: next.sku, material: next.material })) : null;
-
   const inCost = classifyChangeover(prev, run);
-  const outCost = classifyChangeover(run, next);
 
   return (
     <>
@@ -142,24 +140,13 @@ function Body({ run, prev, next, lineKey, lineBaseline, state, onClose, onMove, 
         <Stat label="Duration" value={formatDuration(run.durationHours)} sub={run.startLabel} />
       </section>
 
-      {/* Sequence strip */}
-      <section className="rd-section">
-        <div className="rd-section-h">Sequence</div>
-        <div className="rd-seq">
-          <SeqSlot item={prev} role="prev" />
-          <Changeover cost={inCost} />
-          <SeqSlot item={{ ...run, format: fmt }} role="current" />
-          <Changeover cost={outCost} />
-          <SeqSlot item={next} role="next" />
-        </div>
-      </section>
-
-      {/* Why this OEE */}
-      <section className="rd-section">
-        <div className="rd-section-h">Why this OEE {isExecuted ? 'result' : 'estimate'}</div>
-        <p className="rd-prose">
-          {whyProse({ run, prev, inCost, band, delta, isExecuted })}
-        </p>
+      {/* Optimisation context */}
+      <section className="rd-section rd-opt-section">
+        <div className="rd-section-h">{isExecuted ? 'Decision KPIs' : 'Chosen optimisation'}</div>
+        <OptimizationDecision
+          context={optimizationContext}
+          fallbackText={whyProse({ run, prev, inCost, band, delta, isExecuted })}
+        />
       </section>
 
       {/* Actions */}
@@ -169,7 +156,9 @@ function Body({ run, prev, next, lineKey, lineBaseline, state, onClose, onMove, 
         </footer>
       ) : (
         <footer className="rd-foot">
-          <button className="rd-btn rd-btn-ghost" onClick={onMove}>Move to another line</button>
+          {showMoveAction && onMove && (
+            <button className="rd-btn rd-btn-ghost" onClick={onMove}>Move to another line</button>
+          )}
           {onPreviewInPlanner && (
             <button className="rd-btn rd-btn-primary" onClick={onPreviewInPlanner}>
               Recalculate & preview in planner
@@ -193,41 +182,39 @@ function Stat({ label, value, sub, tone }) {
   );
 }
 
-function SeqSlot({ item, role }) {
-  if (!item) {
-    return (
-      <div className={`rd-seqslot rd-seqslot-empty rd-seqslot-${role}`}>
-        <div className="rd-seqslot-l">{role === 'prev' ? 'Start of plan' : 'End of plan'}</div>
-      </div>
-    );
+function OptimizationDecision({ context, fallbackText }) {
+  if (!context) {
+    return <p className="rd-prose">{fallbackText}</p>;
   }
-  if (item.kind === 'clean' || item.kind === 'maint') {
-    return (
-      <div className={`rd-seqslot rd-seqslot-svc rd-seqslot-${role}`}>
-        <div className="rd-seqslot-l">{role === 'prev' ? 'Before' : 'After'}</div>
-        <div className="rd-seqslot-v">{item.kind === 'clean' ? 'Cleaning' : 'Maintenance'}</div>
-        <div className="rd-seqslot-s">{formatDuration(item.durationHours)}</div>
-      </div>
-    );
-  }
-  const fmt = item.format || deriveFormat({ sku: item.sku, material: item.material });
-  return (
-    <div className={`rd-seqslot rd-seqslot-${role}`}>
-      <div className="rd-seqslot-l">{role === 'prev' ? 'Before' : role === 'next' ? 'After' : 'This run'}</div>
-      <div className="rd-seqslot-v">{item.material}</div>
-      <div className="rd-seqslot-s">
-        {fmt && <span className={`rd-fmt rd-fmt-${formatTone(fmt)}`}>{fmt}</span>}
-      </div>
-    </div>
-  );
-}
 
-function Changeover({ cost }) {
-  if (!cost) return <span className="rd-arrow">→</span>;
   return (
-    <div className={`rd-changeover rd-co-${cost.band}`} title={cost.detail}>
-      <span className="rd-co-arrow">→</span>
-      <span className="rd-co-label">{cost.label}</span>
+    <div className="rd-opt">
+      <div className="rd-opt-head">
+        <span className="rd-opt-badge">{context.banner}</span>
+        <div className="rd-opt-title">
+          <b>{context.title}</b>
+          <span>{context.placement}</span>
+        </div>
+        <div className="rd-opt-target">
+          <span>Optimised for</span>
+          <b>{context.target}</b>
+        </div>
+      </div>
+
+      <div className="rd-opt-kpis" role="group" aria-label="Optimisation KPIs">
+        {context.kpis.map((kpi) => (
+          <div className={`rd-opt-kpi rd-opt-kpi-${kpi.tone}`} key={kpi.label}>
+            <span>{kpi.label}</span>
+            <b>{kpi.value}</b>
+            <small>{kpi.detail}</small>
+          </div>
+        ))}
+      </div>
+
+      <p className="rd-opt-note">
+        {context.note}
+        {context.tradeoff && <span> Tradeoff: {context.tradeoff}.</span>}
+      </p>
     </div>
   );
 }

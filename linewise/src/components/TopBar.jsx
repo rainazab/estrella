@@ -12,6 +12,7 @@ export default function TopBar({
   onSettings,
   onLogout,
   onDraftPlan,
+  onHandoff,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
@@ -52,6 +53,15 @@ export default function TopBar({
         >
           <span className="bell-ic">🔔</span>
           <span className={`badge${!urgentCount ? ' zero' : ''}`}>{urgentCount}</span>
+        </button>
+
+        <button
+          type="button"
+          className="handoff-btn"
+          onClick={onHandoff}
+          title="Close shift handoff"
+        >
+          Handoff
         </button>
 
         <div className="user-wrap" ref={menuRef}>
