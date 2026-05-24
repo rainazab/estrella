@@ -32,7 +32,19 @@ const FORMAT_TONE = {
 
 const BRAND_OPTIONS = ['Estrella Damm', 'Voll-Damm', 'Free Damm', 'AmiBock'];
 const FORMAT_OPTIONS = ['33cl', '50cl', '44cl'];
-const FAKE_NOW_LABEL = '06:00 · 24 May';
+/* Format `data.timeline.now` (ISO 8601 from /plan) as "HH:MM · DD Mon".
+   Falls back to a hyphen when the field isn't present so the UI never
+   shows a hardcoded constant. */
+function formatNowLabel(isoNow) {
+  if (!isoNow) return '—';
+  const d = new Date(isoNow);
+  if (Number.isNaN(d.getTime())) return '—';
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  const day = d.getDate();
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${hh}:${mm} · ${day} ${months[d.getMonth()]}`;
+}
 
 export default function Inbox({
   orders,
@@ -86,7 +98,7 @@ export default function Inbox({
         </div>
         <div className="panel-desc">
           {mode === 'briefing'
-            ? `${FAKE_NOW_LABEL} · handoff, drift, and open requests.`
+            ? `${formatNowLabel(data?.timeline?.now)} · handoff, drift, and open requests.`
             : 'Requests routed from the operations manager.'}
         </div>
 
