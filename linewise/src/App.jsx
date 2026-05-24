@@ -199,7 +199,7 @@ function Workspace({ data }) {
       setSelectedLine(data.objectives.oee.order[0]);
       setShowNaive(false);
       setView('recs');
-    }, 1300);
+    }, 2500);
   }
 
   function replanAllUrgents(urgentOrders = orders.filter((o) => o.status === 'urgent')) {
@@ -260,7 +260,7 @@ function Workspace({ data }) {
         setSelectedLine(run.lineKey || data.objectives.oee.order[0]);
         setShowNaive(false);
         setView('recs');
-      }, 1300);
+      }, 2500);
     }, 160);
   }
 
@@ -372,7 +372,7 @@ function Workspace({ data }) {
         detail: `Shifted ${replan.shiftedCount} ${replan.shiftedCount === 1 ? 'run' : 'runs'} by ${fmtShiftHours(replan.shiftedHours)}`,
         tone: 'neutral',
       });
-    }, 1300);
+    }, 2500);
   }
 
   function resumeLine(line) {
@@ -484,12 +484,10 @@ function Workspace({ data }) {
             />
           </div>
         ) : (
-          <div className={`shell${inRecs ? ' recs' : ''}`}>
-            <div className="panel">
-              {view === 'calculating' && (
-                <PanelCalculating order={activeOrder} />
-              )}
-            </div>
+          <div className={`shell${inRecs ? ' recs' : ''}${view === 'calculating' ? ' calc-full' : ''}`}>
+            {view !== 'calculating' && (
+              <div className="panel" />
+            )}
 
             <div className="stage">
               <div className="stage-pad">
@@ -964,26 +962,23 @@ function RecentChangesRail({ changes = [] }) {
 }
 
 function CalculatingStage() {
+  // Re-use the same BrewLoader the boot screen uses, so the "ranking lines
+  // and sequence options" moment feels like the same brand-led pause —
+  // mascot conducts the line, three lines route in parallel, KPIs tease the
+  // outcome. Fills the stage area (not full-bleed) so the urgent-order
+  // panel on the left stays visible for context.
   return (
-    <>
-      <div className="stage-head">
-        <div>
-          <div className="stage-title">Evaluating insertion options</div>
-          <div className="stage-sub">Matching the urgent order against executed history</div>
-        </div>
-        <span className="stage-tag">working…</span>
-      </div>
-      <div className="center-state">
-        <div className="scanbox">
-          <div className="scanline"><span>Line 14 — changeover analogues</span><span className="done">✓</span></div>
-          <div className="scanline"><span>Line 17 — changeover analogues</span><span className="done">✓</span></div>
-          <div className="scanline"><span>Line 19 — changeover analogues</span><span className="pend">…</span></div>
-          <div className="scanline"><span>Netting out cleaning &amp; downtime</span><span className="pend">…</span></div>
-          <div className="progress"><div className="fill" style={{ width: '60%' }} /></div>
-        </div>
-        <div className="small">Scanning historical changeovers across three lines</div>
-      </div>
-    </>
+    <div style={{
+      flex: 1,
+      minHeight: 0,
+      display: 'flex',
+      alignItems: 'stretch',
+      background: '#fff',
+      borderRadius: 12,
+      overflow: 'hidden',
+    }}>
+      <BrewLoader />
+    </div>
   );
 }
 
