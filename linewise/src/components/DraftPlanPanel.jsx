@@ -32,16 +32,19 @@ function fmtDay(d) {
   return `${WK[d.getDay()]} ${d.getDate()}`;
 }
 
-function fmtRange(startDays, durDays) {
-  const a = addDays(TODAY, startDays);
-  const b = addDays(TODAY, startDays + durDays);
+/* Args in HOURS per the v2.3+ contract (start, w). Convert internally
+   so the daily-tick math stays in days. */
+function fmtRange(startHours, durHours) {
+  const a = addDays(TODAY, startHours / 24);
+  const b = addDays(TODAY, (startHours + durHours) / 24);
   if (a.toDateString() === b.toDateString()) return fmtDay(a);
   return `${fmtDay(a)} → ${fmtDay(b)}`;
 }
 
-function startsIn(days) {
-  if (days <= 0) return 'now';
-  if (days < 1) return 'today';
+function startsIn(hours) {
+  if (hours <= 0) return 'now';
+  if (hours < 24) return 'today';
+  const days = hours / 24;
   if (days < 2) return 'tomorrow';
   if (days < 7) return `in ${Math.round(days)}d`;
   const weeks = days / 7;
@@ -156,7 +159,7 @@ function DraftCard({ run, baseline, onClick }) {
         </div>
         <div className="draft-meta-cell">
           <span className="draft-meta-l">Duration</span>
-          <span className="draft-meta-v">{formatDuration(dur * 24)} · {dur.toFixed(1)}w</span>
+          <span className="draft-meta-v">{formatDuration(dur)}</span>
         </div>
         <div className="draft-meta-cell">
           <span className="draft-meta-l">Volume</span>
