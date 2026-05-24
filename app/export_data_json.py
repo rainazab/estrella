@@ -108,6 +108,55 @@ def _row_duration_hours(row) -> float:
     return 4.0
 
 
+def build_historical_runs_pool(master_blocks: pd.DataFrame) -> Dict[str, List[Dict[str, Any]]]:
+    """Per-line pool of real 2025 production runs (no `start` — caller
+    assigns positions during forward projection). Used by
+    `production_projector.project_forward_production` to fill W23+ with
+    varied historical SKU mix instead of cloning the Planificado week.
+
+    Returns `{ "14": [run, ...], "17": [...], "19": [...] }` sorted by
+    historical timestamp so consecutive entries reflect actual run
+    sequences from 2025.
+    """
+    out: Dict[str, List[Dict[str, Any]]] = {str(l): [] for l in LINES}
+    if master_blocks is None or master_blocks.empty:
+        return out
+    df = master_blocks.copy()
+    if "block_type" in df.columns:
+        df = df[df["block_type"] == "production"]
+    if "fecha_fin" in df.columns:
+        df["fecha_fin"] = pd.to_datetime(df["fecha_fin"], errors="coerce")
+        df = df.sort_values("fecha_fin")
+    for line in LINES:
+        sub = df[df["tren"] == line]
+        if sub.empty:
+            continue
+        runs: List[Dict[str, Any]] = []
+        for _, r in sub.iterrows():
+            dur = max(0.25, _row_duration_hours(r))
+            envase = str(r.get("envase")) if r.get("envase") else None
+            tipo_envase = str(r.get("tipo_envase")) if r.get("tipo_envase") else None
+            hl = r.get("hl")
+            try:
+                vol = int(hl) if hl is not None and not math.isnan(float(hl)) else 0
+            except (TypeError, ValueError):
+                vol = 0
+            runs.append({
+                "of": str(r.get("of")) if r.get("of") else None,
+                "sku": str(r.get("sku")) if r.get("sku") else None,
+                "vol": vol,
+                "oee": _round_oee(r.get("oee")) or 0.55,
+                "w": round(dur, 2),
+                "envase": envase,
+                "tipo_envase": tipo_envase,
+                "format_key": normalize_format(tipo_envase) or normalize_format(envase),
+                "marca": str(r.get("marca")) if r.get("marca") else None,
+                "familia": str(r.get("familia")) if r.get("familia") else None,
+            })
+        out[str(line)] = runs
+    return out
+
+
 # ============================================================ executed + plan
 
 
@@ -1960,20 +2009,25 @@ def main(argv: Optional[List[str]] = None) -> int:
     operational = load_operational_contract(timeline.get("anchorDate"))
 
     # Extend the planning horizon to end-of-year. Damm's Planificado
-    # workbook only carries ~7 days of committed plan; this step tiles
-    # that weekly pattern forward through 2026-12-31 so the timeline +
-    # the recommender + the resequencer can reason about W23-onward.
-    # Each tiled band is tagged source: "projected_from_planificado",
-    # cycleWeek, and inferredWidth so downstream consumers can tell
-    # committed apart from modelled.
+    # workbook only carries ~7 days of committed plan; this step fills
+    # W23 onwards through 2026-12-31 with rotating slices of the 2025
+    # Master OEE history per line, so every forward week is a different
+    # real week (real OFs, real SKUs, real OEEs) — not a clone of W22.
+    # The recommender + resequencer can then reason about the whole year.
     horizon_days = horizon_days_to_eoy(timeline.get("anchorDate"))
     anchor_dt = datetime.fromisoformat(timeline["anchorDate"]).date()
+    historical_pool = build_historical_runs_pool(master_blocks)
     base_plan = project_forward_production(
-        base_plan, target_horizon_days=horizon_days, cycle_period_days=7.0,
+        base_plan,
+        target_horizon_days=horizon_days,
+        cycle_period_days=7.0,
+        historical_runs=historical_pool,
     )
+    pool_sizes = ", ".join(f"L{k}={len(v)}" for k, v in historical_pool.items())
     print(
         f"   forward production projection: "
-        f"tiled to {horizon_days}-day horizon (EOY {anchor_dt.year}-12-31)",
+        f"tiled to {horizon_days}-day horizon (EOY {anchor_dt.year}-12-31) "
+        f"from history pool [{pool_sizes}]",
         flush=True,
     )
 

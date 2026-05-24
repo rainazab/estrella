@@ -5,26 +5,29 @@ asks for sequencing recommendations and OEE prediction across the
 whole forward calendar — so the timeline needs production runs past
 the Planificado window.
 
-This module tiles the existing week-shaped plan forward, repeating the
-SKU mix until the requested end date. Each projected band carries:
+Two projection modes, controlled by whether `historical_runs` is passed:
 
-  source:        "projected_from_planificado"
-  cycleWeek:     1-indexed (1 = original Planificado, 2 = first tile, …)
-  inferredWidth: true                    # signals "modelled, not committed"
-  oee:           inherited from the source band
-  vol:           inherited
+* **History-replay mode** (preferred). Per line, walks the 2025 Master
+  OEE production pool. Each forward week is filled by a rotating slice
+  of consecutive historical runs (real OFs, real SKUs, real OEEs).
+  Looping back through the pool starts at a different offset, so even
+  successive passes through the same line's history don't produce
+  identical weeks. This is the move that makes "Onward week N" feel
+  like a different week, not a clone of week 1.
 
-That `source` tag is what makes this honest. The recommender + global
-re-sequencer can score these projected bands using the same transition
-buckets they use for committed runs (they observe `of`, `sku`, and
-`format_key` — all preserved). Service blocks slot back in via
-`cf_matrix.project_service_blocks` on the same extended horizon.
+* **Clone-Planificado mode** (fallback when no history). Tiles the
+  current Planificado week forward unchanged.
 
-Approach (per line, independent):
-  1. Snapshot the existing production runs (week 1).
-  2. Determine the tile period (default 7d) and total cycles needed.
-  3. For each cycle n >= 2, clone the week's runs with start shifted by
-     `(n-1) × tile_period_hours`, stop when start crosses the horizon.
+Every projected band carries:
+
+  source:             "projected_from_history" | "projected_from_planificado"
+  cycleWeek:          1-indexed (1 = committed, 2..N = modelled)
+  inferredWidth:      true                # UI cue: "modelled, not committed"
+  sourceHistoryIndex: int (history mode only)
+
+The recommender + global re-sequencer can score these bands using the
+same transition buckets they use for committed runs — they read `of`,
+`sku`, and `format_key`, all of which are inherited from real history.
 
 Limits & follow-ups:
   * Cross-line balancing not applied here — the resequencer can be
@@ -48,24 +51,69 @@ def _is_production(seg: Dict[str, Any]) -> bool:
     return kind in (None, "ins", "shift")
 
 
+def _fill_week_from_history(
+    *,
+    line_pool: List[Dict[str, Any]],
+    week_start_h: float,
+    cycle_n: int,
+    cycle_h: float,
+    target_h: float,
+    pool_offset: int,
+) -> List[Dict[str, Any]]:
+    """Pull consecutive runs from a line's historical pool, starting at
+    `pool_offset` (wraps around), accumulating until ~`cycle_h` of run
+    time is placed at `week_start_h`. Returns the projected bands."""
+    if not line_pool:
+        return []
+    out: List[Dict[str, Any]] = []
+    cursor = week_start_h
+    accumulated = 0.0
+    idx = pool_offset
+    safety = 0
+    while accumulated < cycle_h:
+        safety += 1
+        if safety > len(line_pool) * 2:
+            break  # defensive — never loop more than twice through the pool
+        run = line_pool[idx % len(line_pool)]
+        idx += 1
+        w = float(run.get("w") or 0.0)
+        if w <= 0:
+            continue
+        if cursor + w > target_h:
+            break  # don't overshoot the horizon
+        clone = copy.deepcopy(run)
+        clone["start"] = round(cursor, 2)
+        clone["w"] = round(w, 2)
+        clone["source"] = "projected_from_history"
+        clone["cycleWeek"] = cycle_n
+        clone["inferredWidth"] = True
+        clone["sourceHistoryIndex"] = (idx - 1) % len(line_pool)
+        out.append(clone)
+        cursor += w
+        accumulated += w
+    return out
+
+
 def project_forward_production(
     base_plan: Dict[str, List[Dict[str, Any]]],
     *,
     target_horizon_days: float,
     cycle_period_days: float = 7.0,
+    historical_runs: Optional[Dict[str, List[Dict[str, Any]]]] = None,
 ) -> Dict[str, List[Dict[str, Any]]]:
     """Return a new basePlan where each line's production runs are tiled
     forward to roughly `target_horizon_days` from the anchor (start=0).
 
-    The input is mutated only via deep copies; non-production blocks
-    (clean / maint) in the original lane are preserved at their original
-    positions.
+    When `historical_runs[line]` is supplied with a non-empty list of
+    {of, sku, vol, oee, w, format_key, …} runs from the 2025 master
+    history, each forward week is filled by a different rotating slice
+    of that pool (history-replay mode). Otherwise the original
+    Planificado week is cloned forward (clone-Planificado fallback).
 
-    Note that this runs *before* `project_service_blocks` injects the
-    extended cleaning cadence — i.e. when this function sees the lane,
-    only the original Planificado weekly stops (if any) are present.
-    The exporter sequences these calls so the new service-block events
-    interleave with the tiled production correctly.
+    Non-production blocks (clean / maint) in the original lane are
+    preserved at their original positions. The exporter calls
+    `project_service_blocks` *after* this function so the extended
+    cleaning cadence interleaves with the projected production.
     """
     if not isinstance(base_plan, dict):
         return base_plan
@@ -92,31 +140,46 @@ def project_forward_production(
             out[line] = lane
             continue
 
-        # Tile the seed forward. cycle_n=1 is the original; cycles 2..N
-        # are clones with start shifted by (n-1) * cycle_h.
+        line_pool = (historical_runs or {}).get(str(line)) or []
         tiled: List[Dict[str, Any]] = list(production_seed)
+
         cycle_n = 2
         while True:
-            offset = (cycle_n - 1) * cycle_h
-            seed_start = min(float(s.get("start") or 0.0) for s in production_seed)
-            if seed_start + offset >= target_h:
+            week_start = (cycle_n - 1) * cycle_h
+            if week_start >= target_h:
                 break
-            for orig in production_seed:
-                start = float(orig.get("start") or 0.0) + offset
-                if start >= target_h:
-                    continue
-                clone = copy.deepcopy(orig)
-                clone["start"] = round(start, 2)
-                clone["source"] = "projected_from_planificado"
-                clone["cycleWeek"] = cycle_n
-                # Mark as inferred so the UI can render it dimmed if
-                # the frontend wants to distinguish committed vs modelled.
-                clone["inferredWidth"] = True
-                tiled.append(clone)
+
+            if line_pool:
+                # History-replay mode. Rotate the pool offset each cycle
+                # so successive weeks draw different slices of 2025.
+                # ~5 runs per cycle of offset is enough to produce a
+                # visibly different SKU mix even on short pools.
+                pool_offset = ((cycle_n - 2) * 5) % len(line_pool)
+                tiled.extend(_fill_week_from_history(
+                    line_pool=line_pool,
+                    week_start_h=week_start,
+                    cycle_n=cycle_n,
+                    cycle_h=cycle_h,
+                    target_h=target_h,
+                    pool_offset=pool_offset,
+                ))
+            else:
+                # Fallback: clone the Planificado seed forward unchanged.
+                offset = (cycle_n - 1) * cycle_h
+                for orig in production_seed:
+                    start = float(orig.get("start") or 0.0) + offset
+                    if start >= target_h:
+                        continue
+                    clone = copy.deepcopy(orig)
+                    clone["start"] = round(start, 2)
+                    clone["source"] = "projected_from_planificado"
+                    clone["cycleWeek"] = cycle_n
+                    clone["inferredWidth"] = True
+                    tiled.append(clone)
+
             cycle_n += 1
-            # Defensive cap — should never trigger with sane horizons.
             if cycle_n > 100:
-                break
+                break  # defensive
 
         tiled.sort(key=lambda s: float(s.get("start") or 0.0))
         # Merge tiled production with the lane's existing non-production

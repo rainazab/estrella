@@ -96,6 +96,88 @@ class TestProjectForwardProduction:
         assert starts == [168.0, 192.0, 216.0]
 
 
+class TestHistoryReplayMode:
+    def test_history_pool_drives_forward_weeks(self):
+        seed = [_prod('ED13LT', start=0, w=168.0)]  # 7d committed
+        # 8 distinct historical runs (24h each = full week per chunk)
+        history = {'14': [
+            _prod(f'HIST{i:02d}', start=0, w=24.0, sku=f'SKU{i}', oee=0.4 + i * 0.02)
+            for i in range(8)
+        ]}
+        out = pp.project_forward_production(
+            {'14': seed},
+            target_horizon_days=21,
+            cycle_period_days=7.0,
+            historical_runs=history,
+        )
+        lane = [s for s in out['14'] if not s.get('kind')]
+        committed = [s for s in lane if s.get('source') != 'projected_from_history']
+        projected = [s for s in lane if s.get('source') == 'projected_from_history']
+        # Week 1 committed; weeks 2 and 3 projected from history.
+        assert len(committed) == 1 and committed[0]['of'] == 'ED13LT'
+        assert len(projected) >= 2  # at least a few hist runs fitted per week
+        # All projected bands carry the right tags
+        for b in projected:
+            assert b['source'] == 'projected_from_history'
+            assert b['cycleWeek'] in (2, 3)
+            assert b['inferredWidth'] is True
+            assert 'sourceHistoryIndex' in b
+            assert b['of'].startswith('HIST')
+
+    def test_weeks_draw_different_history_slices(self):
+        """Variation check: week 2 and week 3 should pull different
+        historical OFs from the rotating pool."""
+        seed = [_prod('ED13LT', start=0, w=168.0)]
+        history = {'14': [
+            _prod(f'HIST{i:02d}', start=0, w=24.0)
+            for i in range(20)
+        ]}
+        out = pp.project_forward_production(
+            {'14': seed},
+            target_horizon_days=21,
+            cycle_period_days=7.0,
+            historical_runs=history,
+        )
+        week2_ofs = sorted({
+            s['of'] for s in out['14']
+            if s.get('cycleWeek') == 2 and s.get('source') == 'projected_from_history'
+        })
+        week3_ofs = sorted({
+            s['of'] for s in out['14']
+            if s.get('cycleWeek') == 3 and s.get('source') == 'projected_from_history'
+        })
+        assert week2_ofs != week3_ofs, "consecutive forward weeks must vary"
+
+    def test_falls_back_to_planificado_when_no_history(self):
+        seed = [_prod('ED13LT', start=0, w=168.0)]
+        out = pp.project_forward_production(
+            {'14': seed},
+            target_horizon_days=14,
+            cycle_period_days=7.0,
+            historical_runs={},
+        )
+        projected = [s for s in out['14'] if s.get('cycleWeek') == 2]
+        # Fallback path tags projections as 'projected_from_planificado'
+        assert projected
+        assert projected[0]['source'] == 'projected_from_planificado'
+
+    def test_history_pool_loops_safely_when_demand_exceeds_supply(self):
+        seed = [_prod('ED13LT', start=0, w=168.0)]
+        # Only 3 hist runs (72h total) but we need to fill multiple weeks
+        history = {'14': [_prod(f'HIST{i}', start=0, w=24.0) for i in range(3)]}
+        out = pp.project_forward_production(
+            {'14': seed},
+            target_horizon_days=35,
+            cycle_period_days=7.0,
+            historical_runs=history,
+        )
+        projected = [s for s in out['14'] if s.get('source') == 'projected_from_history']
+        # No crash; some runs placed; weeks tagged correctly
+        assert projected
+        weeks = {s.get('cycleWeek') for s in projected}
+        assert weeks.issubset({2, 3, 4, 5})
+
+
 class TestHorizonDaysToEoy:
     def test_january_yields_a_long_horizon(self):
         assert pp.horizon_days_to_eoy('2026-01-01') == 364
