@@ -580,91 +580,56 @@ function laneFormatsFromRules(rule) {
 
 function MonthAggregateRun({ planned, baseline, timeUnit, pxPerDay, lineKey, onRunClick, todayX = 0 }) {
   const widthPx = aggregateWidthPx('month', pxPerDay);
-  const weeks = buildWeekAggregates(planned, timeUnit);
-  /* At month zoom, service blocks (clean/maint) are real events the
-     planner needs to see at their precise axis date — not just rolled
-     into a week-aggregate's cleanCount badge. Render them as their own
-     small absolutely-positioned cards using the existing tc-service
-     design so they pop against the week aggregates. */
-  const serviceBlocks = (planned ?? []).filter(
-    (s) => s?.kind === 'clean' || s?.kind === 'maint',
-  );
-  return (
-    <>
-      {weeks.map((week) => {
-        const runRef = week.currentRun ?? week.firstRun ?? null;
-        const seg = runRef?.seg ?? null;
-        const prev = Number.isInteger(runRef?.index) && runRef.index > 0 ? planned[runRef.index - 1] : null;
-        const next = Number.isInteger(runRef?.index) && runRef.index < planned.length - 1 ? planned[runRef.index + 1] : null;
-        /* Position by axis date — the lane body lays executed cards out as
-           a flex flow which drifts past their real time span (min-widths
-           exceed pxPerDay), so a flex-flow aggregate would land several
-           axis weeks to the right of where its week actually sits. Absolute
-           positioning anchors each aggregate to the same coordinate the
-           axis uses, so "Week 21" lands under W21. */
-        const daysFromToday = Math.round((week.weekStart - TODAY) / 86400000);
-        const left = todayX + daysFromToday * pxPerDay;
-        return (
-          <div
-            key={week.key}
-            className="tl-agg-slot"
-            style={{ position: 'absolute', left, top: 12, bottom: 12, zIndex: 2 }}
-          >
-            <AggregateCard
-              widthPx={widthPx}
-              period="week"
-              label={week.label}
-              subLabel={week.subLabel}
-              dominantMaterial={week.dominantMaterial}
-              dominantSku={week.dominantSku}
-              runCount={week.runCount}
-              cleanCount={week.cleanCount}
-              maintCount={week.maintCount}
-              formats={week.formats}
-              totalVolume={week.totalVolume}
-              productiveHours={week.productiveHours}
-              avgOee={week.avgOee}
-              lineBaseline={baseline}
-              isToday={week.isToday}
-              hasUrgentInsert={week.hasUrgentInsert}
-              isIdle={week.isIdle}
-              onClick={seg && onRunClick ? () => onRunClick({
-                seg: normalizeRun(seg, timeUnit),
-                prev: normalizeRun(prev, timeUnit),
-                next: normalizeRun(next, timeUnit),
-                lineKey,
-                index: runRef.index,
-                baseline,
-                state: 'planned',
-              }) : null}
-            />
-          </div>
-        );
-      })}
-      {serviceBlocks.map((seg, i) => {
-        const startDays = segStartDays(seg, timeUnit);
-        const durHours = segDurationHours(seg, timeUnit);
-        const durDays = segDurationDays(seg, timeUnit);
-        const left = todayX + startDays * pxPerDay;
-        // Service blocks are 8h wide in time = ~9px at month zoom. Floor
-        // at ~56px so the kind label + duration stay legible.
-        const cardWidth = Math.max(56, Math.round(durDays * pxPerDay));
-        return (
-          <div
-            key={`svc-${lineKey}-${seg.kind}-${seg.start}-${i}`}
-            className="tl-month-svc"
-            style={{ position: 'absolute', left, top: 12, bottom: 12, zIndex: 3 }}
-          >
-            <TimelineCard
-              kind={seg.kind}
-              durationHours={durHours}
-              widthPx={cardWidth}
-            />
-          </div>
-        );
-      })}
-    </>
-  );
+  return buildWeekAggregates(planned, timeUnit).map((week) => {
+    const runRef = week.currentRun ?? week.firstRun ?? null;
+    const seg = runRef?.seg ?? null;
+    const prev = Number.isInteger(runRef?.index) && runRef.index > 0 ? planned[runRef.index - 1] : null;
+    const next = Number.isInteger(runRef?.index) && runRef.index < planned.length - 1 ? planned[runRef.index + 1] : null;
+    /* Position by axis date — the lane body lays executed cards out as
+       a flex flow which drifts past their real time span (min-widths
+       exceed pxPerDay), so a flex-flow aggregate would land several
+       axis weeks to the right of where its week actually sits. Absolute
+       positioning anchors each aggregate to the same coordinate the
+       axis uses, so "Week 21" lands under W21. */
+    const daysFromToday = Math.round((week.weekStart - TODAY) / 86400000);
+    const left = todayX + daysFromToday * pxPerDay;
+    return (
+      <div
+        key={week.key}
+        className="tl-agg-slot"
+        style={{ position: 'absolute', left, top: 12, bottom: 12, zIndex: 2 }}
+      >
+      <AggregateCard
+        widthPx={widthPx}
+        period="week"
+        label={week.label}
+        subLabel={week.subLabel}
+        dominantMaterial={week.dominantMaterial}
+        dominantSku={week.dominantSku}
+        runCount={week.runCount}
+        cleanCount={week.cleanCount}
+        maintCount={week.maintCount}
+        formats={week.formats}
+        totalVolume={week.totalVolume}
+        productiveHours={week.productiveHours}
+        avgOee={week.avgOee}
+        lineBaseline={baseline}
+        isToday={week.isToday}
+        hasUrgentInsert={week.hasUrgentInsert}
+        isIdle={week.isIdle}
+        onClick={seg && onRunClick ? () => onRunClick({
+          seg: normalizeRun(seg, timeUnit),
+          prev: normalizeRun(prev, timeUnit),
+          next: normalizeRun(next, timeUnit),
+          lineKey,
+          index: runRef.index,
+          baseline,
+          state: 'planned',
+        }) : null}
+      />
+      </div>
+    );
+  });
 }
 
 function buildWeekAggregates(planned, timeUnit) {
