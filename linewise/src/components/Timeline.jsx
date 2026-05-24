@@ -117,9 +117,39 @@ function segmentWidthPx(seg, zoom, pxPerDay, timeUnit) {
   );
 }
 
-function aggregateWidthPx(zoom, pxPerDay) {
-  if (zoom === 'month') return Math.max(220, Math.round(7 * pxPerDay));
+function aggregateWidthPx(_zoom, _pxPerDay) {
   return null;
+}
+
+/* Collapse adjacent production segs that belong to the same OF into a
+   single block, so a run split into N pieces by the planner renders as
+   one card instead of N. Service segs (clean/maint) and OF changes break
+   the chain. Sums w + vol; OEE is weighted by w. */
+function mergeAdjacentByOrder(segs) {
+  if (!segs || segs.length === 0) return segs ?? [];
+  const out = [];
+  for (const seg of segs) {
+    const last = out[out.length - 1];
+    if (last && last.kind == null && seg.kind == null && last.of && seg.of && last.of === seg.of) {
+      const wa = Number(last.w) || 0;
+      const wb = Number(seg.w) || 0;
+      const totalW = wa + wb;
+      const oeeA = Number(last.oee);
+      const oeeB = Number(seg.oee);
+      const weightedOee = totalW > 0 && Number.isFinite(oeeA) && Number.isFinite(oeeB)
+        ? (oeeA * wa + oeeB * wb) / totalW
+        : (Number.isFinite(oeeA) ? oeeA : oeeB);
+      out[out.length - 1] = {
+        ...last,
+        w: totalW,
+        vol: (Number(last.vol) || 0) + (Number(seg.vol) || 0),
+        oee: weightedOee,
+      };
+    } else {
+      out.push(seg);
+    }
+  }
+  return out;
 }
 
 export default function Timeline({
@@ -142,12 +172,19 @@ export default function Timeline({
   const viewportWidth = useTimelineViewportWidth(timelineRef);
   const pxPerDay = pxPerDayForZoom(zoom, viewportWidth);
   const timeUnit = payloadTimeUnit(data);
+  const mergedHistoryByLine = Object.fromEntries(
+    LINES.map((k) => [k, mergeAdjacentByOrder(data?.executedHistory?.[k] ?? [])]),
+  );
+  const rawPlan = effectivePlan ?? data.basePlan;
+  const mergedPlanByLine = Object.fromEntries(
+    LINES.map((k) => [k, mergeAdjacentByOrder(rawPlan?.[k] ?? [])]),
+  );
   const execDaysByLine = mode === 'default'
-    ? LINES.map((k) => executedEnd(data?.executedHistory?.[k] ?? [], timeUnit))
+    ? LINES.map((k) => executedEnd(mergedHistoryByLine[k], timeUnit))
     : LINES.map(() => 0);
   const maxExecDays = Math.ceil(Math.max(0, ...execDaysByLine));
   const execDays = maxExecDays;
-  const activePlan = effectivePlan ?? data.basePlan;
+  const activePlan = mergedPlanByLine;
   const planHorizonDays = Math.ceil(Math.max(
     1,
     ...LINES.flatMap((k) => (activePlan?.[k] ?? []).map((seg) => plannedEnd(seg, timeUnit))),
@@ -155,10 +192,10 @@ export default function Timeline({
   const todayXForMetrics = maxExecDays * pxPerDay;
   const laneMetrics = LINES.map((lineKey) => {
     const laneExecDays = mode === 'default'
-      ? executedEnd(data?.executedHistory?.[lineKey] ?? [], timeUnit)
+      ? executedEnd(mergedHistoryByLine[lineKey], timeUnit)
       : 0;
     const leadPadDays = Math.max(0, maxExecDays - laneExecDays);
-    const executedWidth = (data?.executedHistory?.[lineKey] ?? [])
+    const executedWidth = mergedHistoryByLine[lineKey]
       .reduce((sum, seg) => sum + segmentWidthPx(seg, zoom, pxPerDay, timeUnit), 0);
     const planned = activePlan?.[lineKey] ?? [];
     const aggregateWidth = aggregateWidthPx(zoom, pxPerDay);
@@ -242,7 +279,7 @@ export default function Timeline({
             centre={data.lineCentre?.[lineKey] ?? 'CF Prat'}
             baseline={data.lineBaseline?.[lineKey]}
             formats={data.lineFormats?.[lineKey] ?? laneFormatsFromRules(data.lineRules?.[lineKey])}
-            executed={data.executedHistory?.[lineKey] ?? []}
+            executed={mergedHistoryByLine[lineKey]}
             planned={planned}
             zoom={zoom}
             sync={sync}
@@ -942,17 +979,7 @@ function Lane({ lineKey, centre, baseline, formats = [], executed, planned, zoom
             onDrop={onZoneDrop}
           />
         )}
-        {showFuturePlan && !isMoving && zoom === 'month' ? (
-          <MonthAggregateRun
-            planned={planned.map((seg) => hydrateSegment(seg, orderLookup))}
-            baseline={baseline}
-            timeUnit={timeUnit}
-            pxPerDay={pxPerDay}
-            lineKey={lineKey}
-            onRunClick={onRunClick}
-            todayX={todayX}
-          />
-        ) : showFuturePlan && planned.map((seg, i) => {
+        {showFuturePlan && planned.map((seg, i) => {
           const displaySeg = hydrateSegment(seg, orderLookup);
           const prev = i > 0 ? planned[i - 1] : (executed[executed.length - 1] ?? null);
           const next = i < planned.length - 1 ? planned[i + 1] : null;
