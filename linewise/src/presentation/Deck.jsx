@@ -124,30 +124,121 @@ function DecisionMomentSlide() {
         <p>The planner has to choose where it goes before the factory pays for the wrong move.</p>
       </div>
 
-      <div className="planner-board" aria-hidden="true">
-        <div className="board-head">
-          <span>Current production plan</span>
-          <b>Lines 14 / 17 / 19</b>
-        </div>
-
-        <PlanLine line="14" blocks={['red', 'green', 'gold']} candidate="after-first" />
-        <PlanLine line="17" blocks={['green', 'ink', 'red']} candidate="after-second" />
-        <PlanLine line="19" blocks={['gold', 'red', 'green']} candidate="end" />
-
-        <div className="urgent-card">
-          <div className="urgent-label">Urgent order</div>
-          <div className="urgent-code">OF-NEW</div>
-          <div className="urgent-meta">SKU + volume</div>
-        </div>
-
-        <div className="decision-options">
-          <span>Same line?</span>
-          <span>Another line?</span>
-          <span>Next slot?</span>
-          <span>Later slot?</span>
-        </div>
-      </div>
+      <QueueRoutingBoard />
     </section>
+  )
+}
+
+function QueueRoutingBoard() {
+  const lanes = [
+    {
+      line: 'L1',
+      brand: 'Estrella',
+      tone: 'red',
+      scheduled: '247',
+      bottles: [{ tone: 'amber', x: 31 }, { tone: 'gold', x: 86 }],
+    },
+    {
+      line: 'L2',
+      brand: 'Daura',
+      tone: 'gold',
+      scheduled: '189',
+      bottles: [{ tone: 'dark', x: 42 }, { tone: 'gold', x: 68, callout: true }],
+    },
+    {
+      line: 'L3',
+      brand: 'Voll-Damm',
+      tone: 'ink',
+      scheduled: '163',
+      bottles: [],
+    },
+  ]
+
+  return (
+    <div className="planner-board queue-routing-board" aria-hidden="true">
+      <div className="queue-source">
+        <div className="queue-label">Order queue</div>
+        <div className="queue-bin">
+          <Bottle tone="amber" />
+          <Bottle tone="dark" />
+          <Bottle tone="gold" />
+        </div>
+        <div className="queue-count">247 orders</div>
+      </div>
+
+      <svg className="queue-path" viewBox="0 0 360 420" role="presentation">
+        <path d="M88 86 C96 190, 174 250, 302 327" />
+        <path className="queue-path-arrow" d="M285 308 L306 328 L278 340" />
+      </svg>
+
+      <div className="planner-guide">
+        <div className="planner-head">
+          <span className="planner-star">S</span>
+          <span className="planner-eye eye-left" />
+          <span className="planner-eye eye-right" />
+          <span className="planner-smile" />
+        </div>
+        <div className="planner-arm" />
+        <div className="planner-pointer" />
+        <div className="planner-leg leg-left" />
+        <div className="planner-leg leg-right" />
+        <div className="planner-shadow" />
+        <div className="planner-name">Planner</div>
+      </div>
+
+      <div className="floating-order-bottle">
+        <Bottle tone="amber" large />
+      </div>
+
+      <div className="queue-lanes">
+        {lanes.map((lane) => (
+          <QueueLane key={lane.line} {...lane} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function QueueLane({ line, brand, tone, scheduled, bottles }) {
+  return (
+    <div className={`queue-lane lane-${tone}`}>
+      <div className="queue-lane-label">
+        <b>{line}</b>
+        <span>{brand}</span>
+      </div>
+      <div className="conveyor">
+        {bottles.map((bottle) => (
+          <div
+            className={`lane-bottle lane-bottle-${bottle.tone}${bottle.callout ? ' with-callout' : ''}`}
+            style={{ left: `${bottle.x}%` }}
+            key={`${line}-${bottle.tone}-${bottle.x}`}
+          >
+            <Bottle tone={bottle.tone} />
+            {bottle.callout && (
+              <div className="changeover-callout">changeover avoided</div>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="scheduled-card">
+        <span>Scheduled</span>
+        <b>{scheduled}</b>
+        <small>runs</small>
+      </div>
+    </div>
+  )
+}
+
+function Bottle({ tone, large = false }) {
+  return (
+    <div className={`bottle bottle-${tone}${large ? ' bottle-large' : ''}`}>
+      <span className="bottle-cap" />
+      <span className="bottle-neck" />
+      <span className="bottle-body">
+        <i className="bottle-shine" />
+        <i className="bottle-label" />
+      </span>
+    </div>
   )
 }
 
